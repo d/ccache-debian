@@ -1,0 +1,23 @@
+01_no_home.diff:
+  Francois Marier <francois@debian.org>
+  Made especially for the Debian package.
+
+02_ccache_compressed.diff:
+  Lars Gustäbel <lars@gustaebel.de>
+  http://www.gustaebel.de/lars/ccache/ (downloaded on 2007-05-20)
+
+03_long_options.diff:
+  Francois Marier <francois@debian.org>
+  Made especially for the Debian package.
+
+04_ignore_profile.diff:
+  Ted Percival <ted@midg3t.net>
+  http://bugs.debian.org/cgi-bin/bugreport.cgi?msg=20;filename=ccache-profile.patch;att=1;bug=215849
+
+05_nfs_fix.diff:
+  John Coiner <john.coiner@amd.com>
+  http://lists.samba.org/archive/ccache/2007q1/000265.html
+
+06_md.diff:
+  Andrea Bittau <a.bittau@cs.ucl.ac.uk>
+  http://darkircop.org/ccache/ccache-2.4-md.patch (downloaded on 2007-06-30)

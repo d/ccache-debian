@@ -98,7 +98,7 @@ install: build
 
 	ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/$(DEB_BUILD_GNU_TYPE)-gcc
 	ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/$(DEB_BUILD_GNU_TYPE)-g++
-	set -e; for ver in 2.95 3.0 3.2 3.3 3.4 4.0 4.1 4.2; do \
+	set -e; for ver in 2.95 3.0 3.2 3.3 3.4 4.0 4.1 4.2 4.3; do \
 		ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/$(DEB_BUILD_GNU_TYPE)-gcc-$$ver; \
 		ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/gcc-$$ver; \
 		ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/$(DEB_BUILD_GNU_TYPE)-g++-$$ver; \

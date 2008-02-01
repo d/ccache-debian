@@ -21,3 +21,11 @@
 06_md.diff:
   Andrea Bittau <a.bittau@cs.ucl.ac.uk>
   http://darkircop.org/ccache/ccache-2.4-md.patch (downloaded on 2007-06-30)
+
+07_cachedirtag.diff:
+  Karl Chen <quarl@cs.berkeley.edu>
+  http://lists.samba.org/archive/ccache/2008q1/000315.html (received by email on 2008-02-02 after following up with the author of the patch)
+
+08_manpage_hyphens.diff:
+  Francois Marier <francois@debian.org>
+  Made especially for the Debian package.

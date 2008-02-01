@@ -1,3 +1,14 @@
+ccache (2.4-12) unstable; urgency=low
+
+  * Add symlink for gcc 4.3 (closes: #463590)
+  * Add support for the CACHEDIR.TAG spec, thanks to Karl Chen.
+    (see http://www.brynosaurus.com/cachedir/)
+  * Fix hyphens in manpage (lintian notice)
+  * Bump Standards-Version up to 3.7.3 (no changes)
+  * Bump debhelper compatibility to 6
+
+ -- Francois Marier <francois@debian.org>  Sat, 02 Feb 2008 10:37:22 +1300
+
 ccache (2.4-11) unstable; urgency=low
 
   * Add the collab-maint repo to debian/control

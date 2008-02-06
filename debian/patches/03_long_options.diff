@@ -1,5 +1,7 @@
---- ccache.c	2004-09-13 06:38:30.000000000 -0400
-+++ ccache.c.new	2006-11-18 01:04:29.000000000 -0500
+Index: ccache.c
+===================================================================
+--- ccache.c	(révision 7695)
++++ ccache.c	(copie de travail)
 @@ -22,6 +22,7 @@
  */
  
@@ -54,3 +56,30 @@
  		switch (c) {
  		case 'V':
  			printf("ccache version %s\n", CCACHE_VERSION);
+Index: ccache.1
+===================================================================
+--- ccache.1	(révision 7695)
++++ ccache.1	(copie de travail)
+@@ -23,14 +23,14 @@
+ .nf 
+  
+ 
+--s                      show statistics summary
+--z                      zero statistics
+--c                      run a cache cleanup
+--C                      clear the cache completely
+--F <maxfiles>           set maximum files in cache
+--M <maxsize>            set maximum size of cache (use G, M or K)
+--h                      this help page
+--V                      print version number
++\-s, \-\-show-stats        show statistics summary
++\-z, \-\-zero-stats        zero statistics
++\-c, \-\-cleanup           run a cache cleanup
++\-C, \-\-clear             clear the cache completely
++\-F <n>, \-\-max-files=<n> set maximum files in cache
++\-M <n>, \-\-max-size=<n>  set maximum size of cache (use G, M or K)
++\-h, \-\-help              this help page
++\-V, \-\-version           print version number
+ 
+ .fi 
+  

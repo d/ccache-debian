@@ -1,15 +1,17 @@
 Index: ccache.c
 ===================================================================
---- ccache.c	(révision 5368)
+--- ccache.c	(révision 7695)
 +++ ccache.c	(copie de travail)
-@@ -1029,6 +1029,12 @@
+@@ -1029,6 +1029,14 @@
  		exit(1);
  	}
  
-+	if (create_cachedirtag(cache_dir) != 0) {
-+		fprintf(stderr,"ccache: failed to create %s/CACHEDIR.TAG (%s)\n",
-+			cache_dir, strerror(errno));
-+		exit(1);
++	if (!getenv("CCACHE_READONLY")) {
++		if (create_cachedirtag(cache_dir) != 0) {
++			fprintf(stderr,"ccache: failed to create %s/CACHEDIR.TAG (%s)\n",
++				cache_dir, strerror(errno));
++			exit(1);
++		}
 +	}
 +
  	ccache(argc, argv);
@@ -17,7 +19,7 @@ Index: ccache.c
  }
 Index: ccache.h
 ===================================================================
---- ccache.h	(révision 5368)
+--- ccache.h	(révision 7695)
 +++ ccache.h	(copie de travail)
 @@ -81,6 +81,7 @@
  int copy_file(const char *src, const char *dest);
@@ -29,7 +31,7 @@ Index: ccache.h
  void *x_realloc(void *ptr, size_t size);
 Index: util.c
 ===================================================================
---- util.c	(révision 5368)
+--- util.c	(révision 7695)
 +++ util.c	(copie de travail)
 @@ -138,6 +138,39 @@
  	return 0;

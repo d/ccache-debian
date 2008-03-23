@@ -1015,7 +1015,7 @@ diff -u -r1.1.1.1.2.1 -r1.12
  OBJS= ccache.o mdfour.o hash.o execute.o util.o args.o stats.o \
  	cleanup.o snprintf.o unify.o
  HEADERS = ccache.h mdfour.h
-@@ -20,13 +21,12 @@
+@@ -20,7 +21,7 @@
  docs: ccache.1 web/ccache-man.html
  
  ccache$(EXEEXT): $(OBJS) $(HEADERS)
@@ -1024,9 +1024,3 @@ diff -u -r1.1.1.1.2.1 -r1.12
  
  ccache.1: ccache.yo
  	-yodl2man -o ccache.1 ccache.yo
- 
- web/ccache-man.html: ccache.yo
--	mkdir -p man
- 	yodl2html -o web/ccache-man.html ccache.yo
- 
- install: ccache$(EXEEXT) ccache.1

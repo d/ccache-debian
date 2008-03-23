@@ -1,3 +1,12 @@
+ccache (2.4-14) unstable; urgency=low
+
+  * Mention the long options everywhere in the manpage
+  * Merge Gentoo patches:
+    - respect user's LDFLAGS
+    - use utimes() for timestamp if possible
+
+ -- Francois Marier <francois@debian.org>  Sun, 23 Mar 2008 16:30:11 +1300
+
 ccache (2.4-13) unstable; urgency=low
 
   * Update CACHEDIR.TAG patch to avoid creating the tag file when the

@@ -54,7 +54,6 @@ build-stamp:  config.status
 	dh_testdir
 
 	$(MAKE)
-	#/usr/bin/docbook-to-man debian/ccache.sgml > ccache.1
 
 	touch build-stamp
 

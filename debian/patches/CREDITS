@@ -29,3 +29,11 @@
 08_manpage_hyphens.diff:
   Francois Marier <francois@debian.org>
   Made especially for the Debian package.
+
+09_respect_ldflags.diff:
+  Lisa Seelye <lisa@gentoo.org>
+  http://sources.gentoo.org/viewcvs.py/gentoo-x86/dev-util/ccache/files/ccache-2.4-respectflags.patch?rev=1.1&view=markup
+
+10_utimes.diff:
+  Robin H. Johnson <robbat2@gentoo.org>
+  http://sources.gentoo.org/viewcvs.py/gentoo-x86/dev-util/ccache/files/ccache-2.4-utimes.patch?rev=1.1&view=markup

@@ -1,29 +1,19 @@
 --- ccache.c	2004-09-13 03:38:30.000000000 -0700
 +++ ccache.c	2006-06-09 16:29:16.695117780 -0700
-@@ -481,7 +481,11 @@
- 		return;
- 	}
+@@ -481,8 +481,13 @@
  
+ 	/* update timestamps for LRU cleanup
+ 	   also gives output_file a sensible mtime when hard-linking (for make) */
 +#ifdef HAVE_UTIMES
++       utimes(hashname, NULL);
 +	utimes(stderr_file, NULL);
 +#else
+ 	utime(hashname, NULL);
  	utime(stderr_file, NULL);
 +#endif
  
  	if (strcmp(output_file, "/dev/null") == 0) {
  		ret = 0;
-@@ -515,7 +519,11 @@
- 	}
- 	if (ret == 0) {
- 		/* update the mtime on the file so that make doesn't get confused */
-+#ifdef HAVE_UTIMES
-+		utimes(output_file, NULL);
-+#else
- 		utime(output_file, NULL);
-+#endif
- 	}
- 
- 	/* get rid of the intermediate preprocessor file */
 --- ccache.h	2004-09-13 03:38:30.000000000 -0700
 +++ ccache.h	2006-06-09 16:28:16.601658626 -0700
 @@ -22,6 +22,9 @@

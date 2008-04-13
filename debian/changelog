@@ -1,3 +1,12 @@
+ccache (2.4-15) unstable; urgency=low
+
+  * Add a new patch which improve the consistency of timestamps on cached
+    objects to make sure clean-up is based on least recently used objects.
+  * Patch the set_limit call so that non-writable cache directories return
+    an error when attempting to size the max(files|size) (closes: #332527)
+
+ -- Francois Marier <francois@debian.org>  Sun, 13 Apr 2008 15:07:05 +1200
+
 ccache (2.4-14) unstable; urgency=low
 
   * Mention the long options everywhere in the manpage

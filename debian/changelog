@@ -1,3 +1,10 @@
+ccache (2.4-16) UNRELEASED; urgency=low
+
+  * Fix the documentation references to CCACHE_HARDLINK (patch from Fedora)
+  * Add a patch for the HTML docs in the source (from Fedora)
+
+ -- Francois Marier <francois@debian.org>  Wed, 30 Apr 2008 09:57:36 +1200
+
 ccache (2.4-15) unstable; urgency=low
 
   * Add a new patch which improve the consistency of timestamps on cached

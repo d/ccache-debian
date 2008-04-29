@@ -45,3 +45,11 @@
 12_cachesize_permissions.diff:
   Francois Marier <francois@debian.org>
   Made especially for the Debian package to fix http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=332527
+
+13_html_links.diff:
+  Ville Skytta <ville.skytta at iki.fi>
+  http://cvs.fedoraproject.org/viewcvs/rpms/ccache/F-9/ccache-html-links.patch?rev=1.1&view=markup
+
+14_hardlink_doc.diff:
+  Ville Skytta <ville.skytta@iki.fi>
+  http://cvs.fedoraproject.org/viewcvs/rpms/ccache/F-9/ccache-2.4-hardlink-doc.patch?rev=1.1&view=markup

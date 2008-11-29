@@ -3,10 +3,10 @@ Section: devel
 Priority: optional
 Maintainer: Francois Marier <francois@debian.org>
 Build-Depends: debhelper (>> 6), autotools-dev, zlib1g-dev
-Standards-Version: 3.7.3
+Standards-Version: 3.8.0
 Homepage: http://ccache.samba.org
-Vcs-Svn: svn://svn.debian.org/svn/collab-maint/deb-maint/ccache/
-Vcs-Browser: http://svn.debian.org/wsvn/collab-maint/deb-maint/ccache/
+Vcs-git: git://git.debian.org/git/collab-maint/ccache.git
+Vcs-Browser: http://git.debian.org/?p=collab-maint/ccache.git;a=summary
 
 Package: ccache
 Architecture: any
@@ -16,5 +16,3 @@ Description: Compiler results cacher, for fast recompiles
  ccache is a compiler cache. It speeds up re-compilation of C/C++ code 
  by caching previous compiles and detecting when the same compile is
  being done again.
- .
- This is similar to, but faster than, the compilercache package.

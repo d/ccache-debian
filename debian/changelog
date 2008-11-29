@@ -1,4 +1,4 @@
-ccache (2.4-16) UNRELEASED; urgency=low
+ccache (2.4-16) unstable; urgency=low
 
   * Fix the documentation references to CCACHE_HARDLINK (patch from Fedora)
   * Add a patch for the HTML docs in the source (from Fedora)
@@ -6,7 +6,7 @@ ccache (2.4-16) UNRELEASED; urgency=low
   * Bump Standards-Version to 3.8.0 (no changes)
   * Move packaging to git and update VCS fields
 
- -- Francois Marier <francois@debian.org>  Sat, 29 Nov 2008 23:42:26 +1300
+ -- Francois Marier <francois@debian.org>  Sat, 29 Nov 2008 23:53:39 +1300
 
 ccache (2.4-15) unstable; urgency=low
 

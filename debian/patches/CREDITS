@@ -53,3 +53,7 @@
 14_hardlink_doc.diff:
   Ville Skytta <ville.skytta@iki.fi>
   http://cvs.fedoraproject.org/viewcvs/rpms/ccache/F-9/ccache-2.4-hardlink-doc.patch?rev=1.1&view=markup
+
+15_gcc4.3_warnings.diff:
+  William S Fulton <wsf@fultondesigns.co.uk>
+  http://bugs.debian.org/cgi-bin/bugreport.cgi?msg=5;filename=gcc4.3warnings-clean.patch;att=1;bug=508046

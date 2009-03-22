@@ -1,6 +1,8 @@
---- ccache.c	Mon Sep 13 11:38:30 2004
-+++ ccache.c	Thu Jun 21 22:17:32 2007
-@@ -627,6 +627,13 @@ static void process_args(int argc, char 
+diff --git a/ccache.c b/ccache.c
+index 64c979b..843929f 100644
+--- a/ccache.c
++++ b/ccache.c
+@@ -647,6 +647,13 @@ static void process_args(int argc, char **argv)
  	int found_S_opt = 0;
  	struct stat st;
  	char *e;
@@ -14,7 +16,7 @@
  
  	stripped_args = args_init(0, NULL);
  
-@@ -702,6 +709,18 @@ static void process_args(int argc, char 
+@@ -725,6 +732,18 @@ static void process_args(int argc, char **argv)
  			continue;
  		}
  
@@ -33,12 +35,10 @@
  		/* options that take an argument */
  		{
  			const char *opts[] = {"-I", "-include", "-imacros", "-iprefix",
-@@ -812,6 +831,41 @@ static void process_args(int argc, char 
- 		}
- 		p[1] = found_S_opt ? 's' : 'o';
+@@ -837,6 +856,41 @@ static void process_args(int argc, char **argv)
  		p[2] = 0;
-+	}
-+
+ 	}
+ 
 +	/* If dependencies are generated, configure the preprocessor */
 +
 +	if (generating_dependencies && output_file) {
@@ -72,6 +72,8 @@
 +			args_add(stripped_args, "-MT");
 +			args_add(stripped_args, output_file);
 +		}
- 	}
- 
++	}
++
  	/* cope with -o /dev/null */
+ 	if (strcmp(output_file,"/dev/null") != 0 && stat(output_file, &st) == 0 && !S_ISREG(st.st_mode)) {
+ 		cc_log("Not a regular file %s\n", output_file);

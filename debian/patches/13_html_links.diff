@@ -1,6 +1,8 @@
---- web/index.html~	2004-09-13 13:38:30.000000000 +0300
-+++ web/index.html	2004-09-26 01:04:38.458008118 +0300
-@@ -29,10 +29,10 @@
+diff --git a/web/index.html b/web/index.html
+index cc0289b..4af8391 100644
+--- a/web/index.html
++++ b/web/index.html
+@@ -29,10 +29,10 @@ The latest release is ccache 2.4.
  <li>fixed handling of HOME environment variable
  </ul>
  
@@ -13,7 +15,7 @@
  
  <p>NOTE! This release changes the hash input slighly, so you will
  probably find that you will not get any hits against your existing
-@@ -87,7 +87,7 @@
+@@ -87,7 +87,7 @@ I have coded ccache very carefully to try to provide these guarantees.
  
  <h2>Documentation</h2>
  
@@ -22,7 +24,7 @@
  
  
  <h2>Performance</h2>
-@@ -116,7 +116,7 @@
+@@ -116,7 +116,7 @@ build system.
  <h2>Download</h2>
  
  You can download the latest release from the <a

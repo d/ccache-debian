@@ -1,6 +1,8 @@
---- ccache.c	(révision 8804)
-+++ ccache.c	(copie de travail)
-@@ -481,6 +481,9 @@
+diff --git a/ccache.c b/ccache.c
+index c636692..39742d9 100644
+--- a/ccache.c
++++ b/ccache.c
+@@ -499,6 +499,9 @@ static void from_cache(int first)
  		return;
  	}
  
@@ -10,7 +12,7 @@
  	utime(stderr_file, NULL);
  
  	if (strcmp(output_file, "/dev/null") == 0) {
-@@ -513,10 +516,6 @@
+@@ -533,10 +536,6 @@ static void from_cache(int first)
  			failed();
  		}
  	}

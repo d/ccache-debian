@@ -1,6 +1,8 @@
---- ccache.1.orig	2007-05-20 17:30:57.000000000 +1200
-+++ ccache.1	2007-05-20 17:31:27.000000000 +1200
-@@ -367,12 +367,6 @@
+diff --git a/ccache.1 b/ccache.1
+index 87b3a85..2e854d9 100644
+--- a/ccache.1
++++ b/ccache.1
+@@ -381,12 +381,6 @@ ccache can handle a much wider ranger of compiler options
  .IP o 
  ccache avoids a double call to cpp on a cache miss
  .PP 
@@ -13,9 +15,11 @@
  .SH "CREDITS" 
  .PP 
  Thanks to the following people for their contributions to ccache
---- util.c.patched	2007-05-20 18:19:11.000000000 +1200
-+++ util.c	2007-05-20 18:20:55.000000000 +1200
-@@ -58,9 +58,26 @@
+diff --git a/util.c b/util.c
+index a6b8899..70d7ea7 100644
+--- a/util.c
++++ b/util.c
+@@ -58,9 +58,26 @@ void copy_fd(int fd_in, int fd_out)
  	}
  }
  

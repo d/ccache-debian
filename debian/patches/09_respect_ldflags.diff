@@ -1,6 +1,8 @@
---- Makefile.in.orig	2008-03-23 17:01:19.000000000 +1300
-+++ Makefile.in	2008-03-23 17:03:03.000000000 +1300
-@@ -21,7 +21,7 @@
+diff --git a/Makefile.in b/Makefile.in
+index e32ebe5..438ec19 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -21,7 +21,7 @@ all: ccache$(EXEEXT)
  docs: ccache.1 web/ccache-man.html
  
  ccache$(EXEEXT): $(OBJS) $(HEADERS)

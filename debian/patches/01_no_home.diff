@@ -1,6 +1,8 @@
---- ccache.c
-+++ ccache.c
-@@ -836,6 +836,13 @@
+diff --git a/ccache.c b/ccache.c
+index c15ced5..e7272d5 100644
+--- a/ccache.c
++++ b/ccache.c
+@@ -836,6 +836,13 @@ static void ccache(int argc, char *argv[])
  {
  	/* find the real compiler */
  	find_compiler(argc, argv);
@@ -14,7 +16,7 @@
  	
  	/* we might be disabled */
  	if (getenv("CCACHE_DISABLE")) {
-@@ -895,6 +902,13 @@
+@@ -895,6 +902,13 @@ static void usage(void)
  	printf("-V                      print version number\n");
  }
  
@@ -28,7 +30,7 @@
  /* the main program when not doing a compile */
  static int ccache_main(int argc, char *argv[])
  {
-@@ -914,31 +928,37 @@
+@@ -914,31 +928,37 @@ static int ccache_main(int argc, char *argv[])
  			exit(0);
  			
  		case 's':
@@ -66,7 +68,7 @@
  			v = value_units(optarg);
  			stats_set_limits(-1, v);
  			printf("Set cache size limit to %uk\n", (unsigned)v);
-@@ -983,7 +1003,10 @@
+@@ -983,7 +1003,10 @@ int main(int argc, char *argv[])
  
  	cache_dir = getenv("CCACHE_DIR");
  	if (!cache_dir) {
@@ -78,7 +80,7 @@
  	}
  
  	temp_dir = getenv("CCACHE_TEMPDIR");
-@@ -1023,7 +1046,7 @@
+@@ -1023,7 +1046,7 @@ int main(int argc, char *argv[])
  	}
  
  	/* make sure the cache dir exists */
@@ -87,9 +89,11 @@
  		fprintf(stderr,"ccache: failed to create %s (%s)\n", 
  			cache_dir, strerror(errno));
  		exit(1);
---- util.c
-+++ util.c
-@@ -448,7 +448,7 @@
+diff --git a/util.c b/util.c
+index ec5ccdd..962dd49 100644
+--- a/util.c
++++ b/util.c
+@@ -448,7 +448,7 @@ const char *get_home_directory(void)
  		}
  	}
  #endif

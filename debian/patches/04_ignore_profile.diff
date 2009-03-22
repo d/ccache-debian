@@ -1,7 +1,8 @@
-diff -ru ccache-2.4/ccache.c ccache-2.4-tp/ccache.c
---- ccache.c	2007-05-20 03:14:19.000000000 +1000
-+++ ccache.c	2007-05-20 03:17:54.000000000 +1000
-@@ -641,6 +641,9 @@
+diff --git a/ccache.c b/ccache.c
+index f9b7b82..64c979b 100644
+--- a/ccache.c
++++ b/ccache.c
+@@ -660,6 +660,9 @@ static void process_args(int argc, char **argv)
  
  		/* these are too hard */
  		if (strcmp(argv[i], "-fbranch-probabilities")==0 ||

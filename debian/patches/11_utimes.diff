@@ -1,6 +1,8 @@
---- ccache.c	2004-09-13 03:38:30.000000000 -0700
-+++ ccache.c	2006-06-09 16:29:16.695117780 -0700
-@@ -481,8 +481,13 @@
+diff --git a/ccache.c b/ccache.c
+index 39742d9..290c688 100644
+--- a/ccache.c
++++ b/ccache.c
+@@ -501,8 +501,13 @@ static void from_cache(int first)
  
  	/* update timestamps for LRU cleanup
  	   also gives output_file a sensible mtime when hard-linking (for make) */
@@ -14,8 +16,10 @@
  
  	if (strcmp(output_file, "/dev/null") == 0) {
  		ret = 0;
---- ccache.h	2004-09-13 03:38:30.000000000 -0700
-+++ ccache.h	2006-06-09 16:28:16.601658626 -0700
+diff --git a/ccache.h b/ccache.h
+index 71b03ff..8d3c93c 100644
+--- a/ccache.h
++++ b/ccache.h
 @@ -22,6 +22,9 @@
  #ifdef HAVE_PWD_H
  #include <pwd.h>
@@ -24,10 +28,12 @@
 +#include <sys/time.h>
 +#endif
  
- #define STATUS_NOTFOUND 3
- #define STATUS_FATAL 4
---- config.h.in	2003-09-27 21:48:17.000000000 -0700
-+++ config.h.in	2006-06-09 16:25:43.000000000 -0700
+ #ifdef ENABLE_ZLIB
+ #include <zlib.h>
+diff --git a/config.h.in b/config.h.in
+index 3068845..49ccd83 100644
+--- a/config.h.in
++++ b/config.h.in
 @@ -19,6 +19,9 @@
  /* Define to 1 if you have the `gethostname' function. */
  #undef HAVE_GETHOSTNAME
@@ -68,9 +74,11 @@
  /* Define to 1 if you have the `vasprintf' function. */
  #undef HAVE_VASPRINTF
  
---- configure.in	2004-09-13 03:38:30.000000000 -0700
-+++ configure.in	2006-06-09 16:25:15.541288184 -0700
-@@ -27,10 +27,11 @@
+diff --git a/configure.in b/configure.in
+index be77bbf..1ac94d3 100644
+--- a/configure.in
++++ b/configure.in
+@@ -27,10 +27,11 @@ AC_HEADER_DIRENT
  AC_HEADER_TIME
  AC_HEADER_SYS_WAIT
  

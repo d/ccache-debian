@@ -1,12 +1,29 @@
-Index: ccache.1
-===================================================================
-RCS file: /home/cvsroot/lars/ccache/ccache.1,v
-retrieving revision 1.1.1.1.2.1
-retrieving revision 1.6
-diff -u -r1.1.1.1.2.1 -r1.6
---- ccache.1	21 Nov 2004 17:55:36 -0000	1.1.1.1.2.1
-+++ ccache.1	21 Nov 2004 18:19:28 -0000	1.6
-@@ -210,7 +210,8 @@
+diff --git a/Makefile.in b/Makefile.in
+index 0bf3eb9..e32ebe5 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -11,6 +11,7 @@ CC=@CC@
+ CFLAGS=@CFLAGS@ -I.
+ EXEEXT=@EXEEXT@
+ 
++LIBS= @LIBS@
+ OBJS= ccache.o mdfour.o hash.o execute.o util.o args.o stats.o \
+ 	cleanup.o snprintf.o unify.o
+ HEADERS = ccache.h mdfour.h
+@@ -20,7 +21,7 @@ all: ccache$(EXEEXT)
+ docs: ccache.1 web/ccache-man.html
+ 
+ ccache$(EXEEXT): $(OBJS) $(HEADERS)
+-	$(CC) $(CFLAGS) -o $@ $(OBJS)
++	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LIBS)
+ 
+ ccache.1: ccache.yo
+ 	-yodl2man -o ccache.1 ccache.yo
+diff --git a/ccache.1 b/ccache.1
+index daec8ee..9d1cbcd 100644
+--- a/ccache.1
++++ b/ccache.1
+@@ -210,7 +210,8 @@ If you set the environment variable
  CCACHE_HARDLINK then ccache will attempt to use hard links from the
  cache directory when creating the compiler output rather than using a
  file copy\&. Using hard links is faster, but can confuse programs like
@@ -16,7 +33,7 @@ diff -u -r1.1.1.1.2.1 -r1.6
  .IP 
  .IP "\fBCCACHE_RECACHE\fP" 
  This forces ccache to not use any cached
-@@ -257,6 +258,11 @@
+@@ -257,6 +258,11 @@ systems like this you can use the CCACHE_EXTENSION option to override
  the default\&. On HP-UX set this environment variable to "i" if you use
  the aCC compiler\&.
  .IP 
@@ -28,7 +45,7 @@ diff -u -r1.1.1.1.2.1 -r1.6
  .PP 
  .SH "CACHE SIZE MANAGEMENT" 
  .PP 
-@@ -269,6 +275,14 @@
+@@ -269,6 +275,14 @@ When these limits are reached ccache will reduce the cache to 20%
  below the numbers you specified in order to avoid doing the cache
  clean operation too often\&.
  .PP 
@@ -43,15 +60,11 @@ diff -u -r1.1.1.1.2.1 -r1.6
  .SH "HOW IT WORKS" 
  .PP 
  The basic idea is to detect when you are compiling exactly the same
-Index: ccache.c
-===================================================================
-RCS file: /home/cvsroot/lars/ccache/ccache.c,v
-retrieving revision 1.1.1.1.2.1
-retrieving revision 1.9
-diff -u -r1.1.1.1.2.1 -r1.9
---- ccache.c	21 Nov 2004 17:55:36 -0000	1.1.1.1.2.1
-+++ ccache.c	21 Nov 2004 18:19:28 -0000	1.9
-@@ -199,7 +199,7 @@
+diff --git a/ccache.c b/ccache.c
+index e7272d5..f6be1bc 100644
+--- a/ccache.c
++++ b/ccache.c
+@@ -199,7 +199,7 @@ static void to_cache(ARGS *args)
  		fd = open(tmp_stderr, O_RDONLY | O_BINARY);
  		if (fd != -1) {
  			if (strcmp(output_file, "/dev/null") == 0 ||
@@ -60,7 +73,7 @@ diff -u -r1.1.1.1.2.1 -r1.9
  				if (cpp_stderr) {
  					/* we might have some stderr from cpp */
  					int fd2 = open(cpp_stderr, O_RDONLY | O_BINARY);
-@@ -231,14 +231,25 @@
+@@ -231,14 +231,25 @@ static void to_cache(ARGS *args)
  	x_asprintf(&path_stderr, "%s.stderr", hashname);
  
  	if (stat(tmp_stderr, &st1) != 0 ||
@@ -89,7 +102,7 @@ diff -u -r1.1.1.1.2.1 -r1.9
  	cc_log("Placed %s into cache\n", output_file);
  	stats_tocache(file_size(&st1) + file_size(&st2));
  
-@@ -474,7 +485,13 @@
+@@ -474,7 +485,13 @@ static void from_cache(int first)
  	}
  
  	/* the user might be disabling cache hits */
@@ -103,7 +116,7 @@ diff -u -r1.1.1.1.2.1 -r1.9
  		close(fd_stderr);
  		unlink(stderr_file);
  		free(stderr_file);
-@@ -487,7 +504,9 @@
+@@ -487,7 +504,9 @@ static void from_cache(int first)
  		ret = 0;
  	} else {
  		unlink(output_file);
@@ -114,14 +127,10 @@ diff -u -r1.1.1.1.2.1 -r1.9
  			ret = link(hashname, output_file);
  		} else {
  			ret = copy_file(hashname, output_file);
-Index: ccache.h
-===================================================================
-RCS file: /home/cvsroot/lars/ccache/ccache.h,v
-retrieving revision 1.1.1.1.2.1
-retrieving revision 1.7
-diff -u -r1.1.1.1.2.1 -r1.7
---- ccache.h	21 Nov 2004 17:55:36 -0000	1.1.1.1.2.1
-+++ ccache.h	21 Nov 2004 18:19:28 -0000	1.7
+diff --git a/ccache.h b/ccache.h
+index faec597..67904cd 100644
+--- a/ccache.h
++++ b/ccache.h
 @@ -23,6 +23,10 @@
  #include <pwd.h>
  #endif
@@ -147,7 +156,7 @@ diff -u -r1.1.1.1.2.1 -r1.7
  enum stats {
  	STATS_NONE=0,
  	STATS_STDOUT,
-@@ -79,6 +90,8 @@
+@@ -79,6 +90,8 @@ void fatal(const char *msg);
  
  void copy_fd(int fd_in, int fd_out);
  int copy_file(const char *src, const char *dest);
@@ -156,15 +165,11 @@ diff -u -r1.1.1.1.2.1 -r1.7
  
  int create_dir(const char *dir);
  void x_asprintf(char **ptr, const char *format, ...);
-Index: ccache.yo
-===================================================================
-RCS file: /home/cvsroot/lars/ccache/ccache.yo,v
-retrieving revision 1.1.1.1.2.1
-retrieving revision 1.5
-diff -u -r1.1.1.1.2.1 -r1.5
---- ccache.yo	21 Nov 2004 17:55:36 -0000	1.1.1.1.2.1
-+++ ccache.yo	21 Nov 2004 18:19:28 -0000	1.5
-@@ -169,6 +169,11 @@
+diff --git a/ccache.yo b/ccache.yo
+index 12e45a6..311bead 100644
+--- a/ccache.yo
++++ b/ccache.yo
+@@ -169,6 +169,11 @@ will have problems with the intermediate filename extensions used in
  this optimisation, in which case this option could allow ccache to be
  used.
  
@@ -176,7 +181,7 @@ diff -u -r1.1.1.1.2.1 -r1.5
  dit(bf(CCACHE_NOSTATS)) If you set the environment variable
  CCACHE_NOSTATS then ccache will not update the statistics files on
  each compile.
-@@ -181,7 +186,8 @@
+@@ -181,7 +186,8 @@ dit(bf(CCACHE_HARDLINK)) If you set the environment variable
  CCACHE_HARDLINK then ccache will attempt to use hard links from the
  cache directory when creating the compiler output rather than using a
  file copy. Using hard links is faster, but can confuse programs like
@@ -186,7 +191,7 @@ diff -u -r1.1.1.1.2.1 -r1.5
  
  dit(bf(CCACHE_RECACHE)) This forces ccache to not use any cached
  results, even if it finds them. New results are still cached, but
-@@ -236,6 +242,14 @@
+@@ -236,6 +242,14 @@ When these limits are reached ccache will reduce the cache to 20%
  below the numbers you specified in order to avoid doing the cache
  clean operation too often.
  
@@ -201,7 +206,7 @@ diff -u -r1.1.1.1.2.1 -r1.5
  manpagesection(HOW IT WORKS)
  
  The basic idea is to detect when you are compiling exactly the same
-@@ -294,6 +308,8 @@
+@@ -294,6 +308,8 @@ itemize(
    cache. This tells the filesystem to inherit group ownership for new
    directories. The command "chmod g+s `find $CCACHE_DIR -type d`" might
    be useful for this.
@@ -210,14 +215,10 @@ diff -u -r1.1.1.1.2.1 -r1.5
  )
  
  manpagesection(HISTORY)
-Index: config.h.in
-===================================================================
-RCS file: /home/cvsroot/lars/ccache/config.h.in,v
-retrieving revision 1.1.1.1
-retrieving revision 1.2
-diff -u -r1.1.1.1 -r1.2
---- config.h.in	30 Apr 2004 13:13:41 -0000	1.1.1.1
-+++ config.h.in	4 May 2004 20:49:26 -0000	1.2
+diff --git a/config.h.in b/config.h.in
+index 286f038..3068845 100644
+--- a/config.h.in
++++ b/config.h.in
 @@ -98,3 +98,6 @@
  
  /* Define _GNU_SOURCE so that we get all necessary prototypes */
@@ -225,14 +226,11 @@ diff -u -r1.1.1.1 -r1.2
 +
 +/* Define to 1 if you like to have zlib compression for the ccache. */
 +#undef ENABLE_ZLIB
-Index: configure
-===================================================================
-RCS file: /home/cvsroot/lars/ccache/configure,v
-retrieving revision 1.1.1.1.2.1
-diff -u -r1.1.1.1.2.1 configure
---- configure	21 Nov 2004 17:55:36 -0000	1.1.1.1.2.1
-+++ configure	21 Nov 2004 18:24:42 -0000
-@@ -836,6 +836,11 @@
+diff --git a/configure b/configure
+index 2275677..c96e3ee 100755
+--- a/configure
++++ b/configure
+@@ -836,6 +836,11 @@ if test -n "$ac_init_help"; then
  
    cat <<\_ACEOF
  
@@ -244,7 +242,7 @@ diff -u -r1.1.1.1.2.1 configure
  Some influential environment variables:
    CC          C compiler command
    CFLAGS      C compiler flags
-@@ -936,7 +941,7 @@
+@@ -936,7 +941,7 @@ esac
      else
        echo "$as_me: WARNING: no configuration information is in $ac_dir" >&2
      fi
@@ -253,7 +251,7 @@ diff -u -r1.1.1.1.2.1 configure
    done
  fi
  
-@@ -1859,7 +1864,8 @@
+@@ -1859,7 +1864,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -263,7 +261,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -1917,7 +1923,8 @@
+@@ -1917,7 +1923,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -273,7 +271,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2033,7 +2040,8 @@
+@@ -2033,7 +2040,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -283,7 +281,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2087,7 +2095,8 @@
+@@ -2087,7 +2095,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -293,7 +291,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2132,7 +2141,8 @@
+@@ -2132,7 +2141,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -303,7 +301,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2176,7 +2186,8 @@
+@@ -2176,7 +2186,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -313,7 +311,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2609,7 +2620,8 @@
+@@ -2609,7 +2620,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -323,7 +321,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2681,7 +2693,8 @@
+@@ -2681,7 +2693,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -333,7 +331,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2735,7 +2748,8 @@
+@@ -2735,7 +2748,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -343,7 +341,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2806,7 +2820,8 @@
+@@ -2806,7 +2820,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -353,7 +351,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2860,7 +2875,8 @@
+@@ -2860,7 +2875,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -363,7 +361,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2927,7 +2943,8 @@
+@@ -2927,7 +2943,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -373,7 +371,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2997,7 +3014,8 @@
+@@ -2997,7 +3014,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -383,7 +381,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -3078,7 +3096,8 @@
+@@ -3078,7 +3096,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -393,7 +391,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -3248,7 +3267,8 @@
+@@ -3248,7 +3267,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -403,7 +401,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -3319,7 +3339,8 @@
+@@ -3319,7 +3339,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -413,7 +411,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -3509,7 +3530,8 @@
+@@ -3509,7 +3530,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -423,7 +421,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -3611,7 +3633,8 @@
+@@ -3611,7 +3633,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -433,7 +431,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -3676,7 +3699,8 @@
+@@ -3676,7 +3699,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
    cat conftest.err >&5
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); } &&
@@ -443,7 +441,7 @@ diff -u -r1.1.1.1.2.1 configure
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -3775,6 +3799,229 @@
+@@ -3775,6 +3799,229 @@ _ACEOF
  
  fi
  
@@ -673,7 +671,7 @@ diff -u -r1.1.1.1.2.1 configure
            ac_config_files="$ac_config_files Makefile"
  
  cat >confcache <<\_ACEOF
-@@ -4568,6 +4815,11 @@
+@@ -4568,6 +4815,11 @@ esac
    *) ac_INSTALL=$ac_top_builddir$INSTALL ;;
    esac
  
@@ -685,7 +683,7 @@ diff -u -r1.1.1.1.2.1 configure
    # Let's still pretend it is `configure' which instantiates (i.e., don't
    # use $as_me), people would be surprised to read:
    #    /* config.h.  Generated by config.status.  */
-@@ -4606,12 +4858,6 @@
+@@ -4606,12 +4858,6 @@ echo "$as_me: error: cannot find input file: $f" >&2;}
  	 fi;;
        esac
      done` || { (exit 1); exit 1; }
@@ -698,15 +696,11 @@ diff -u -r1.1.1.1.2.1 configure
  _ACEOF
  cat >>$CONFIG_STATUS <<_ACEOF
    sed "$ac_vpsub
-Index: configure.in
-===================================================================
-RCS file: /home/cvsroot/lars/ccache/configure.in,v
-retrieving revision 1.1.1.1.2.1
-retrieving revision 1.4
-diff -u -r1.1.1.1.2.1 -r1.4
---- configure.in	21 Nov 2004 17:55:36 -0000	1.1.1.1.2.1
-+++ configure.in	21 Nov 2004 18:19:28 -0000	1.4
-@@ -68,5 +68,14 @@
+diff --git a/configure.in b/configure.in
+index 3229ef0..be77bbf 100644
+--- a/configure.in
++++ b/configure.in
+@@ -68,5 +68,14 @@ if test x"$ccache_cv_HAVE_C99_VSNPRINTF" = x"yes"; then
      AC_DEFINE(HAVE_C99_VSNPRINTF, 1, [ ])
  fi
  
@@ -721,15 +715,85 @@ diff -u -r1.1.1.1.2.1 -r1.4
 +
  AC_CONFIG_FILES([Makefile])
  AC_OUTPUT
-Index: util.c
-===================================================================
-RCS file: /home/cvsroot/lars/ccache/util.c,v
-retrieving revision 1.1.1.1.2.1
-retrieving revision 1.11
-diff -u -r1.1.1.1.2.1 -r1.11
---- util.c	21 Nov 2004 17:55:36 -0000	1.1.1.1.2.1
-+++ util.c	21 Nov 2004 18:19:28 -0000	1.11
-@@ -44,6 +44,7 @@
+diff --git a/manage-cache.sh b/manage-cache.sh
+new file mode 100644
+index 0000000..7ef329d
+--- /dev/null
++++ b/manage-cache.sh
+@@ -0,0 +1,68 @@
++#!/bin/bash
++#
++# 2004-05-12 lars@gustaebel.de
++
++CCACHE_DIR=${CCACHE_DIR:-$HOME/.ccache}
++
++echo "Do you want to compress or decompress the ccache in $CCACHE_DIR?"
++read -p "Type c or d: " mode
++
++if [ "$mode" != "c" ] && [ "$mode" != "d" ]
++then
++    exit 1
++fi
++
++is_compressed() {
++    test "$(head -c 2 $1)" = $'\x1f\x8b'
++    return $?
++}
++
++tmpfile=$(mktemp)
++
++for dir in 0 1 2 3 4 5 6 7 8 9 a b c d e f
++do
++    # process ccache subdir
++    echo -n "$dir "
++
++    # find cache files
++    find $CCACHE_DIR/$dir -type f -name '*-*' |
++    sort > $tmpfile
++
++    oldsize=$(cat $CCACHE_DIR/$dir/stats | cut -d ' ' -f 13)
++    newsize=0
++
++    while read file
++    do
++        # empty files will be ignored since compressing
++        # them makes them bigger
++        test $(stat -c %s $file) -eq 0 && continue
++
++        if [ $mode = c ]
++        then
++            if ! is_compressed $file
++            then
++                gzip $file
++                mv $file.gz $file
++            fi
++        else
++            if is_compressed $file
++            then
++                mv $file $file.gz
++                gzip -d $file.gz
++            fi
++        fi
++
++        # calculate new size statistic for this subdir
++        let newsize=$newsize+$(stat -c "%B*%b" $file)/1024
++    done < $tmpfile
++
++    # update statistic file
++    read -a numbers < $CCACHE_DIR/$dir/stats
++    numbers[12]=$newsize
++    echo "${numbers[*]} " > $CCACHE_DIR/$dir/stats
++done
++echo
++
++# clean up
++rm $tmpfile
++
+diff --git a/util.c b/util.c
+index 962dd49..a6b8899 100644
+--- a/util.c
++++ b/util.c
+@@ -44,6 +44,7 @@ void fatal(const char *msg)
  	exit(1);
  }
  
@@ -737,7 +801,7 @@ diff -u -r1.1.1.1.2.1 -r1.11
  /* copy all data from one file descriptor to another */
  void copy_fd(int fd_in, int fd_out)
  {
-@@ -57,6 +58,11 @@
+@@ -57,6 +58,11 @@ void copy_fd(int fd_in, int fd_out)
  	}
  }
  
@@ -749,7 +813,7 @@ diff -u -r1.1.1.1.2.1 -r1.11
  /* copy a file - used when hard links don't work 
     the copy is done via a temporary file and atomic rename
  */
-@@ -120,6 +126,174 @@
+@@ -120,6 +126,174 @@ int copy_file(const char *src, const char *dest)
  	return 0;
  }
  
@@ -924,103 +988,3 @@ diff -u -r1.1.1.1.2.1 -r1.11
  
  /* make sure a directory exists */
  int create_dir(const char *dir)
-Index: manage-cache.sh
-===================================================================
-RCS file: manage-cache.sh
-diff -N manage-cache.sh
---- manage-cache.sh	1 Jan 1970 00:00:00 -0000
-+++ manage-cache.sh-cache.sh	12 May 2004 19:22:20 -0000	1.1
-@@ -0,0 +1,68 @@
-+#!/bin/bash
-+#
-+# 2004-05-12 lars@gustaebel.de
-+
-+CCACHE_DIR=${CCACHE_DIR:-$HOME/.ccache}
-+
-+echo "Do you want to compress or decompress the ccache in $CCACHE_DIR?"
-+read -p "Type c or d: " mode
-+
-+if [ "$mode" != "c" ] && [ "$mode" != "d" ]
-+then
-+    exit 1
-+fi
-+
-+is_compressed() {
-+    test "$(head -c 2 $1)" = $'\x1f\x8b'
-+    return $?
-+}
-+
-+tmpfile=$(mktemp)
-+
-+for dir in 0 1 2 3 4 5 6 7 8 9 a b c d e f
-+do
-+    # process ccache subdir
-+    echo -n "$dir "
-+
-+    # find cache files
-+    find $CCACHE_DIR/$dir -type f -name '*-*' |
-+    sort > $tmpfile
-+
-+    oldsize=$(cat $CCACHE_DIR/$dir/stats | cut -d ' ' -f 13)
-+    newsize=0
-+
-+    while read file
-+    do
-+        # empty files will be ignored since compressing
-+        # them makes them bigger
-+        test $(stat -c %s $file) -eq 0 && continue
-+
-+        if [ $mode = c ]
-+        then
-+            if ! is_compressed $file
-+            then
-+                gzip $file
-+                mv $file.gz $file
-+            fi
-+        else
-+            if is_compressed $file
-+            then
-+                mv $file $file.gz
-+                gzip -d $file.gz
-+            fi
-+        fi
-+
-+        # calculate new size statistic for this subdir
-+        let newsize=$newsize+$(stat -c "%B*%b" $file)/1024
-+    done < $tmpfile
-+
-+    # update statistic file
-+    read -a numbers < $CCACHE_DIR/$dir/stats
-+    numbers[12]=$newsize
-+    echo "${numbers[*]} " > $CCACHE_DIR/$dir/stats
-+done
-+echo
-+
-+# clean up
-+rm $tmpfile
-+
-Index: Makefile.in
-===================================================================
-RCS file: /home/cvsroot/lars/ccache/Makefile.in,v
-retrieving revision 1.1.1.1.2.1
-retrieving revision 1.12
-diff -u -r1.1.1.1.2.1 -r1.12
---- Makefile.in	21 Nov 2004 17:55:36 -0000	1.1.1.1.2.1
-+++ Makefile.in	21 Nov 2004 18:19:28 -0000	1.12
-@@ -11,6 +11,7 @@
- CFLAGS=@CFLAGS@ -I.
- EXEEXT=@EXEEXT@
- 
-+LIBS= @LIBS@
- OBJS= ccache.o mdfour.o hash.o execute.o util.o args.o stats.o \
- 	cleanup.o snprintf.o unify.o
- HEADERS = ccache.h mdfour.h
-@@ -20,7 +21,7 @@
- docs: ccache.1 web/ccache-man.html
- 
- ccache$(EXEEXT): $(OBJS) $(HEADERS)
--	$(CC) $(CFLAGS) -o $@ $(OBJS)
-+	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LIBS)
- 
- ccache.1: ccache.yo
- 	-yodl2man -o ccache.1 ccache.yo

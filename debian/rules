@@ -32,11 +32,9 @@ config.status: patch configure-stamp
 configure-stamp:
 	dh_testdir
 ifneq "$(wildcard /usr/share/misc/config.sub)" ""
-	[ ! -f config.sub ] || mv -f config.sub config.sub.upstream
 	cp -f /usr/share/misc/config.sub config.sub
 endif
 ifneq "$(wildcard /usr/share/misc/config.guess)" ""
-	[ ! -f config.guess ] || mv -f config.guess config.guess.upstream
 	cp -f /usr/share/misc/config.guess config.guess
 endif
 	./configure $(confflags) --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -74,8 +72,7 @@ clean-patched:
 	dh_testroot
 	rm -f build-stamp configure-stamp
 	[ ! -f Makefile ] || $(MAKE) distclean
-	[ ! -f config.guess.upstream ] || mv -f config.guess.upstream config.guess
-	[ ! -f config.sub.upstream ] || mv -f config.sub.upstream config.sub
+	rm -f config.guess config.sub
 	dh_clean
 
 unpatch:

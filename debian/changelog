@@ -1,4 +1,4 @@
-ccache (2.4-17) UNRELEASED; urgency=low
+ccache (2.4-17) unstable; urgency=low
 
   [ Y Giridhar Appaji Nag ]
   * New patch 15_gcc4.3_warnings to fix gcc 4.3 warnings.  Thanks
@@ -11,7 +11,7 @@ ccache (2.4-17) UNRELEASED; urgency=low
   * Make Y Giridhar Appaji Nag <appaji@debian.org> the maintainer and
     add myself as uploader
 
- -- Y Giridhar Appaji Nag <appaji@debian.org>  Sun, 22 Mar 2009 10:42:38 +0530
+ -- Y Giridhar Appaji Nag <appaji@debian.org>  Sun, 22 Mar 2009 22:08:01 +0530
 
 ccache (2.4-16) unstable; urgency=low
 

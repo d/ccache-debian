@@ -5,12 +5,13 @@ ccache (2.4-17) UNRELEASED; urgency=low
     William S Fulton <wsf@fultondesigns.co.uk> for the bug report and
     the patch (Closes: #508046)
   * Refresh all patches to be "git diff" based and to apply cleanly.
+  * Update Standards-Version to 3.8.1 (no changes required)
 
   [ Francois Marier ]
   * Make Y Giridhar Appaji Nag <appaji@debian.org> the maintainer and
     add myself as uploader
 
- -- Y Giridhar Appaji Nag <appaji@debian.org>  Sun, 22 Mar 2009 10:33:23 +0530
+ -- Y Giridhar Appaji Nag <appaji@debian.org>  Sun, 22 Mar 2009 10:42:38 +0530
 
 ccache (2.4-16) unstable; urgency=low
 

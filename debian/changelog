@@ -4,8 +4,9 @@ ccache (2.4-18) unstable; urgency=low
     <ametzler@downhill.at.eu.org> for the bug report (Closes: #532169)
   * Fix lintian W:debhelper-but-no-misc-depends, add ${misc:Depends} to ccache
     Depends:
+  * Update Standards-Version to 3.8.3 (No changes required)
 
- -- Y Giridhar Appaji Nag <appaji@debian.org>  Sat, 17 Oct 2009 02:27:40 +0530
+ -- Y Giridhar Appaji Nag <appaji@debian.org>  Sat, 17 Oct 2009 02:32:07 +0530
 
 ccache (2.4-17) unstable; urgency=low
 

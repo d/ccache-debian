@@ -5,8 +5,10 @@ ccache (2.4-18) unstable; urgency=low
   * Fix lintian W:debhelper-but-no-misc-depends, add ${misc:Depends} to ccache
     Depends:
   * Update Standards-Version to 3.8.3 (No changes required)
+  * Update 08_manpage_hyphens.diff to indicate in the manpage that MD4 is a
+    cryptographic hash, remove the word 'strong' (Closes: #538821)
 
- -- Y Giridhar Appaji Nag <appaji@debian.org>  Sat, 17 Oct 2009 02:32:07 +0530
+ -- Y Giridhar Appaji Nag <appaji@debian.org>  Sat, 17 Oct 2009 03:23:29 +0530
 
 ccache (2.4-17) unstable; urgency=low
 

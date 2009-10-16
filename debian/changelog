@@ -2,8 +2,10 @@ ccache (2.4-18) unstable; urgency=low
 
   * Support gcc-4.4 - create links in /usr/lib/ccache.  Thanks Andreas Metzler
     <ametzler@downhill.at.eu.org> for the bug report (Closes: #532169)
+  * Fix lintian W:debhelper-but-no-misc-depends, add ${misc:Depends} to ccache
+    Depends:
 
- -- Y Giridhar Appaji Nag <appaji@debian.org>  Wed, 10 Jun 2009 10:08:10 +0530
+ -- Y Giridhar Appaji Nag <appaji@debian.org>  Sat, 17 Oct 2009 02:27:40 +0530
 
 ccache (2.4-17) unstable; urgency=low
 

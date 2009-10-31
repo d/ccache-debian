@@ -2,7 +2,6 @@ Source: ccache
 Section: devel
 Priority: optional
 Maintainer: Y Giridhar Appaji Nag <appaji@debian.org>
-Uploaders: Francois Marier <francois@debian.org>
 Build-Depends: debhelper (>> 6), autotools-dev, zlib1g-dev
 Standards-Version: 3.8.3
 Homepage: http://ccache.samba.org

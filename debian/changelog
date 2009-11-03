@@ -1,11 +1,6 @@
-ccache (2.4-19) UNRELEASED; urgency=low
+ccache (2.4-18) UNRELEASED; urgency=low
 
-  * Remove myself from uploaders
-
- -- Francois Marier <francois@debian.org>  Sat, 31 Oct 2009 16:38:39 +1300
-
-ccache (2.4-18) unstable; urgency=low
-
+  [ Y Giridhar Appaji Nag ]
   * Support gcc-4.4 - create links in /usr/lib/ccache.  Thanks Andreas Metzler
     <ametzler@downhill.at.eu.org> for the bug report (Closes: #532169)
   * Fix lintian W:debhelper-but-no-misc-depends, add ${misc:Depends} to ccache
@@ -14,7 +9,10 @@ ccache (2.4-18) unstable; urgency=low
   * Update 08_manpage_hyphens.diff to indicate in the manpage that MD4 is a
     cryptographic hash, remove the word 'strong' (Closes: #538821)
 
- -- Y Giridhar Appaji Nag <appaji@debian.org>  Sat, 17 Oct 2009 03:23:29 +0530
+  [ Francois Marier ]
+  * Remove myself from uploaders
+
+ -- Y Giridhar Appaji Nag <appaji@debian.org>  Tue, 03 Nov 2009 13:54:27 +0530
 
 ccache (2.4-17) unstable; urgency=low
 

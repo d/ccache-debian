@@ -1,66 +1,91 @@
 /*
-   Copyright (C) Andrew Tridgell 2002
-   
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
-   (at your option) any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/
-/*
-  routines to handle the stats files
+ * Copyright (C) 2002-2004 Andrew Tridgell
+ * Copyright (C) 2009-2010 Joel Rosdahl
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
 
-  the stats file is stored one per cache subdirectory to make this more
-  scalable
+/*
+ * Routines to handle the stats files The stats file is stored one per cache
+ * subdirectory to make this more scalable.
  */
 
 #include "ccache.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 extern char *stats_file;
 extern char *cache_dir;
 
-#define STATS_VERSION 1
+/* default maximum cache size */
+#ifndef DEFAULT_MAXSIZE
+#define DEFAULT_MAXSIZE (1024*1024)
+#endif
 
 #define FLAG_NOZERO 1 /* don't zero with the -z option */
 #define FLAG_ALWAYS 2 /* always show, even if zero */
 
+static void display_size(size_t v);
+
+/* statistics fields in display order */
 static struct {
 	enum stats stat;
 	char *message;
-	void (*fn)(unsigned );
+	void (*fn)(size_t );
 	unsigned flags;
 } stats_info[] = {
-	{ STATS_CACHED,       "cache hit                      ", NULL, FLAG_ALWAYS },
+	{ STATS_CACHEHIT_DIR, "cache hit (direct)             ", NULL, FLAG_ALWAYS },
+	{ STATS_CACHEHIT_CPP, "cache hit (preprocessed)       ", NULL, FLAG_ALWAYS },
 	{ STATS_TOCACHE,      "cache miss                     ", NULL, FLAG_ALWAYS },
 	{ STATS_LINK,         "called for link                ", NULL, 0 },
 	{ STATS_MULTIPLE,     "multiple source files          ", NULL, 0 },
 	{ STATS_STDOUT,       "compiler produced stdout       ", NULL, 0 },
+	{ STATS_NOOUTPUT,     "compiler produced no output    ", NULL, 0 },
+	{ STATS_EMPTYOUTPUT,  "compiler produced empty output ", NULL, 0 },
 	{ STATS_STATUS,       "compile failed                 ", NULL, 0 },
 	{ STATS_ERROR,        "ccache internal error          ", NULL, 0 },
 	{ STATS_PREPROCESSOR, "preprocessor error             ", NULL, 0 },
 	{ STATS_COMPILER,     "couldn't find the compiler     ", NULL, 0 },
 	{ STATS_MISSING,      "cache file missing             ", NULL, 0 },
 	{ STATS_ARGS,         "bad compiler arguments         ", NULL, 0 },
-	{ STATS_NOTC,         "not a C/C++ file               ", NULL, 0 },
+	{ STATS_SOURCELANG,   "unsupported source language    ", NULL, 0 },
 	{ STATS_CONFTEST,     "autoconf compile/link          ", NULL, 0 },
 	{ STATS_UNSUPPORTED,  "unsupported compiler option    ", NULL, 0 },
 	{ STATS_OUTSTDOUT,    "output to stdout               ", NULL, 0 },
 	{ STATS_DEVICE,       "output to a non-regular file   ", NULL, 0 },
 	{ STATS_NOINPUT,      "no input file                  ", NULL, 0 },
+	{ STATS_BADEXTRAFILE, "error hashing extra file       ", NULL, 0 },
 	{ STATS_NUMFILES,     "files in cache                 ", NULL, FLAG_NOZERO|FLAG_ALWAYS },
 	{ STATS_TOTALSIZE,    "cache size                     ", display_size , FLAG_NOZERO|FLAG_ALWAYS },
 	{ STATS_MAXFILES,     "max files                      ", NULL, FLAG_NOZERO },
 	{ STATS_MAXSIZE,      "max cache size                 ", display_size, FLAG_NOZERO },
 	{ STATS_NONE, NULL, NULL, 0 }
 };
+
+static void display_size(size_t v)
+{
+	char *s = format_size(v);
+	printf("%15s", s);
+	free(s);
+}
 
 /* parse a stats file from a buffer - adding to the counters */
 static void parse_stats(unsigned counters[STATS_END], char *buf)
@@ -85,13 +110,13 @@ static void write_stats(int fd, unsigned counters[STATS_END])
 
 	for (i=0;i<STATS_END;i++) {
 		len += snprintf(buf+len, sizeof(buf)-(len+1), "%u ", counters[i]);
-		if (len >= (int)sizeof(buf)-1) fatal("stats too long?!");
+		if (len >= (int)sizeof(buf)-1) fatal("stats too long");
 	}
 	len += snprintf(buf+len, sizeof(buf)-(len+1), "\n");
-	if (len >= (int)sizeof(buf)-1) fatal("stats too long?!");
+	if (len >= (int)sizeof(buf)-1) fatal("stats too long");
 
 	lseek(fd, 0, SEEK_SET);
-	write(fd, buf, len);
+	if (write(fd, buf, len) == -1) fatal("Could not write stats");
 }
 
 
@@ -115,8 +140,11 @@ static void stats_read_fd(int fd, unsigned counters[STATS_END])
 	parse_stats(counters, buf);
 }
 
-/* update the stats counter for this compile */
-static void stats_update_size(enum stats stat, size_t size)
+/*
+ * Update a statistics counter (unless it's STATS_NONE) and also record that a
+ * number of bytes and files have been added to the cache. Size is in KiB.
+ */
+void stats_update_size(enum stats stat, size_t size, unsigned files)
 {
 	int fd;
 	unsigned counters[STATS_END];
@@ -125,37 +153,31 @@ static void stats_update_size(enum stats stat, size_t size)
 	if (getenv("CCACHE_NOSTATS")) return;
 
 	if (!stats_file) {
+		/*
+		 * A NULL stats_file means that we didn't get past calculate_object_hash(),
+		 * so we update the counter in the cache-wide statistics file
+		 * CCACHE_DIR/stats instead of a subdirectory stats file.
+		 */
 		if (!cache_dir) return;
 		x_asprintf(&stats_file, "%s/stats", cache_dir);
 	}
 
-	/* open safely to try to prevent symlink races */
 	fd = safe_open(stats_file);
-
-	/* still can't get it? don't bother ... */
 	if (fd == -1) return;
+	if (write_lock_fd(fd) != 0) return;
 
 	memset(counters, 0, sizeof(counters));
-
-	if (lock_fd(fd) != 0) return;
-
-	/* read in the old stats */
 	stats_read_fd(fd, counters);
 
-	/* update them */
-	counters[stat]++;
-
-	/* on a cache miss we up the file count and size */
-	if (stat == STATS_TOCACHE) {
-		counters[STATS_NUMFILES] += 2;
-		counters[STATS_TOTALSIZE] += size;
+	if (stat != STATS_NONE) {
+		counters[stat]++;
 	}
+	counters[STATS_NUMFILES] += files;
+	counters[STATS_TOTALSIZE] += size;
 
-	/* and write them out */
 	write_stats(fd, counters);
 	close(fd);
 
-	/* we might need to cleanup if the cache has now got too big */
 	if (counters[STATS_MAXFILES] != 0 &&
 	    counters[STATS_NUMFILES] > counters[STATS_MAXFILES]) {
 		need_cleanup = 1;
@@ -172,19 +194,10 @@ static void stats_update_size(enum stats stat, size_t size)
 	}
 }
 
-/* record a cache miss */
-void stats_tocache(size_t size)
-{
-	/* convert size to kilobytes */
-	size = size / 1024;
-
-	stats_update_size(STATS_TOCACHE, size);
-}
-
 /* update a normal stat */
 void stats_update(enum stats stat)
 {
-	stats_update_size(stat, 0);
+	stats_update_size(stat, 0, 0);
 }
 
 /* read in the stats from one dir and add to the counters */
@@ -197,7 +210,7 @@ void stats_read(const char *stats_file, unsigned counters[STATS_END])
 		stats_default(counters);
 		return;
 	}
-	lock_fd(fd);
+	read_lock_fd(fd);
 	stats_read_fd(fd, counters);
 	close(fd);
 }
@@ -236,7 +249,7 @@ void stats_summary(void)
 	for (i=0;stats_info[i].message;i++) {
 		enum stats stat = stats_info[i].stat;
 
-		if (counters[stat] == 0 && 
+		if (counters[stat] == 0 &&
 		    !(stats_info[i].flags & FLAG_ALWAYS)) {
 			continue;
 		}
@@ -271,7 +284,7 @@ void stats_zero(void)
 			continue;
 		}
 		memset(counters, 0, sizeof(counters));
-		lock_fd(fd);
+		write_lock_fd(fd);
 		stats_read_fd(fd, counters);
 		for (i=0;stats_info[i].message;i++) {
 			if (!(stats_info[i].flags & FLAG_NOZERO)) {
@@ -286,7 +299,7 @@ void stats_zero(void)
 
 
 /* set the per directory limits */
-void stats_set_limits(long maxfiles, long maxsize)
+int stats_set_limits(long maxfiles, long maxsize)
 {
 	int dir;
 	unsigned counters[STATS_END];
@@ -298,7 +311,9 @@ void stats_set_limits(long maxfiles, long maxsize)
 		maxsize /= 16;
 	}
 
-	create_dir(cache_dir);
+	if (create_dir(cache_dir) != 0) {
+		return 1;
+	}
 
 	/* set the limits in each directory */
 	for (dir=0;dir<=0xF;dir++) {
@@ -306,14 +321,16 @@ void stats_set_limits(long maxfiles, long maxsize)
 		int fd;
 
 		x_asprintf(&cdir, "%s/%1x", cache_dir, dir);
-		create_dir(cdir);
+		if (create_dir(cdir) != 0) {
+			return 1;
+		}
 		x_asprintf(&fname, "%s/stats", cdir);
 		free(cdir);
 
 		memset(counters, 0, sizeof(counters));
 		fd = safe_open(fname);
 		if (fd != -1) {
-			lock_fd(fd);
+			write_lock_fd(fd);
 			stats_read_fd(fd, counters);
 			if (maxfiles != -1) {
 				counters[STATS_MAXFILES] = maxfiles;
@@ -326,6 +343,8 @@ void stats_set_limits(long maxfiles, long maxsize)
 		}
 		free(fname);
 	}
+
+	return 0;
 }
 
 /* set the per directory sizes */
@@ -342,7 +361,7 @@ void stats_set_sizes(const char *dir, size_t num_files, size_t total_size)
 
 	fd = safe_open(stats_file);
 	if (fd != -1) {
-		lock_fd(fd);
+		write_lock_fd(fd);
 		stats_read_fd(fd, counters);
 		counters[STATS_NUMFILES] = num_files;
 		counters[STATS_TOTALSIZE] = total_size;

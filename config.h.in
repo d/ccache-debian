@@ -1,12 +1,12 @@
-/* config.h.in.  Generated from configure.in by autoheader.  */
+/* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to 1 if you have the `asprintf' function. */
 #undef HAVE_ASPRINTF
 
-/* */
+/* Define to 1 if you have the `vsnprintf' function. */
 #undef HAVE_C99_VSNPRINTF
 
-/* */
+/* Define to 1 if you have the `__compar_fn_t' typedef. */
 #undef HAVE_COMPAR_FN_T
 
 /* Define to 1 if you have the <ctype.h> header file. */
@@ -16,8 +16,17 @@
    */
 #undef HAVE_DIRENT_H
 
+/* Define to 1 if your compiler supports extern inline */
+#undef HAVE_EXTERN_INLINE
+
 /* Define to 1 if you have the `gethostname' function. */
 #undef HAVE_GETHOSTNAME
+
+/* Define to 1 if you have the `getpwuid' function. */
+#undef HAVE_GETPWUID
+
+/* Define to 1 if you have the `gettimeofday' function. */
+#undef HAVE_GETTIMEOFDAY
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
@@ -30,6 +39,9 @@
 
 /* Define to 1 if you have the <ndir.h> header file, and it defines `DIR'. */
 #undef HAVE_NDIR_H
+
+/* Define to 1 if you have the <pwd.h> header file. */
+#undef HAVE_PWD_H
 
 /* Define to 1 if you have the `realpath' function. */
 #undef HAVE_REALPATH
@@ -49,6 +61,9 @@
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
 
+/* Define to 1 if you have the `strndup' function. */
+#undef HAVE_STRNDUP
+
 /* Define to 1 if you have the <sys/dir.h> header file, and it defines `DIR'.
    */
 #undef HAVE_SYS_DIR_H
@@ -60,6 +75,9 @@
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
 
+/* Define to 1 if you have the <sys/time.h> header file. */
+#undef HAVE_SYS_TIME_H
+
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
 
@@ -68,6 +86,9 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* Define to 1 if you have the `utimes' function. */
+#undef HAVE_UTIMES
 
 /* Define to 1 if you have the `vasprintf' function. */
 #undef HAVE_VASPRINTF
@@ -87,6 +108,9 @@
 /* Define to the one symbol short name of this package. */
 #undef PACKAGE_TARNAME
 
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
+
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
@@ -96,5 +120,35 @@
 /* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
 #undef TIME_WITH_SYS_TIME
 
-/* Define _GNU_SOURCE so that we get all necessary prototypes */
+/* Define on OpenBSD to activate all library features */
+#undef _BSD_SOURCE
+
+/* Define on Irix to enable u_int */
+#undef _BSD_TYPES
+
+/* Define on Darwin to activate all library features */
+#undef _DARWIN_C_SOURCE
+
+/* Define on Linux to activate all library features */
 #undef _GNU_SOURCE
+
+/* Define on NetBSD to activate all library features */
+#undef _NETBSD_SOURCE
+
+/* Define to activate features from IEEE Stds 1003.1-2001 */
+#undef _POSIX_C_SOURCE
+
+/* Define to the level of X/Open that your system supports */
+#undef _XOPEN_SOURCE
+
+/* Define to activate Unix95-and-earlier features */
+#undef _XOPEN_SOURCE_EXTENDED
+
+/* Define on FreeBSD to activate all library features */
+#undef __BSD_VISIBLE
+
+/* Define to `__inline__' or `__inline' if that's what the C compiler
+   calls it, or to nothing if 'inline' is not supported under any name.  */
+#ifndef __cplusplus
+#undef inline
+#endif

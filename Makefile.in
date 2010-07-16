@@ -1,53 +1,77 @@
-srcdir=@srcdir@
-VPATH=@srcdir@
+srcdir = @srcdir@
+VPATH = @srcdir@
 
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-bindir=@bindir@
-mandir=@mandir@
-INSTALLCMD=@INSTALL@
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir = @bindir@
+mandir = @mandir@
+datarootdir = @datarootdir@
+installcmd = @INSTALL@
 
-CC=@CC@
-CFLAGS=@CFLAGS@ -I.
-EXEEXT=@EXEEXT@
+CC = @CC@
+CFLAGS = @CFLAGS@
+CPPFLAGS = @CPPFLAGS@ -I.
+LDFLAGS = @LDFLAGS@
+EXEEXT = @EXEEXT@
 
-OBJS= ccache.o mdfour.o hash.o execute.o util.o args.o stats.o \
-	cleanup.o snprintf.o unify.o
-HEADERS = ccache.h mdfour.h
+libs = @LIBS@ -lm
 
+sources = \
+    ccache.c mdfour.c hash.c execute.c util.c args.c stats.c version.c \
+    cleanup.c snprintf.c unify.c manifest.c hashtable.c hashtable_itr.c \
+    murmurhashneutral2.c hashutil.c getopt_long.c
+all_sources = $(sources) @extra_sources@
+
+headers = \
+    ccache.h hashtable.h hashtable_itr.h hashtable_private.h hashutil.h \
+    manifest.h mdfour.h murmurhashneutral2.h getopt_long.h
+
+objs = $(all_sources:.c=.o)
+
+generated_docs = ccache.1 INSTALL.html manual.html NEWS.html README.html
+
+files_to_clean = $(objs) ccache$(EXEEXT) *~
+
+.PHONY: all
 all: ccache$(EXEEXT)
 
-docs: ccache.1 web/ccache-man.html
+.PHONY: docs
+docs: $(generated_docs)
 
-ccache$(EXEEXT): $(OBJS) $(HEADERS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS)
+ccache$(EXEEXT): $(objs)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(objs) $(libs)
 
-ccache.1: ccache.yo
-	-yodl2man -o ccache.1 ccache.yo
+.PHONY: install
+install: all
+	$(installcmd) -d $(DESTDIR)$(bindir)
+	$(installcmd) -m 755 ccache$(EXEEXT) $(DESTDIR)$(bindir)
+	$(installcmd) -d $(DESTDIR)$(mandir)/man1
+	-$(installcmd) -m 644 $(srcdir)/ccache.1 $(DESTDIR)$(mandir)/man1/
 
-web/ccache-man.html: ccache.yo
-	mkdir -p man
-	yodl2html -o web/ccache-man.html ccache.yo
-
-install: ccache$(EXEEXT) ccache.1
-	${INSTALLCMD} -d $(DESTDIR)${bindir}
-	${INSTALLCMD} -m 755 ccache$(EXEEXT) $(DESTDIR)${bindir}
-	${INSTALLCMD} -d $(DESTDIR)${mandir}/man1
-	${INSTALLCMD} -m 644 ${srcdir}/ccache.1 $(DESTDIR)${mandir}/man1/
-
+.PHONY: clean
 clean:
-	/bin/rm -f $(OBJS) *~ ccache$(EXEEXT)
+	rm -f $(files_to_clean)
 
-test: test.sh
-	CC='$(CC)' ./test.sh
+.PHONY: perf
+perf: ccache$(EXEEXT)
+	$(srcdir)/perf.py --ccache ccache$(EXEEXT) $(CC) $(CFLAGS) $(CPPFLAGS) $(srcdir)/ccache.c
 
+.PHONY: test
+test: ccache$(EXEEXT)
+	CC='$(CC)' $(srcdir)/test.sh
+
+.PHONY: check
 check: test
 
+.PHONY: distclean
 distclean: clean
-	/bin/rm -f Makefile config.h config.sub config.log build-stamp config.status
+	rm -rf Makefile dev.mk config.h config.log config.status .deps version.c
 
-# FIXME: To fix this, test.sh needs to be able to take ccache from the
-# installed prefix, not from the source dir.
-installcheck: 
-	@echo "WARNING!  This is not really \"installcheck\" yet."
-	$(MAKE) check
+.PHONY: installcheck
+installcheck:
+	CCACHE=$(bindir)/ccache $(srcdir)/test.sh
+
+.c.o:
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+
+@include_dev_mk@

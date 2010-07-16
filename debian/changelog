@@ -1,4 +1,7 @@
-ccache (2.4-18) UNRELEASED; urgency=low
+ccache (3.0.1-1) UNRELEASED; urgency=low
+
+  [ Francois Marier ]
+  * Remove myself from uploaders
 
   [ Y Giridhar Appaji Nag ]
   * Support gcc-4.4 - create links in /usr/lib/ccache.  Thanks Andreas Metzler
@@ -8,11 +11,9 @@ ccache (2.4-18) UNRELEASED; urgency=low
   * Update Standards-Version to 3.8.3 (No changes required)
   * Update 08_manpage_hyphens.diff to indicate in the manpage that MD4 is a
     cryptographic hash, remove the word 'strong' (Closes: #538821)
+  * New upstream release
 
-  [ Francois Marier ]
-  * Remove myself from uploaders
-
- -- Y Giridhar Appaji Nag <appaji@debian.org>  Tue, 03 Nov 2009 13:54:27 +0530
+ -- Y Giridhar Appaji Nag <appaji@debian.org>  Fri, 16 Jul 2010 19:43:46 +0530
 
 ccache (2.4-17) unstable; urgency=low
 

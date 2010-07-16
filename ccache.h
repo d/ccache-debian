@@ -1,41 +1,29 @@
-#define CCACHE_VERSION "2.4"
+#ifndef CCACHE_H
+#define CCACHE_H
 
 #include "config.h"
+#include "mdfour.h"
 
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/mman.h>
+#include <sys/stat.h>
 #include <sys/file.h>
-#include <fcntl.h>
-#include <time.h>
-#include <string.h>
-#include <ctype.h>
-#include <utime.h>
+#include <unistd.h>
 #include <stdarg.h>
-#include <dirent.h>
-#include <limits.h>
-#ifdef HAVE_PWD_H
-#include <pwd.h>
+#include <stdio.h>
+
+#ifdef __GNUC__
+#define ATTR_FORMAT(x, y, z) __attribute__((format (x, y, z)))
+#else
+#define ATTR_FORMAT(x, y, z)
 #endif
 
-#define STATUS_NOTFOUND 3
-#define STATUS_FATAL 4
-#define STATUS_NOCACHE 5
-
+#ifndef MYNAME
 #define MYNAME "ccache"
-
-#define LIMIT_MULTIPLE 0.8
-
-/* default maximum cache size */
-#ifndef DEFAULT_MAXSIZE
-#define DEFAULT_MAXSIZE (1000*1000)
 #endif
 
+extern const char CCACHE_VERSION[];
+
+/* statistics fields in storage order */
 enum stats {
 	STATS_NONE=0,
 	STATS_STDOUT,
@@ -45,88 +33,115 @@ enum stats {
 	STATS_PREPROCESSOR,
 	STATS_COMPILER,
 	STATS_MISSING,
-	STATS_CACHED,
+	STATS_CACHEHIT_CPP,
 	STATS_ARGS,
 	STATS_LINK,
 	STATS_NUMFILES,
 	STATS_TOTALSIZE,
 	STATS_MAXFILES,
 	STATS_MAXSIZE,
-	STATS_NOTC,
+	STATS_SOURCELANG,
 	STATS_DEVICE,
 	STATS_NOINPUT,
 	STATS_MULTIPLE,
 	STATS_CONFTEST,
 	STATS_UNSUPPORTED,
 	STATS_OUTSTDOUT,
+	STATS_CACHEHIT_DIR,
+	STATS_NOOUTPUT,
+	STATS_EMPTYOUTPUT,
+	STATS_BADEXTRAFILE,
 
 	STATS_END
 };
 
-typedef unsigned uint32;
+#define SLOPPY_INCLUDE_FILE_MTIME 1
+#define SLOPPY_FILE_MACRO 2
+#define SLOPPY_TIME_MACROS 4
 
-#include "mdfour.h"
+void hash_start(struct mdfour *md);
+void hash_delimiter(struct mdfour *md, const char* type);
+void hash_string(struct mdfour *md, const char *s);
+void hash_int(struct mdfour *md, int x);
+int hash_fd(struct mdfour *md, int fd);
+int hash_file(struct mdfour *md, const char *fname);
+char *hash_result(struct mdfour *md);
+void hash_result_as_bytes(struct mdfour *md, unsigned char *out);
+void hash_buffer(struct mdfour *md, const void *s, size_t len);
 
-void hash_start(void);
-void hash_string(const char *s);
-void hash_int(int x);
-void hash_file(const char *fname);
-char *hash_result(void);
-void hash_buffer(const char *s, int len);
-
-void cc_log(const char *format, ...);
-void fatal(const char *msg);
+void cc_log(const char *format, ...) ATTR_FORMAT(printf, 1, 2);
+void cc_log_executed_command(char **argv);
+void fatal(const char *format, ...) ATTR_FORMAT(printf, 1, 2);
 
 void copy_fd(int fd_in, int fd_out);
-int copy_file(const char *src, const char *dest);
+int copy_file(const char *src, const char *dest, int compress_dest);
+int move_file(const char *src, const char *dest, int compress_dest);
+int move_uncompressed_file(const char *src, const char *dest,
+			   int compress_dest);
+int test_if_compressed(const char *filename);
 
 int create_dir(const char *dir);
-void x_asprintf(char **ptr, const char *format, ...);
+const char *get_hostname(void);
+const char *tmp_string(void);
+char *format_hash_as_string(const unsigned char *hash, unsigned size);
+int create_hash_dir(char **dir, const char *hash, const char *cache_dir);
+int create_cachedirtag(const char *dir);
+void x_asprintf(char **ptr, const char *format, ...) ATTR_FORMAT(printf, 2, 3);
 char *x_strdup(const char *s);
+char *x_strndup(const char *s, size_t n);
 void *x_realloc(void *ptr, size_t size);
 void *x_malloc(size_t size);
 void traverse(const char *dir, void (*fn)(const char *, struct stat *));
-char *str_basename(const char *s);
+char *basename(const char *s);
 char *dirname(char *s);
-int lock_fd(int fd);
+const char *get_extension(const char *path);
+char *remove_extension(const char *path);
+int read_lock_fd(int fd);
+int write_lock_fd(int fd);
 size_t file_size(struct stat *st);
 int safe_open(const char *fname);
 char *x_realpath(const char *path);
 char *gnu_getcwd(void);
 int create_empty_file(const char *fname);
 const char *get_home_directory(void);
+char *get_cwd();
+size_t common_dir_prefix_length(const char *s1, const char *s2);
+char *get_relative_path(const char *from, const char *to);
+void update_mtime(const char *path);
 
 void stats_update(enum stats stat);
 void stats_zero(void);
 void stats_summary(void);
-void stats_tocache(size_t size);
+void stats_update_size(enum stats stat, size_t size, unsigned files);
 void stats_read(const char *stats_file, unsigned counters[STATS_END]);
-void stats_set_limits(long maxfiles, long maxsize);
+int stats_set_limits(long maxfiles, long maxsize);
 size_t value_units(const char *s);
-void display_size(unsigned v);
+char *format_size(size_t v);
 void stats_set_sizes(const char *dir, size_t num_files, size_t total_size);
 
-int unify_hash(const char *fname);
+int unify_hash(struct mdfour *hash, const char *fname);
 
 #ifndef HAVE_VASPRINTF
-int vasprintf(char **, const char *, va_list );
+int vasprintf(char **, const char *, va_list) ATTR_FORMAT(printf, 2, 0);
 #endif
 #ifndef HAVE_ASPRINTF
-int asprintf(char **ptr, const char *format, ...);
+int asprintf(char **ptr, const char *, ...) ATTR_FORMAT(printf, 2, 3);
 #endif
 
 #ifndef HAVE_SNPRINTF
-int snprintf(char *,size_t ,const char *, ...);
+int snprintf(char *, size_t, const char *, ...) ATTR_FORMAT(printf, 3, 4);
 #endif
 
 void cleanup_dir(const char *dir, size_t maxfiles, size_t maxsize);
 void cleanup_all(const char *dir);
 void wipe_all(const char *dir);
 
-int execute(char **argv, 
+int execute(char **argv,
 	    const char *path_stdout,
 	    const char *path_stderr);
 char *find_executable(const char *name, const char *exclude_name);
+void print_command(FILE *fp, char **argv);
+void print_executed_command(FILE *fp, char **argv);
 
 typedef struct {
 	char **argv;
@@ -135,6 +150,8 @@ typedef struct {
 
 
 ARGS *args_init(int , char **);
+ARGS *args_copy(ARGS *args);
+void args_free(ARGS *args);
 void args_add(ARGS *args, const char *s);
 void args_add_prefix(ARGS *args, const char *s);
 void args_pop(ARGS *args, int n);
@@ -157,3 +174,5 @@ typedef int (*COMPAR_FN_T)(const void *, const void *);
 #ifdef __CYGWIN__
 #undef HAVE_MKSTEMP
 #endif
+
+#endif /* ifndef CCACHE_H */

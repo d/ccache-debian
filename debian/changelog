@@ -12,8 +12,10 @@ ccache (3.0.1-1) UNRELEASED; urgency=low
   * Update 08_manpage_hyphens.diff to indicate in the manpage that MD4 is a
     cryptographic hash, remove the word 'strong' (Closes: #538821)
   * New upstream release
+  * Please welcome Joel Rosdahl <joel@debian.org>, the upstream maintainer of
+    ccache as a co-maintainer.
 
- -- Y Giridhar Appaji Nag <appaji@debian.org>  Fri, 16 Jul 2010 19:44:48 +0530
+ -- Y Giridhar Appaji Nag <appaji@debian.org>  Sat, 31 Jul 2010 12:09:21 +0530
 
 ccache (2.4-17) unstable; urgency=low
 

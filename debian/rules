@@ -81,12 +81,13 @@ binary-arch: build install
 	dh_testdir
 	dh_testroot
 	dh_installdocs
+	cd debian/ccache/usr/share/doc/ccache && mv NEWS.html changelog.html
 	dh_installexamples
 	dh_installmenu
 	dh_installcron
 	dh_installman
 	dh_installinfo
-	dh_installchangelogs
+	dh_installchangelogs NEWS.txt
 	dh_link
 	dh_strip
 	dh_compress

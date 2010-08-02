@@ -14,8 +14,14 @@ ccache (3.0.1-1) UNRELEASED; urgency=low
     ccache as a co-maintainer.
 
   [ Joel Rosdahl ]
-  * The man page in the new upstream release has fixed the wording of MD4
-    being a strong cryptographic hash. Closes: #538821.
+  * ccache now correctly falls back to the real compiler when -save-temps
+    is used. Closes: #498005.
+  * The package no longer patches generated files. Closes: #508054.
+  * ccache now has support for rewriting absolute paths (see the
+    CCACHE_BASEDIR variable). Closes: #523480.
+  * The ccache manual has fixed the wording of MD4 being a strong
+    cryptographic hash. Closes: #538821.
+  * A new upstream release has been packaged. Closes: #580944.
   * Update copyright information in DEP-5 format.
   * Remove obsolete patches.
   * Don't mention the CCACHE_UNIFY option in README.Debian as it's more or
@@ -30,7 +36,7 @@ ccache (3.0.1-1) UNRELEASED; urgency=low
   * Update Standards-Version to 3.9.1 (no changes required).
   * Change watch file to check for the .bz2 version of the archive.
 
- -- Joel Rosdahl <joel@debian.org>  Mon, 02 Aug 2010 16:26:10 +0200
+ -- Joel Rosdahl <joel@debian.org>  Mon, 02 Aug 2010 17:43:34 +0200
 
 ccache (2.4-17) unstable; urgency=low
 

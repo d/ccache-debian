@@ -28,8 +28,9 @@ ccache (3.0.1-1) UNRELEASED; urgency=low
   * Add doc-base entry for the ccache manual.
   * Switch to dpkg-source 3.0 (quilt) format.
   * Update Standards-Version to 3.9.1 (no changes required).
+  * Change watch file to check for the .bz2 version of the archive.
 
- -- Joel Rosdahl <joel@debian.org>  Mon, 02 Aug 2010 16:18:20 +0200
+ -- Joel Rosdahl <joel@debian.org>  Mon, 02 Aug 2010 16:26:10 +0200
 
 ccache (2.4-17) unstable; urgency=low
 

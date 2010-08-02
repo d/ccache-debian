@@ -23,6 +23,7 @@ ccache (3.0.1-1) UNRELEASED; urgency=low
   * Add note in README.Debian that the "NFS Issues" only are relevant when
     using CCACHE_HARDLINK.
   * Remove obsolete update-ccache and reference to manage-cache.sh.
+  * Update package description.
 
  -- Joel Rosdahl <joel@debian.org>  Mon, 02 Aug 2010 15:08:27 +0200
 

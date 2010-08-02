@@ -15,7 +15,10 @@ ccache (3.0.1-1) UNRELEASED; urgency=low
   * Please welcome Joel Rosdahl <joel@debian.org>, the upstream maintainer of
     ccache as a co-maintainer.
 
- -- Y Giridhar Appaji Nag <appaji@debian.org>  Sat, 31 Jul 2010 12:09:21 +0530
+  [ Joel Rosdahl ]
+  * Update copyright information in DEP-5 format.
+
+ -- Joel Rosdahl <joel@debian.org>  Mon, 02 Aug 2010 15:08:27 +0200
 
 ccache (2.4-17) unstable; urgency=low
 
@@ -229,7 +232,7 @@ ccache (2.1.1-1) unstable; urgency=low
       - copyright-should-refer-to-common-license-file-for-gpl
       - copyright-lists-upstream-authors-with-dh_make-boilerplate
   * Built with g++ 3.2 :-).
-  
+
  -- Andreas Rottmann <rotty@debian.org>  Thu, 16 Jan 2003 11:42:38 +0100
 
 ccache (1.9-1) unstable; urgency=low

@@ -9,14 +9,15 @@ ccache (3.0.1-1) UNRELEASED; urgency=low
   * Fix lintian W:debhelper-but-no-misc-depends, add ${misc:Depends} to ccache
     Depends:
   * Update Standards-Version to 3.9.0 (No changes required)
-  * Update 08_manpage_hyphens.diff to indicate in the manpage that MD4 is a
-    cryptographic hash, remove the word 'strong' (Closes: #538821)
   * New upstream release
   * Please welcome Joel Rosdahl <joel@debian.org>, the upstream maintainer of
     ccache as a co-maintainer.
 
   [ Joel Rosdahl ]
+  * The man page in the new upstream release has fixed the wording of MD4
+    being a strong cryptographic hash. Closes: #538821.
   * Update copyright information in DEP-5 format.
+  * Remove obsolete patches.
 
  -- Joel Rosdahl <joel@debian.org>  Mon, 02 Aug 2010 15:08:27 +0200
 

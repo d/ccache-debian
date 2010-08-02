@@ -1,6 +1,4 @@
 #!/usr/bin/make -f
-# Sample debian/rules that uses debhelper.
-# GNU copyright 1997 to 1999 by Joey Hess.
 
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
@@ -23,12 +21,7 @@ ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
 	INSTALL_PROGRAM += -s
 endif
 
-patched_files = ccache.c stats.c util.c \
-	ccache.1 ccache.h ccache.yo config.h.in \
-	configure configure.in Makefile.in \
-	web/ccache-man.html web/index.html
-
-config.status: patch configure-stamp
+config.status: configure-stamp
 configure-stamp:
 	dh_testdir
 ifneq "$(wildcard /usr/share/misc/config.sub)" ""
@@ -40,34 +33,13 @@ endif
 	./configure $(confflags) --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 	touch $@
 
-patch: patch-stamp
-patch-stamp:
-	for ufile in $(patched_files); do \
-		[ -f "$(CURDIR)/$$ufile" ] || continue; \
-		[ ! -f "$(CURDIR)/$$ufile.unpatched" ] || continue; \
-		echo "### Saving unpatched file $$ufile"; \
-		cp -f "$(CURDIR)/$$ufile" "$(CURDIR)/$$ufile.unpatched"; \
-	done
-	mkdir -p debian/patched
-	for pfile in debian/patches/*.diff; do \
-		[ -f "$$pfile" ] || continue; \
-		pname="$$(basename $$pfile .diff)"; \
-		[ ! -f "debian/patched/$$pname.patched" ] || continue; \
-		echo "### Applying patch $$pname"; \
-		patch -p1 -N < $$pfile; \
-		cp -f "$$pfile" "debian/patched/$$pname.patched"; \
-	done
-	chmod +x $(CURDIR)/manage-cache.sh
-	touch $@
-
 build: build-stamp
 build-stamp: config.status
 	dh_testdir
 	$(MAKE)
 	touch $@
 
-clean: clean-patched unpatch
-clean-patched:
+clean:
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp configure-stamp
@@ -75,22 +47,12 @@ clean-patched:
 	rm -f config.guess config.sub
 	dh_clean
 
-unpatch:
-	for ufile in $(patched_files); do \
-		[ -f "$(CURDIR)/$$ufile.unpatched" ] || continue; \
-		echo "### Restoring unpatched file $$ufile"; \
-		mv -f "$(CURDIR)/$$ufile.unpatched" "$(CURDIR)/$$ufile"; \
-	done
-	rm -f $(CURDIR)/manage-cache.sh
-	rm -rf debian/patched patch-stamp
-
 install: build
 	dh_testdir
 	dh_testroot
 	dh_clean -k
 	dh_installdirs
 
-	# Add here commands to install the package into debian/ccache.
 	$(MAKE) install prefix=$(CURDIR)/debian/ccache/usr
 
 	ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/$(DEB_BUILD_GNU_TYPE)-gcc
@@ -124,7 +86,7 @@ binary-arch: build install
 	dh_installcron
 	dh_installman
 	dh_installinfo
-	dh_installchangelogs 
+	dh_installchangelogs
 	dh_link
 	dh_strip
 	dh_compress
@@ -136,4 +98,4 @@ binary-arch: build install
 	dh_builddeb
 
 binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install patch unpatch
+.PHONY: build clean binary-indep binary-arch binary install

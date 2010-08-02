@@ -13,15 +13,6 @@ environment variable, like
 
 Note that ccache works with both native and cross compilers.
 
-Ignoring whitespace
--------------------
-
-If you wish to set up ccache so that it ignores blank lines, have a
-look at the CCACHE_UNIFY option.  However, please note that this
-option is off by default since the reported line numbers may not
-match the source files anymore.
-
-
 NFS Issues
 ----------
 
@@ -56,4 +47,4 @@ Since Make does open() when checking timestamps, and the dummy file is
 close()d when it's created, the binary will always relink after the
 object is recompiled.
 
- -- Francois Marier <francois@debian.org>  Sun, 20 May 2007 17:35:36 +1200
+ -- Joel Rosdahl <joel@debian.org>, Mon,  2 Aug 2010 13:44:08 +0200

@@ -18,6 +18,8 @@ ccache (3.0.1-1) UNRELEASED; urgency=low
     being a strong cryptographic hash. Closes: #538821.
   * Update copyright information in DEP-5 format.
   * Remove obsolete patches.
+  * Don't mention the CCACHE_UNIFY option in README.Debian as it's more or
+    less obsolete.
 
  -- Joel Rosdahl <joel@debian.org>  Mon, 02 Aug 2010 15:08:27 +0200
 

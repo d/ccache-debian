@@ -26,6 +26,7 @@ ccache (3.0.1-1) UNRELEASED; urgency=low
   * Update package description.
   * Include upstream NEWS.txt and manual.html.
   * Add doc-base entry for the ccache manual.
+  * Switch to dpkg-source 3.0 (quilt) format.
 
  -- Joel Rosdahl <joel@debian.org>  Mon, 02 Aug 2010 15:08:27 +0200
 

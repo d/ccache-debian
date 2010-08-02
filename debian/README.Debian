@@ -13,8 +13,8 @@ environment variable, like
 
 Note that ccache works with both native and cross compilers.
 
-NFS Issues
-----------
+NFS Issues when using CCACHE_HARDLINK
+-------------------------------------
 
 (from John Coiner <john.coiner@amd.com> on the ccache mailing list)
 
@@ -47,4 +47,4 @@ Since Make does open() when checking timestamps, and the dummy file is
 close()d when it's created, the binary will always relink after the
 object is recompiled.
 
- -- Joel Rosdahl <joel@debian.org>, Mon,  2 Aug 2010 13:44:08 +0200
+ -- Joel Rosdahl <joel@debian.org>, Mon,  2 Aug 2010 15:01:05 +0200

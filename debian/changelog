@@ -20,6 +20,8 @@ ccache (3.0.1-1) UNRELEASED; urgency=low
   * Remove obsolete patches.
   * Don't mention the CCACHE_UNIFY option in README.Debian as it's more or
     less obsolete.
+  * Add note in README.Debian that the "NFS Issues" only are relevant when
+    using CCACHE_HARDLINK.
 
  -- Joel Rosdahl <joel@debian.org>  Mon, 02 Aug 2010 15:08:27 +0200
 

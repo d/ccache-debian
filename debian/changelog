@@ -9,7 +9,6 @@ ccache (3.0.1-1) UNRELEASED; urgency=low
   * Fix lintian W:debhelper-but-no-misc-depends, add ${misc:Depends} to ccache
     Depends:
   * Update Standards-Version to 3.9.0 (No changes required)
-  * New upstream release
   * Please welcome Joel Rosdahl <joel@debian.org>, the upstream maintainer of
     ccache as a co-maintainer.
 
@@ -37,7 +36,7 @@ ccache (3.0.1-1) UNRELEASED; urgency=low
   * Update Standards-Version to 3.9.1 (no changes required).
   * Change watch file to check for the .bz2 version of the archive.
 
- -- Joel Rosdahl <joel@debian.org>  Mon, 02 Aug 2010 19:46:42 +0200
+ -- Y Giridhar Appaji Nag <appaji@debian.org>  Tue, 03 Aug 2010 16:40:59 +0530
 
 ccache (2.4-17) unstable; urgency=low
 

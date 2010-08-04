@@ -30,6 +30,7 @@ endif
 ifneq "$(wildcard /usr/share/misc/config.guess)" ""
 	cp -f /usr/share/misc/config.guess config.guess
 endif
+	[ ! -f version.c ] || mv version.c version.c.upstream
 	./configure $(confflags) --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 	touch $@
 
@@ -44,6 +45,7 @@ clean:
 	dh_testroot
 	rm -f build-stamp configure-stamp
 	[ ! -f Makefile ] || $(MAKE) distclean
+	[ ! -f version.c.upstream ] || mv version.c.upstream version.c
 	rm -f config.guess config.sub
 	dh_clean
 

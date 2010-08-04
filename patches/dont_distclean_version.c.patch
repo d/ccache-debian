@@ -1,0 +1,13 @@
+Index: ccache/Makefile.in
+===================================================================
+--- ccache.orig/Makefile.in	2010-08-04 22:37:10.304673191 +0200
++++ ccache/Makefile.in	2010-08-04 22:37:37.704106733 +0200
+@@ -65,7 +65,7 @@
+ 
+ .PHONY: distclean
+ distclean: clean
+-	rm -rf Makefile dev.mk config.h config.log config.status .deps version.c
++	rm -rf Makefile dev.mk config.h config.log config.status .deps
+ 
+ .PHONY: installcheck
+ installcheck:

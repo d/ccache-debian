@@ -9,9 +9,10 @@ ccache (3.0.1-1) unstable; urgency=low
   default. To enable compression, set the CCACHE_COMPRESS environment
   variable.
 
-  See /usr/share/doc/ccache/NEWS.txt.gz for more upstream release notes.
+  See /usr/share/doc/ccache/changelog.gz for more upstream release notes for
+  3.0 as well as 3.0.1.
 
- -- Y Giridhar Appaji Nag <appaji@debian.org>  Wed, 04 Aug 2010 17:34:03 +0530
+ -- Y Giridhar Appaji Nag <appaji@debian.org>  Wed, 04 Aug 2010 17:43:37 +0530
 
 ccache (2.4-8) unstable; urgency=high
 

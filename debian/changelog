@@ -1,4 +1,4 @@
-ccache (3.0.1-1) UNRELEASED; urgency=low
+ccache (3.0.1-1) unstable; urgency=low
 
   [ Francois Marier ]
   * Remove myself from uploaders
@@ -35,7 +35,7 @@ ccache (3.0.1-1) UNRELEASED; urgency=low
   * Update Standards-Version to 3.9.1 (no changes required).
   * Change watch file to check for the .bz2 version of the archive.
 
- -- Y Giridhar Appaji Nag <appaji@debian.org>  Tue, 03 Aug 2010 16:43:23 +0530
+ -- Joel Rosdahl <joel@debian.org>  Wed, 04 Aug 2010 22:41:42 +0200
 
 ccache (2.4-17) unstable; urgency=low
 

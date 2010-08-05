@@ -1,1 +1,2 @@
+debian_specific_usage_docs.patch
 dont_distclean_version.c.patch

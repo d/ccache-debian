@@ -1,0 +1,67 @@
+Index: ccache/ccache.1
+===================================================================
+--- ccache.orig/ccache.1	2010-08-05 13:38:33.615298471 +0200
++++ ccache/ccache.1	2010-08-05 13:57:01.044047259 +0200
+@@ -157,25 +157,24 @@
+ .sp
+ There are two ways to use ccache\&. You can either prefix your compilation commands with \fBccache\fR or you can create a symbolic link (named as your compiler) to ccache\&. The first method is most convenient if you just want to try out ccache or wish to use it for some specific projects\&. The second method is most useful for when you wish to use ccache for all your compilations\&.
+ .sp
+-To install for usage by the first method just make sure \fBccache\fR is in your path\&.
++To use the second method on a Debian system, it's easiest to just prepend \fI/usr/lib/ccache\fR to your \fBPATH\fR\&. \fI/usr/lib/ccache\fR contains symlinks for all compilers currently installed as Debian packages\&.
+ .sp
+-To install for the second method, do something like this:
++Alternatively, you can create any symlinks you like yourself like this:
+ .sp
+ .if n \{\
+ .RS 4
+ .\}
+ .nf
+-cp ccache /usr/local/bin/
+-ln \-s ccache /usr/local/bin/gcc
+-ln \-s ccache /usr/local/bin/g++
+-ln \-s ccache /usr/local/bin/cc
+-ln \-s ccache /usr/local/bin/c++
++ln \-s /usr/bin/ccache /usr/local/bin/gcc
++ln \-s /usr/bin/ccache /usr/local/bin/g++
++ln \-s /usr/bin/ccache /usr/local/bin/cc
++ln \-s /usr/bin/ccache /usr/local/bin/c++
+ .fi
+ .if n \{\
+ .RE
+ .\}
+ .sp
+-And so forth\&. This will work as long as /usr/local/bin comes before the path to the compiler (which is usually in /usr/bin)\&. After installing you may wish to run \(lqwhich gcc\(rq to make sure that the correct link is being used\&.
++And so forth\&. This will work as long as the directory with symlinks comes before the path to the compiler (which is usually in /usr/bin)\&. After installing you may wish to run \(lqwhich gcc\(rq to make sure that the correct link is being used\&.
+ .if n \{\
+ .sp
+ .\}
+Index: ccache/manual.html
+===================================================================
+--- ccache.orig/manual.html	2010-08-05 13:57:49.574109288 +0200
++++ ccache/manual.html	2010-08-05 14:02:03.564674369 +0200
+@@ -650,18 +650,16 @@
+ compiler) to ccache. The first method is most convenient if you just want to
+ try out ccache or wish to use it for some specific projects. The second method
+ is most useful for when you wish to use ccache for all your compilations.</p></div>
+-<div class="paragraph"><p>To install for usage by the first method just make sure <strong>ccache</strong> is in your
+-path.</p></div>
+-<div class="paragraph"><p>To install for the second method, do something like this:</p></div>
++<div class="paragraph"><p>To use the second method on a Debian system, it's easiest to just prepend <tt>/usr/lib/ccache</tt> to your <strong>PATH</strong>. <tt>/usr/lib/ccache</tt> contains symlinks for all compilers currently installed as Debian packages.</p></div>
++<div class="paragraph"><p>Alternatively, you can create any symlinks you like yourself like this:</p></div>
+ <div class="literalblock">
+ <div class="content">
+-<pre><tt>cp ccache /usr/local/bin/
+-ln -s ccache /usr/local/bin/gcc
+-ln -s ccache /usr/local/bin/g++
+-ln -s ccache /usr/local/bin/cc
+-ln -s ccache /usr/local/bin/c++</tt></pre>
++<pre><tt>ln -s /usr/bin/ccache /usr/local/bin/gcc
++ln -s /usr/bin/ccache /usr/local/bin/g++
++ln -s /usr/bin/ccache /usr/local/bin/cc
++ln -s /usr/bin/ccache /usr/local/bin/c++</tt></pre>
+ </div></div>
+-<div class="paragraph"><p>And so forth. This will work as long as <tt>/usr/local/bin</tt> comes before the path
++<div class="paragraph"><p>And so forth. This will work as long as the directory containing symlinks comes before the path
+ to the compiler (which is usually in <tt>/usr/bin</tt>). After installing you may wish
+ to run &#8220;which gcc&#8221; to make sure that the correct link is being used.</p></div>
+ <div class="admonitionblock">

@@ -54,23 +54,7 @@ install: build
 	dh_installdirs
 
 	$(MAKE) install prefix=$(CURDIR)/debian/ccache/usr
-
-	ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/$(DEB_BUILD_GNU_TYPE)-gcc
-	ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/$(DEB_BUILD_GNU_TYPE)-g++
-	set -e; for ver in 2.95 3.0 3.2 3.3 3.4 4.0 4.1 4.2 4.3 4.4; do \
-		ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/$(DEB_BUILD_GNU_TYPE)-gcc-$$ver; \
-		ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/gcc-$$ver; \
-		ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/$(DEB_BUILD_GNU_TYPE)-g++-$$ver; \
-		ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/g++-$$ver; \
-	done
-	ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/cc
-	ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/c++
-	ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/gcc
-	ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/g++
-	ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/i586-mingw32msvc-c++
-	ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/i586-mingw32msvc-cc
-	ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/i586-mingw32msvc-g++
-	ln -s ../../bin/ccache $(CURDIR)/debian/ccache/usr/lib/ccache/i586-mingw32msvc-gcc
+	cp debian/update-ccache-symlinks debian/ccache/usr/sbin
 
 # Build architecture-independent files here.
 binary-indep: build install
@@ -85,10 +69,11 @@ binary-arch: build install
 	dh_installexamples
 	dh_installmenu
 	dh_installcron
-	dh_installman
+	dh_installman debian/update-ccache-symlinks.8
 	dh_installinfo
 	dh_installchangelogs NEWS.txt
 	dh_link
+	dh_lintian
 	dh_strip
 	dh_compress
 	dh_fixperms

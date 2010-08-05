@@ -3,7 +3,7 @@ Section: devel
 Priority: optional
 Maintainer: Y Giridhar Appaji Nag <appaji@debian.org>
 Uploaders: Joel Rosdahl <joel@debian.org>
-Build-Depends: debhelper (>> 6), autotools-dev, zlib1g-dev
+Build-Depends: debhelper (>> 6.0.7~), autotools-dev, zlib1g-dev
 Standards-Version: 3.9.1
 Homepage: http://ccache.samba.org
 Vcs-git: git://git.debian.org/git/collab-maint/ccache.git

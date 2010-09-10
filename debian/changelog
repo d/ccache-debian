@@ -1,10 +1,10 @@
-ccache (3.0.1-2) UNRELEASED; urgency=low
+ccache (3.0.1-2) experimental; urgency=low
 
   * Use dpkg triggers to automatically update symlinks in /usr/lib/ccache
     when compilers are removed or installed. Closes: #494636.
   * Update man page and manual with Debian-specific usage hints.
 
- -- Joel Rosdahl <joel@debian.org>  Sun, 08 Aug 2010 17:21:51 +0200
+ -- Joel Rosdahl <joel@debian.org>  Fri, 10 Sep 2010 19:17:57 +0200
 
 ccache (3.0.1-1) unstable; urgency=low
 

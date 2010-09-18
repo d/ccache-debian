@@ -19,13 +19,6 @@
 
 #include "ccache.h"
 
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
-
 /*
  * When "max files" or "max cache size" is reached, one of the 16 cache
  * subdirectories is cleaned up. When doing so, files are deleted (in LRU
@@ -47,7 +40,8 @@ static size_t cache_size_threshold;
 static size_t files_in_cache_threshold;
 
 /* File comparison function that orders files in mtime order, oldest first. */
-static int files_compare(struct files **f1, struct files **f2)
+static int
+files_compare(struct files **f1, struct files **f2)
 {
 	if ((*f2)->mtime == (*f1)->mtime) {
 		return strcmp((*f1)->fname, (*f2)->fname);
@@ -59,33 +53,34 @@ static int files_compare(struct files **f1, struct files **f2)
 }
 
 /* this builds the list of files in the cache */
-static void traverse_fn(const char *fname, struct stat *st)
+static void
+traverse_fn(const char *fname, struct stat *st)
 {
 	char *p;
 
 	if (!S_ISREG(st->st_mode)) return;
 
 	p = basename(fname);
-	if (strcmp(p, "stats") == 0) {
-		free(p);
-		return;
+	if (str_eq(p, "stats")) {
+		goto out;
+	}
+
+	if (str_startswith(p, ".nfs")) {
+		/* Ignore temporary NFS files that may be left for open but deleted files. */
+		goto out;
 	}
 
 	if (strstr(p, ".tmp.") != NULL) {
 		/* delete any tmp files older than 1 hour */
 		if (st->st_mtime + 3600 < time(NULL)) {
 			unlink(fname);
-			free(p);
-			return;
+			goto out;
 		}
 	}
 
-	free(p);
-
 	if (num_files == allocated) {
 		allocated = 10000 + num_files*2;
-		files = (struct files **)x_realloc(
-			files, sizeof(struct files *)*allocated);
+		files = (struct files **)x_realloc(files, sizeof(struct files *)*allocated);
 	}
 
 	files[num_files] = (struct files *)x_malloc(sizeof(struct files));
@@ -95,9 +90,13 @@ static void traverse_fn(const char *fname, struct stat *st)
 	cache_size += files[num_files]->size;
 	files_in_cache++;
 	num_files++;
+
+out:
+	free(p);
 }
 
-static void delete_file(const char *path, size_t size)
+static void
+delete_file(const char *path, size_t size)
 {
 	if (unlink(path) == 0) {
 		cache_size -= size;
@@ -107,12 +106,13 @@ static void delete_file(const char *path, size_t size)
 	}
 }
 
-static void delete_sibling_file(const char *base, const char *extension)
+static void
+delete_sibling_file(const char *base, const char *extension)
 {
 	struct stat st;
 	char *path;
 
-	x_asprintf(&path, "%s%s", base, extension);
+	path = format("%s%s", base, extension);
 	if (lstat(path, &st) == 0) {
 		delete_file(path, file_size(&st) / 1024);
 	} else if (errno != ENOENT) {
@@ -123,7 +123,8 @@ static void delete_sibling_file(const char *base, const char *extension)
 
 /* sort the files we've found and delete the oldest ones until we are
    below the thresholds */
-static void sort_and_clean(void)
+static void
+sort_and_clean(void)
 {
 	unsigned i;
 	const char *ext;
@@ -131,8 +132,7 @@ static void sort_and_clean(void)
 
 	if (num_files > 1) {
 		/* Sort in ascending mtime order. */
-		qsort(files, num_files, sizeof(struct files *),
-		      (COMPAR_FN_T)files_compare);
+		qsort(files, num_files, sizeof(struct files *), (COMPAR_FN_T)files_compare);
 	}
 
 	/* delete enough files to bring us below the threshold */
@@ -145,12 +145,12 @@ static void sort_and_clean(void)
 		}
 
 		ext = get_extension(files[i]->fname);
-		if (strcmp(ext, ".o") == 0
-		    || strcmp(ext, ".d") == 0
-		    || strcmp(ext, ".stderr") == 0
-		    || strcmp(ext, "") == 0) {
+		if (str_eq(ext, ".o")
+		    || str_eq(ext, ".d")
+		    || str_eq(ext, ".stderr")
+		    || str_eq(ext, "")) {
 			char *base = remove_extension(files[i]->fname);
-			if (strcmp(base, last_base) != 0) { /* Avoid redundant unlinks. */
+			if (!str_eq(base, last_base)) { /* Avoid redundant unlinks. */
 				/*
 				 * Make sure that all sibling files are deleted so that a cached result
 				 * is removed completely. Note the order of deletions -- the stderr
@@ -174,7 +174,8 @@ static void sort_and_clean(void)
 }
 
 /* cleanup in one cache subdir */
-void cleanup_dir(const char *dir, size_t maxfiles, size_t maxsize)
+void
+cleanup_dir(const char *dir, size_t maxfiles, size_t maxsize)
 {
 	unsigned i;
 
@@ -215,22 +216,15 @@ void cleanup_dir(const char *dir, size_t maxfiles, size_t maxsize)
 /* cleanup in all cache subdirs */
 void cleanup_all(const char *dir)
 {
-	unsigned counters[STATS_END];
-	char *dname, *sfile;
+	unsigned maxfiles, maxsize;
+	char *dname;
 	int i;
 
 	for (i = 0; i <= 0xF; i++) {
-		x_asprintf(&dname, "%s/%1x", dir, i);
-		x_asprintf(&sfile, "%s/%1x/stats", dir, i);
-
-		memset(counters, 0, sizeof(counters));
-		stats_read(sfile, counters);
-
-		cleanup_dir(dname,
-			    counters[STATS_MAXFILES],
-			    counters[STATS_MAXSIZE]);
+		dname = format("%s/%1x", dir, i);
+		stats_get_limits(dname, &maxfiles, &maxsize);
+		cleanup_dir(dname, maxfiles, maxsize);
 		free(dname);
-		free(sfile);
 	}
 }
 
@@ -242,7 +236,7 @@ static void wipe_fn(const char *fname, struct stat *st)
 	if (!S_ISREG(st->st_mode)) return;
 
 	p = basename(fname);
-	if (strcmp(p, "stats") == 0) {
+	if (str_eq(p, "stats")) {
 		free(p);
 		return;
 	}
@@ -258,7 +252,7 @@ void wipe_all(const char *dir)
 	int i;
 
 	for (i = 0; i <= 0xF; i++) {
-		x_asprintf(&dname, "%s/%1x", dir, i);
+		dname = format("%s/%1x", dir, i);
 		traverse(dir, wipe_fn);
 		free(dname);
 	}

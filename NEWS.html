@@ -552,17 +552,165 @@ footnotes: function () {
 <body>
 <div id="header">
 <h1>ccache news</h1>
-<span id="revnumber">version 3.0.1</span>
+<span id="revnumber">version 3.1</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
 </div>
 </div>
 <div id="content">
+<h2 id="_ccache_3_1">ccache 3.1</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Release date: 2010-09-16</p></div>
+<h3 id="_new_features_and_improvements">New features and improvements</h3><div style="clear:left"></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Added support for hashing the output of a custom command (e.g. <tt>$compiler
+      --version</tt>) to identify the compiler instead of stat-ing or hashing the
+      compiler binary. This can improve robustness when the compiler (as seen
+      by ccache) actually isn&#8217;t the real compiler but another compiler wrapper.
+</p>
+</li>
+<li>
+<p>
+Added support for caching compilations that use precompiled headers. (See
+      the manual for important instructions regarding this.)
+</p>
+</li>
+<li>
+<p>
+Locking of the files containing statistics counters is now done using
+      symlinks instead of POSIX locks. This should make ccache behave a lot
+      better on file systems where POSIX locks are slow or broken (e.g. NFS on
+      some systems).
+</p>
+</li>
+<li>
+<p>
+Manifest files are now updated without the need of taking locks.
+</p>
+</li>
+<li>
+<p>
+Updates of statistics counters are now always done in one of the
+      sub-level statistics files. This reduces lock contention, which
+      especially improves performance on slow NFS mounts.
+</p>
+</li>
+<li>
+<p>
+Reading and writing of statistics counters has been made
+      forward-compatible (unknown counters are retained).
+</p>
+</li>
+<li>
+<p>
+Files are now read without using mmap(). This has two benefits: it&#8217;s more
+      robust against file changes during reading and it improves performance on
+      poor systems where mmap() doesn&#8217;t use the disk cache.
+</p>
+</li>
+<li>
+<p>
+Added <tt>.cp</tt> and <tt>.CP</tt> as known C++ suffixes.
+</p>
+</li>
+<li>
+<p>
+Improved logging.
+</p>
+</li>
+<li>
+<p>
+Added <tt>-install_name</tt> as an option known to take an argument. (This
+      improves statistics when using the Darwin linker.)
+</p>
+</li>
+</ul></div>
+<h3 id="_bug_fixes">Bug fixes</h3><div style="clear:left"></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Non-fatal error messages are now never printed to stderr but logged
+      instead.
+</p>
+</li>
+<li>
+<p>
+Fixed a bug affecting failing commands when <tt>--ccache-skip</tt> is used.
+</p>
+</li>
+<li>
+<p>
+Made <tt>--ccache-skip</tt> work for all options.
+</p>
+</li>
+<li>
+<p>
+EINTR is now handled correctly.
+</p>
+</li>
+</ul></div>
+<h3 id="_other">Other</h3><div style="clear:left"></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Work on porting ccache to win32 (native), mostly done by Ramiro Polla.
+      The port is not yet finished, but will hopefully be complete in some
+      subsequent release.
+</p>
+</li>
+<li>
+<p>
+Added a <tt>--nostats</tt> flag to the performance benchmark program.
+</p>
+</li>
+<li>
+<p>
+Made the performance benchmark program more accurate when measuring cache
+      hits.
+</p>
+</li>
+<li>
+<p>
+Added a new test framework for unit tests written in C.
+</p>
+</li>
+<li>
+<p>
+Got rid of <tt>configure-dev</tt>; dev mode is now given by <tt>dev.mk.in</tt>
+      presence.
+</p>
+</li>
+<li>
+<p>
+Improved documentation on how to combine ccache with other compiler
+      wrappers (like <tt>distcc</tt>).
+</p>
+</li>
+<li>
+<p>
+New <tt>LICENSE.txt</tt> file with licensing and copyright details about bundled
+      source code.
+</p>
+</li>
+<li>
+<p>
+New <tt>AUTHORS.txt</tt> file with a list of ccache contributors.
+</p>
+</li>
+<li>
+<p>
+New <tt>HACKING.txt</tt> file with some notes about ccache code conventions.
+</p>
+</li>
+</ul></div>
+</div>
 <h2 id="_ccache_3_0_1">ccache 3.0.1</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-07-15</p></div>
-<h3 id="_bug_fixes">Bug fixes</h3><div style="clear:left"></div>
+<h3 id="_bug_fixes_2">Bug fixes</h3><div style="clear:left"></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -601,7 +749,7 @@ The way the hashes are calculated has changed, so you won&#8217;t get cache
 </p>
 </li>
 </ul></div>
-<h3 id="_new_features_and_improvements">New features and improvements</h3><div style="clear:left"></div>
+<h3 id="_new_features_and_improvements_2">New features and improvements</h3><div style="clear:left"></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -746,7 +894,7 @@ The following options are no longer hashed in the preprocessor mode:
 </p>
 </li>
 </ul></div>
-<h3 id="_bug_fixes_2">Bug fixes</h3><div style="clear:left"></div>
+<h3 id="_bug_fixes_3">Bug fixes</h3><div style="clear:left"></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -889,8 +1037,8 @@ Statistics counters are now correctly updated for -E option failures and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.0.1<br />
-Last updated 2010-07-15 17:51:47 CEST
+Version 3.1<br />
+Last updated 2010-09-16 18:56:48 CEST
 </div>
 </div>
 </body>

@@ -22,15 +22,6 @@
 #include "manifest.h"
 #include "murmurhashneutral2.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <assert.h>
-#include <fcntl.h>
-#include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include <zlib.h>
 
 /*
@@ -77,8 +68,7 @@ static const uint32_t MAX_MANIFEST_ENTRIES = 100;
 
 #define static_assert(e) do { enum { static_assert__ = 1/(e) }; } while (0)
 
-struct file_info
-{
+struct file_info {
 	/* Index to n_files. */
 	uint32_t index;
 	/* Hash of referenced file. */
@@ -87,8 +77,7 @@ struct file_info
 	uint32_t size;
 };
 
-struct object
-{
+struct object {
 	/* Number of entries in file_info_indexes. */
 	uint32_t n_file_info_indexes;
 	/* Indexes to file_infos. */
@@ -97,8 +86,7 @@ struct object
 	struct file_hash hash;
 };
 
-struct manifest
-{
+struct manifest {
 	/* Size of hash fields (in bytes). */
 	uint8_t hash_size;
 
@@ -115,22 +103,25 @@ struct manifest
 	struct object *objects;
 };
 
-static unsigned int hash_from_file_info(void *key)
+static unsigned int
+hash_from_file_info(void *key)
 {
 	static_assert(sizeof(struct file_info) == 24); /* No padding. */
 	return murmurhashneutral2(key, sizeof(struct file_info), 0);
 }
 
-static int file_infos_equal(void *key1, void *key2)
+static int
+file_infos_equal(void *key1, void *key2)
 {
 	struct file_info *fi1 = (struct file_info *)key1;
 	struct file_info *fi2 = (struct file_info *)key2;
 	return fi1->index == fi2->index
-		&& memcmp(fi1->hash, fi2->hash, 16) == 0
-		&& fi1->size == fi2->size;
+	       && memcmp(fi1->hash, fi2->hash, 16) == 0
+	       && fi1->size == fi2->size;
 }
 
-static void free_manifest(struct manifest *mf)
+static void
+free_manifest(struct manifest *mf)
 {
 	uint16_t i;
 	for (i = 0; i < mf->n_files; i++) {
@@ -144,56 +135,57 @@ static void free_manifest(struct manifest *mf)
 	free(mf->objects);
 }
 
-#define READ_INT(size, var)				\
-	do {						\
-		int ch_;				\
-		size_t i_;				\
-		(var) = 0;				\
-		for (i_ = 0; i_ < (size); i_++) {	\
-			ch_ = gzgetc(f);		\
-			if (ch_ == EOF) {		\
-				goto error;		\
-			}				\
-			(var) <<= 8;			\
-			(var) |= ch_ & 0xFF;		\
-		}					\
+#define READ_INT(size, var) \
+	do { \
+		int ch_; \
+		size_t i_; \
+		(var) = 0; \
+		for (i_ = 0; i_ < (size); i_++) { \
+			ch_ = gzgetc(f); \
+			if (ch_ == EOF) { \
+				goto error; \
+			} \
+			(var) <<= 8; \
+			(var) |= ch_ & 0xFF; \
+		} \
 	} while (0)
 
-#define READ_STR(var)					\
-	do {						\
-		char buf_[1024];			\
-		size_t i_;				\
-		int ch_;				\
-		for (i_ = 0; i_ < sizeof(buf_); i_++) {	\
-			ch_ = gzgetc(f);		\
-			if (ch_ == EOF) {		\
-				goto error;		\
-			}				\
-			buf_[i_] = ch_;			\
-			if (ch_ == '\0') {		\
-				break;			\
-			}				\
-		}					\
-		if (i_ == sizeof(buf_)) {		\
-			goto error;			\
-		}					\
-		(var) = x_strdup(buf_);			\
+#define READ_STR(var) \
+	do { \
+		char buf_[1024]; \
+		size_t i_; \
+		int ch_; \
+		for (i_ = 0; i_ < sizeof(buf_); i_++) { \
+			ch_ = gzgetc(f); \
+			if (ch_ == EOF) { \
+				goto error; \
+			} \
+			buf_[i_] = ch_; \
+			if (ch_ == '\0') { \
+				break; \
+			} \
+		} \
+		if (i_ == sizeof(buf_)) { \
+			goto error; \
+		} \
+		(var) = x_strdup(buf_); \
 	} while (0)
 
-#define READ_BYTES(n, var)			\
-	do {					\
-		size_t i_;			\
-		int ch_;			\
-		for (i_ = 0; i_ < (n); i_++) {	\
-			ch_ = gzgetc(f);	\
-			if (ch_ == EOF) {	\
-				goto error;	\
-			}			\
-			(var)[i_] = ch_;	\
-		}				\
+#define READ_BYTES(n, var) \
+	do { \
+		size_t i_; \
+		int ch_; \
+		for (i_ = 0; i_ < (n); i_++) { \
+			ch_ = gzgetc(f); \
+			if (ch_ == EOF) { \
+				goto error; \
+			} \
+			(var)[i_] = ch_; \
+		} \
 	} while (0)
 
-static struct manifest *create_empty_manifest(void)
+static struct manifest *
+create_empty_manifest(void)
 {
 	struct manifest *mf;
 
@@ -209,11 +201,11 @@ static struct manifest *create_empty_manifest(void)
 	return mf;
 }
 
-static struct manifest *read_manifest(gzFile f)
+static struct manifest *
+read_manifest(gzFile f)
 {
 	struct manifest *mf;
 	uint16_t i, j;
-	size_t n;
 	uint32_t magic;
 	uint8_t version;
 	uint16_t dummy;
@@ -235,29 +227,22 @@ static struct manifest *read_manifest(gzFile f)
 
 	READ_INT(1, mf->hash_size);
 	if (mf->hash_size != 16) {
-		/* Temporary measure until we support different hash
-		 * algorithms. */
-		cc_log("Manifest file has unsupported hash size %u",
-		       mf->hash_size);
+		/* Temporary measure until we support different hash algorithms. */
+		cc_log("Manifest file has unsupported hash size %u", mf->hash_size);
 		free_manifest(mf);
 		return NULL;
 	}
 
-
 	READ_INT(2, dummy);
 
 	READ_INT(4, mf->n_files);
-	n = mf->n_files * sizeof(*mf->files);
-	mf->files = x_malloc(n);
-	memset(mf->files, 0, n);
+	mf->files = x_calloc(mf->n_files, sizeof(*mf->files));
 	for (i = 0; i < mf->n_files; i++) {
 		READ_STR(mf->files[i]);
 	}
 
 	READ_INT(4, mf->n_file_infos);
-	n = mf->n_file_infos * sizeof(*mf->file_infos);
-	mf->file_infos = x_malloc(n);
-	memset(mf->file_infos, 0, n);
+	mf->file_infos = x_calloc(mf->n_file_infos, sizeof(*mf->file_infos));
 	for (i = 0; i < mf->n_file_infos; i++) {
 		READ_INT(4, mf->file_infos[i].index);
 		READ_BYTES(mf->hash_size, mf->file_infos[i].hash);
@@ -265,15 +250,12 @@ static struct manifest *read_manifest(gzFile f)
 	}
 
 	READ_INT(4, mf->n_objects);
-	n = mf->n_objects * sizeof(*mf->objects);
-	mf->objects = x_malloc(n);
-	memset(mf->objects, 0, n);
+	mf->objects = x_calloc(mf->n_objects, sizeof(*mf->objects));
 	for (i = 0; i < mf->n_objects; i++) {
 		READ_INT(4, mf->objects[i].n_file_info_indexes);
-		n = mf->objects[i].n_file_info_indexes
-		    * sizeof(*mf->objects[i].file_info_indexes);
-		mf->objects[i].file_info_indexes = x_malloc(n);
-		memset(mf->objects[i].file_info_indexes, 0, n);
+		mf->objects[i].file_info_indexes =
+			x_calloc(mf->objects[i].n_file_info_indexes,
+			         sizeof(*mf->objects[i].file_info_indexes));
 		for (j = 0; j < mf->objects[i].n_file_info_indexes; j++) {
 			READ_INT(4, mf->objects[i].file_info_indexes[j]);
 		}
@@ -289,36 +271,37 @@ error:
 	return NULL;
 }
 
-#define WRITE_INT(size, var)						\
-	do {								\
-		char ch_;						\
-		size_t i_;						\
-		for (i_ = 0; i_ < (size); i_++) {			\
-			ch_ = ((var) >> (8 * ((size) - i_ - 1)));	\
-			if (gzputc(f, ch_) == EOF) {			\
-				goto error;				\
-			}						\
-		}							\
+#define WRITE_INT(size, var) \
+	do { \
+		char ch_; \
+		size_t i_; \
+		for (i_ = 0; i_ < (size); i_++) { \
+			ch_ = ((var) >> (8 * ((size) - i_ - 1))); \
+			if (gzputc(f, ch_) == EOF) { \
+				goto error; \
+			} \
+		} \
 	} while (0)
 
-#define WRITE_STR(var)							\
-	do {								\
-		if (gzputs(f, var) == EOF || gzputc(f, '\0') == EOF) {	\
-			goto error;					\
-		}							\
+#define WRITE_STR(var) \
+	do { \
+		if (gzputs(f, var) == EOF || gzputc(f, '\0') == EOF) { \
+			goto error; \
+		} \
 	} while (0)
 
-#define WRITE_BYTES(n, var)					\
-	do {							\
-		size_t i_;					\
-		for (i_ = 0; i_ < (n); i_++) {			\
-			if (gzputc(f, (var)[i_]) == EOF) {	\
-				goto error;			\
-			}					\
-		}						\
+#define WRITE_BYTES(n, var) \
+	do { \
+		size_t i_; \
+		for (i_ = 0; i_ < (n); i_++) { \
+			if (gzputc(f, (var)[i_]) == EOF) { \
+				goto error; \
+			} \
+		} \
 	} while (0)
 
-static int write_manifest(gzFile f, const struct manifest *mf)
+static int
+write_manifest(gzFile f, const struct manifest *mf)
 {
 	uint16_t i, j;
 
@@ -356,8 +339,9 @@ error:
 	return 0;
 }
 
-static int verify_object(struct manifest *mf, struct object *obj,
-			 struct hashtable *hashed_files)
+static int
+verify_object(struct manifest *mf, struct object *obj,
+              struct hashtable *hashed_files)
 {
 	uint32_t i;
 	struct file_info *fi;
@@ -371,11 +355,9 @@ static int verify_object(struct manifest *mf, struct object *obj,
 		if (!actual) {
 			actual = x_malloc(sizeof(*actual));
 			hash_start(&hash);
-			result = hash_source_code_file(&hash,
-						       mf->files[fi->index]);
+			result = hash_source_code_file(&hash, mf->files[fi->index]);
 			if (result & HASH_SOURCE_CODE_ERROR) {
-				cc_log("Failed hashing %s",
-				       mf->files[fi->index]);
+				cc_log("Failed hashing %s", mf->files[fi->index]);
 				free(actual);
 				return 0;
 			}
@@ -385,9 +367,7 @@ static int verify_object(struct manifest *mf, struct object *obj,
 			}
 			hash_result_as_bytes(&hash, actual->hash);
 			actual->size = hash.totalN;
-			hashtable_insert(hashed_files,
-					 x_strdup(mf->files[fi->index]),
-					 actual);
+			hashtable_insert(hashed_files, x_strdup(mf->files[fi->index]), actual);
 		}
 		if (memcmp(fi->hash, actual->hash, mf->hash_size) != 0
 		    || fi->size != actual->size) {
@@ -398,7 +378,8 @@ static int verify_object(struct manifest *mf, struct object *obj,
 	return 1;
 }
 
-static struct hashtable *create_string_index_map(char **strings, uint32_t len)
+static struct hashtable *
+create_string_index_map(char **strings, uint32_t len)
 {
 	uint32_t i;
 	struct hashtable *h;
@@ -413,8 +394,8 @@ static struct hashtable *create_string_index_map(char **strings, uint32_t len)
 	return h;
 }
 
-static struct hashtable *create_file_info_index_map(struct file_info *infos,
-						    uint32_t len)
+static struct hashtable *
+create_file_info_index_map(struct file_info *infos, uint32_t len)
 {
 	uint32_t i;
 	struct hashtable *h;
@@ -432,9 +413,9 @@ static struct hashtable *create_file_info_index_map(struct file_info *infos,
 	return h;
 }
 
-static uint32_t get_include_file_index(struct manifest *mf,
-				       char *path,
-				       struct hashtable *mf_files)
+static uint32_t
+get_include_file_index(struct manifest *mf, char *path,
+                       struct hashtable *mf_files)
 {
 	uint32_t *index;
 	uint32_t n;
@@ -452,11 +433,12 @@ static uint32_t get_include_file_index(struct manifest *mf,
 	return n;
 }
 
-static uint32_t get_file_hash_index(struct manifest *mf,
-				    char *path,
-				    struct file_hash *file_hash,
-				    struct hashtable *mf_files,
-				    struct hashtable *mf_file_infos)
+static uint32_t
+get_file_hash_index(struct manifest *mf,
+                    char *path,
+                    struct file_hash *file_hash,
+                    struct hashtable *mf_files,
+                    struct hashtable *mf_file_infos)
 {
 	struct file_info fi;
 	uint32_t *fi_index;
@@ -472,8 +454,7 @@ static uint32_t get_file_hash_index(struct manifest *mf,
 	}
 
 	n = mf->n_file_infos;
-	mf->file_infos = x_realloc(mf->file_infos,
-				   (n + 1) * sizeof(*mf->file_infos));
+	mf->file_infos = x_realloc(mf->file_infos, (n + 1) * sizeof(*mf->file_infos));
 	mf->n_file_infos++;
 	mf->file_infos[n] = fi;
 
@@ -482,7 +463,7 @@ static uint32_t get_file_hash_index(struct manifest *mf,
 
 static void
 add_file_info_indexes(uint32_t *indexes, uint32_t size,
-		      struct manifest *mf, struct hashtable *included_files)
+                      struct manifest *mf, struct hashtable *included_files)
 {
 	struct hashtable_itr *iter;
 	uint32_t i;
@@ -496,15 +477,14 @@ add_file_info_indexes(uint32_t *indexes, uint32_t size,
 	}
 
 	mf_files = create_string_index_map(mf->files, mf->n_files);
-	mf_file_infos = create_file_info_index_map(mf->file_infos,
-						   mf->n_file_infos);
+	mf_file_infos = create_file_info_index_map(mf->file_infos, mf->n_file_infos);
 	iter = hashtable_iterator(included_files);
 	i = 0;
 	do {
 		path = hashtable_iterator_key(iter);
 		file_hash = hashtable_iterator_value(iter);
 		indexes[i] = get_file_hash_index(mf, path, file_hash, mf_files,
-						 mf_file_infos);
+		                                 mf_file_infos);
 		i++;
 	} while (hashtable_iterator_advance(iter));
 	assert(i == size);
@@ -513,9 +493,10 @@ add_file_info_indexes(uint32_t *indexes, uint32_t size,
 	hashtable_destroy(mf_files, 1);
 }
 
-static void add_object_entry(struct manifest *mf,
-			     struct file_hash *object_hash,
-			     struct hashtable *included_files)
+static void
+add_object_entry(struct manifest *mf,
+                 struct file_hash *object_hash,
+                 struct hashtable *included_files)
 {
 	struct object *obj;
 	uint32_t n;
@@ -537,7 +518,8 @@ static void add_object_entry(struct manifest *mf,
  * Try to get the object hash from a manifest file. Caller frees. Returns NULL
  * on failure.
  */
-struct file_hash *manifest_get(const char *manifest_path)
+struct file_hash *
+manifest_get(const char *manifest_path)
 {
 	int fd;
 	gzFile f = NULL;
@@ -546,13 +528,10 @@ struct file_hash *manifest_get(const char *manifest_path)
 	uint32_t i;
 	struct file_hash *fh = NULL;
 
-	fd = open(manifest_path, O_RDONLY);
+	fd = open(manifest_path, O_RDONLY | O_BINARY);
 	if (fd == -1) {
 		/* Cache miss. */
-		goto out;
-	}
-	if (read_lock_fd(fd) == -1) {
-		cc_log("Failed to read lock manifest file");
+		cc_log("No such manifest file");
 		goto out;
 	}
 	f = gzdopen(fd, "rb");
@@ -592,10 +571,11 @@ out:
 
 /*
  * Put the object name into a manifest file given a set of included files.
- * Returns 1 on success, otherwise 0.
+ * Returns true on success, otherwise false.
  */
-int manifest_put(const char *manifest_path, struct file_hash *object_hash,
-		 struct hashtable *included_files)
+bool
+manifest_put(const char *manifest_path, struct file_hash *object_hash,
+             struct hashtable *included_files)
 {
 	int ret = 0;
 	int fd1;
@@ -606,14 +586,15 @@ int manifest_put(const char *manifest_path, struct file_hash *object_hash,
 	struct manifest *mf = NULL;
 	char *tmp_file = NULL;
 
+	/*
+	 * We don't bother to acquire a lock when writing the manifest to disk. A
+	 * race between two processes will only result in one lost entry, which is
+	 * not a big deal, and it's also very unlikely.
+	 */
+
 	fd1 = safe_open(manifest_path);
 	if (fd1 == -1) {
 		cc_log("Failed to open manifest file");
-		goto out;
-	}
-	if (write_lock_fd(fd1) == -1) {
-		cc_log("Failed to write lock manifest file");
-		close(fd1);
 		goto out;
 	}
 	if (fstat(fd1, &st) != 0) {
@@ -634,32 +615,37 @@ int manifest_put(const char *manifest_path, struct file_hash *object_hash,
 		mf = read_manifest(f1);
 		if (!mf) {
 			cc_log("Failed to read manifest file");
+			gzclose(f1);
 			goto out;
 		}
 	}
 
+	if (f1) {
+		gzclose(f1);
+	} else {
+		close(fd1);
+	}
+
 	if (mf->n_objects > MAX_MANIFEST_ENTRIES) {
 		/*
-		 * Normally, there shouldn't be many object entries in the
-		 * manifest since new entries are added only if an include file
-		 * has changed but not the source file, and you typically
-		 * change source files more often than header files. However,
-		 * it's certainly possible to imagine cases where the manifest
-		 * will grow large (for instance, a generated header file that
-		 * changes for every build), and this must be taken care of
-		 * since processing an ever growing manifest eventually will
-		 * take too much time. A good way of solving this would be to
-		 * maintain the object entries in LRU order and discarding the
-		 * old ones. An easy way is to throw away all entries when
-		 * there are too many. Let's do that for now.
+		 * Normally, there shouldn't be many object entries in the manifest since
+		 * new entries are added only if an include file has changed but not the
+		 * source file, and you typically change source files more often than
+		 * header files. However, it's certainly possible to imagine cases where
+		 * the manifest will grow large (for instance, a generated header file that
+		 * changes for every build), and this must be taken care of since
+		 * processing an ever growing manifest eventually will take too much time.
+		 * A good way of solving this would be to maintain the object entries in
+		 * LRU order and discarding the old ones. An easy way is to throw away all
+		 * entries when there are too many. Let's do that for now.
 		 */
 		cc_log("More than %u entries in manifest file; discarding",
-			MAX_MANIFEST_ENTRIES);
+		       MAX_MANIFEST_ENTRIES);
 		free_manifest(mf);
 		mf = create_empty_manifest();
 	}
 
-	x_asprintf(&tmp_file, "%s.tmp.%s", manifest_path, tmp_string());
+	tmp_file = format("%s.tmp.%s", manifest_path, tmp_string());
 	fd2 = safe_open(tmp_file);
 	if (fd2 == -1) {
 		cc_log("Failed to open %s", tmp_file);
@@ -673,11 +659,12 @@ int manifest_put(const char *manifest_path, struct file_hash *object_hash,
 
 	add_object_entry(mf, object_hash, included_files);
 	if (write_manifest(f2, mf)) {
-		if (rename(tmp_file, manifest_path) == 0) {
+		gzclose(f2);
+		f2 = NULL;
+		if (x_rename(tmp_file, manifest_path) == 0) {
 			ret = 1;
 		} else {
-			cc_log("Failed to rename %s to %s",
-			       tmp_file, manifest_path);
+			cc_log("Failed to rename %s to %s", tmp_file, manifest_path);
 			goto out;
 		}
 	} else {
@@ -694,9 +681,6 @@ out:
 	}
 	if (f2) {
 		gzclose(f2);
-	}
-	if (f1) {
-		gzclose(f1);
 	}
 	return ret;
 }

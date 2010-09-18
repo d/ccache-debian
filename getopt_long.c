@@ -32,6 +32,10 @@
  * SUCH DAMAGE.
  */
 
+#include "config.h"
+
+#ifndef HAVE_GETOPT_LONG
+
 #include "getopt_long.h"
 
 #include <stdio.h>
@@ -44,8 +48,8 @@
 
 int
 getopt_long(int argc, char *const argv[],
-	    const char *optstring,
-	    const struct option * longopts, int *longindex)
+            const char *optstring,
+            const struct option * longopts, int *longindex)
 {
 	static char *place = EMSG; /* option letter processing */
 	char        *oli;          /* option letter list index */
@@ -189,3 +193,5 @@ getopt_long(int argc, char *const argv[],
 	}
 	return optopt;
 }
+
+#endif /* HAVE_GETOPT_LONG */

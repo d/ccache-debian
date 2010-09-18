@@ -66,6 +66,7 @@ binary-arch: build install
 	dh_testroot
 	dh_installdocs
 	cd debian/ccache/usr/share/doc/ccache && mv NEWS.html changelog.html
+	cd debian/ccache/usr/share/doc/ccache && mv MANUAL.html manual.html
 	dh_installexamples
 	dh_installmenu
 	dh_installcron

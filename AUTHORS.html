@@ -4,7 +4,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <meta name="generator" content="AsciiDoc 8.5.2" />
-<title>ccache installation</title>
+<title>ccache authors</title>
 <style type="text/css">
 /* Debug borders */
 p, li, dt, dd, div, pre, h1, h2, h3, h4, h5, h6 {
@@ -551,7 +551,7 @@ footnotes: function () {
 </head>
 <body>
 <div id="header">
-<h1>ccache installation</h1>
+<h1>ccache authors</h1>
 <span id="revnumber">version 3.1</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
@@ -559,102 +559,127 @@ footnotes: function () {
 </div>
 </div>
 <div id="content">
-<h2 id="_building_code_from_a_release_archive">Building code from a release archive</h2>
+<div id="preamble">
 <div class="sectionbody">
-<h3 id="_prerequisites">Prerequisites</h3><div style="clear:left"></div>
-<div class="paragraph"><p>To build ccache, you need:</p></div>
+<div class="paragraph"><p>ccache was originally written by Andrew Tridgell and is currently developed and
+maintained by Joel Rosdahl.</p></div>
+<div class="paragraph"><p>ccache is a collective work with contributions from many people, including:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
-A C compiler (for instance GCC)
+Andrea Bittau &lt;<a href="mailto:a.bittau@cs.ucl.ac.uk">a.bittau@cs.ucl.ac.uk</a>&gt;
 </p>
 </li>
-</ul></div>
-<div class="paragraph"><p>It is also recommended that you have:</p></div>
-<div class="ulist"><ul>
 <li>
 <p>
-zlib <a href="http://www.zlib.net">http://www.zlib.net</a> (if you don&#8217;t have zlib installed, ccache will
-  use a bundled copy)
+Andrew Tridgell &lt;<a href="mailto:tridge@samba.org">tridge@samba.org</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Bernhard Bauer &lt;<a href="mailto:bauerb@google.com">bauerb@google.com</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Clemens Rabe &lt;<a href="mailto:crabe@gmx.de">crabe@gmx.de</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Francois Marier &lt;<a href="mailto:francois@debian.org">francois@debian.org</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Joel Rosdahl &lt;<a href="mailto:joel@rosdahl.net">joel@rosdahl.net</a>&gt;
+</p>
+</li>
+<li>
+<p>
+John Coiner &lt;<a href="mailto:john.coiner@amd.com">john.coiner@amd.com</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Karl Chen &lt;<a href="mailto:quarl@cs.berkeley.edu">quarl@cs.berkeley.edu</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Kovarththanan Rajaratnam &lt;<a href="mailto:kovarththanan.rajaratnam@gmail.com">kovarththanan.rajaratnam@gmail.com</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Lars Gustäbel &lt;<a href="mailto:lars@gustaebel.de">lars@gustaebel.de</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Martin Pool &lt;<a href="mailto:mbp@sourcefrog.net">mbp@sourcefrog.net</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Owen Mann &lt;<a href="mailto:owen@mann.org">owen@mann.org</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Paul Griffith &lt;<a href="mailto:paulg@cse.yorku.ca">paulg@cse.yorku.ca</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Ramiro Polla &lt;<a href="mailto:ramiro.polla@gmail.com">ramiro.polla@gmail.com</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Robin H. Johnson &lt;<a href="mailto:robbat2@gentoo.org">robbat2@gentoo.org</a>&gt;
+</p>
+</li>
+<li>
+<p>
+RW &lt;<a href="mailto:fbsd06@mlists.homeunix.com">fbsd06@mlists.homeunix.com</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Tim Potter &lt;<a href="mailto:tpot@samba.org">tpot@samba.org</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Tor Arne Vestbø &lt;<a href="mailto:torarnv@gmail.com">torarnv@gmail.com</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Ville Skyttä &lt;<a href="mailto:ville.skytta@iki.fi">ville.skytta@iki.fi</a>&gt;
+</p>
+</li>
+<li>
+<p>
+William S Fulton &lt;<a href="mailto:wsf@fultondesigns.co.uk">wsf@fultondesigns.co.uk</a>&gt;
+</p>
+</li>
+<li>
+<p>
+Wilson Snyder &lt;<a href="mailto:wsnyder@wsnyder.org">wsnyder@wsnyder.org</a>&gt;
 </p>
 </li>
 </ul></div>
-<h3 id="_installation">Installation</h3><div style="clear:left"></div>
-<div class="paragraph"><p>To compile and install ccache, run these commands:</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><tt>./configure
-make
-make install</tt></pre>
-</div></div>
-<div class="paragraph"><p>You may set the installation directory and other parameters by options to
-&#8216;`./configure''. To see them, run ``./configure --help&#8217;'.</p></div>
-<div class="paragraph"><p>There are two ways to use ccache. You can either prefix your compilation
-commands with &#8220;ccache&#8221; or you can create a symbolic link (named as your
-compiler) to ccache. The first method is most convenient if you just want to
-try out ccache or wish to use it for some specific projects. The second method
-is most useful for when you wish to use ccache for all your compilations.</p></div>
-<div class="paragraph"><p>To install for usage by the first method just copy ccache to somewhere in your
-path.</p></div>
-<div class="paragraph"><p>To install for the second method, do something like this:</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><tt>cp ccache /usr/local/bin/
-ln -s ccache /usr/local/bin/gcc
-ln -s ccache /usr/local/bin/g++
-ln -s ccache /usr/local/bin/cc
-ln -s ccache /usr/local/bin/c++</tt></pre>
-</div></div>
-<div class="paragraph"><p>And so forth. This will work as long as &#8216;`/usr/local/bin'' comes before the
-path to the compiler (which is usually in ``/usr/bin&#8217;'). After installing you
-may wish to run &#8220;which gcc&#8221; to make sure that the correct link is being used.</p></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">Do not use a hard link, use a symbolic link. A hard link will cause
-&#8220;interesting&#8221; problems.</td>
-</tr></table>
+<div class="paragraph"><p>Thanks!</p></div>
 </div>
-</div>
-<h2 id="_building_code_from_the_source_code_repository">Building code from the source code repository</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>In addition to the prerequisites mentioned above, you also need:</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-AsciiDoc (<a href="http://www.methods.co.nz/asciidoc/">http://www.methods.co.nz/asciidoc/</a>) to build the documentation.
-</p>
-</li>
-<li>
-<p>
-Autoconf (<a href="http://www.gnu.org/software/autoconf/">http://www.gnu.org/software/autoconf/</a>)
-</p>
-</li>
-</ul></div>
-<div class="paragraph"><p>To debug and run the performance test suite you&#8217;ll also need:</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Perl (<a href="http://www.perl.org/">http://www.perl.org/</a>)
-</p>
-</li>
-<li>
-<p>
-Python (<a href="http://www.python.org/">http://www.python.org/</a>)
-</p>
-</li>
-</ul></div>
-<div class="paragraph"><p>Run "./autogen.sh" and then follow the steps mentioned under "Installation"
-above.</p></div>
 </div>
 </div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
 Version 3.1<br />
-Last updated 2010-04-28 20:58:43 CEST
+Last updated 2010-09-06 21:25:28 CEST
 </div>
 </div>
 </body>

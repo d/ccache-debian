@@ -552,7 +552,7 @@ footnotes: function () {
 <body>
 <div id="header">
 <h1>CCACHE(1)</h1>
-<span id="revnumber">version 3.1</span>
+<span id="revnumber">version 3.1.1</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -813,18 +813,6 @@ cases you won&#8217;t need any of these as the defaults will be fine.</p></div>
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>CCACHE_COMPRESS</strong>
-</dt>
-<dd>
-<p>
-    If you set the environment variable <strong>CCACHE_COMPRESS</strong> then ccache will
-    compress object files and other compiler output it puts in the cache.
-    However, this setting has no effect on how files are retrieved from the
-    cache; compressed and uncompressed results will still be usable regardless
-    of this setting.
-</p>
-</dd>
-<dt class="hdlist1">
 <strong>CCACHE_COMPILERCHECK</strong>
 </dt>
 <dd>
@@ -904,6 +892,18 @@ should consider continue using the <strong>mtime</strong> method in combination 
 <a href="#_using_ccache_with_other_compiler_wrappers">USING CCACHE WITH OTHER COMPILER WRAPPERS</a>.</p></div>
 </dd>
 </dl></div>
+</dd>
+<dt class="hdlist1">
+<strong>CCACHE_COMPRESS</strong>
+</dt>
+<dd>
+<p>
+    If you set the environment variable <strong>CCACHE_COMPRESS</strong> then ccache will
+    compress object files and other compiler output it puts in the cache.
+    However, this setting has no effect on how files are retrieved from the
+    cache; compressed and uncompressed results will still be usable regardless
+    of this setting.
+</p>
 </dd>
 <dt class="hdlist1">
 <strong>CCACHE_CPP2</strong>
@@ -1714,8 +1714,8 @@ maintained by Joel Rosdahl. See AUTHORS.txt or AUTHORS.html and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.1<br />
-Last updated 2010-09-14 17:09:37 CEST
+Version 3.1.1<br />
+Last updated 2010-11-01 18:31:35 CEST
 </div>
 </div>
 </body>

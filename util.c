@@ -187,8 +187,9 @@ copy_file(const char *src, const char *dest, int compress_dest)
 	struct stat st;
 	int errnum;
 
-	cc_log("Copying %s to %s (%s)",
-	       src, dest, compress_dest ? "compressed": "uncompressed");
+	tmp_name = format("%s.%s.XXXXXX", dest, tmp_string());
+	cc_log("Copying %s to %s via %s (%s)",
+	       src, dest, tmp_name, compress_dest ? "compressed": "uncompressed");
 
 	/* open source file */
 	fd_in = open(src, O_RDONLY | O_BINARY);
@@ -205,7 +206,6 @@ copy_file(const char *src, const char *dest, int compress_dest)
 	}
 
 	/* open destination file */
-	tmp_name = format("%s.%s.XXXXXX", dest, tmp_string());
 	fd_out = mkstemp(tmp_name);
 	if (fd_out == -1) {
 		cc_log("mkstemp error: %s", strerror(errno));
@@ -260,7 +260,13 @@ copy_file(const char *src, const char *dest, int compress_dest)
 			goto error;
 		}
 	}
-	if (n == 0 && !gzeof(gz_in)) {
+
+	/*
+	 * gzeof won't tell if there's an error in the trailing CRC, so we must check
+	 * gzerror before considering everything OK.
+	 */
+	gzerror(gz_in, &errnum);
+	if (!gzeof(gz_in) || (errnum != Z_OK && errnum != Z_STREAM_END)) {
 		cc_log("gzread error: %s (errno: %s)",
 		       gzerror(gz_in, &errnum), strerror(errno));
 		gzclose(gz_in);
@@ -268,7 +274,7 @@ copy_file(const char *src, const char *dest, int compress_dest)
 			gzclose(gz_out);
 		}
 		close(fd_out);
-		unlink(tmp_name);
+		tmp_unlink(tmp_name);
 		free(tmp_name);
 		return -1;
 	}
@@ -312,7 +318,7 @@ error:
 	if (fd_out != -1) {
 		close(fd_out);
 	}
-	unlink(tmp_name);
+	tmp_unlink(tmp_name);
 	free(tmp_name);
 	return -1;
 }
@@ -325,7 +331,7 @@ move_file(const char *src, const char *dest, int compress_dest)
 
 	ret = copy_file(src, dest, compress_dest);
 	if (ret != -1) {
-		unlink(src);
+		x_unlink(src);
 	}
 	return ret;
 }
@@ -1048,9 +1054,42 @@ x_rename(const char *oldpath, const char *newpath)
 {
 #ifdef _WIN32
 	/* Windows' rename() refuses to overwrite an existing file. */
-	unlink(newpath);
+	unlink(newpath);  /* not x_unlink, as x_unlink calls x_rename */
 #endif
 	return rename(oldpath, newpath);
+}
+
+/*
+ * Remove path, NFS hazardous. Use only for temporary files that will not exist
+ * on other systems. That is, the path should include tmp_string().
+ */
+int
+tmp_unlink(const char *path)
+{
+	cc_log("Unlink %s (as-tmp)", path);
+	return unlink(path);
+}
+
+/*
+ * Remove path, NFS safe.
+ */
+int
+x_unlink(const char *path)
+{
+	/*
+	 * If path is on an NFS share, unlink isn't atomic, so we rename to a temp
+	 * file. We don't care if the temp file is trashed, so it's always safe to
+	 * unlink it first.
+	 */
+	const char* tmp_name = format("%s.%s.rmXXXXXX", path, tmp_string());
+	cc_log("Unlink %s via %s", path, tmp_name);
+	if (x_rename(path, tmp_name) == -1) {
+		return -1;
+	}
+	if (unlink(tmp_name) == -1) {
+		return -1;
+	}
+	return 0;
 }
 
 #ifndef _WIN32

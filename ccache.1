@@ -2,12 +2,12 @@
 .\"     Title: ccache
 .\"    Author: [see the "Author" section]
 .\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 09/16/2010
+.\"      Date: 11/07/2010
 .\"    Manual: ccache Manual
-.\"    Source: ccache 3.1
+.\"    Source: ccache 3.1.1
 .\"  Language: English
 .\"
-.TH "CCACHE" "1" "09/16/2010" "ccache 3\&.1" "ccache Manual"
+.TH "CCACHE" "1" "11/07/2010" "ccache 3\&.1\&.1" "ccache Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -277,13 +277,6 @@ You can optionally set
 to force the name of the compiler to use\&. If you don\(cqt do this then ccache works it out from the command line\&.
 .RE
 .PP
-\fBCCACHE_COMPRESS\fR
-.RS 4
-If you set the environment variable
-\fBCCACHE_COMPRESS\fR
-then ccache will compress object files and other compiler output it puts in the cache\&. However, this setting has no effect on how files are retrieved from the cache; compressed and uncompressed results will still be usable regardless of this setting\&.
-.RE
-.PP
 \fBCCACHE_COMPILERCHECK\fR
 .RS 4
 By default, ccache includes the modification time (\(lqmtime\(rq) and size of the compiler in the hash to ensure that results retrieved from the cache are accurate\&. The
@@ -350,6 +343,13 @@ method in combination with
 if possible\&. See
 USING CCACHE WITH OTHER COMPILER WRAPPERS\&.
 .RE
+.RE
+.PP
+\fBCCACHE_COMPRESS\fR
+.RS 4
+If you set the environment variable
+\fBCCACHE_COMPRESS\fR
+then ccache will compress object files and other compiler output it puts in the cache\&. However, this setting has no effect on how files are retrieved from the cache; compressed and uncompressed results will still be usable regardless of this setting\&.
 .RE
 .PP
 \fBCCACHE_CPP2\fR

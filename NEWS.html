@@ -552,13 +552,62 @@ footnotes: function () {
 <body>
 <div id="header">
 <h1>ccache news</h1>
-<span id="revnumber">version 3.1</span>
+<span id="revnumber">version 3.1.1</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
 </div>
 </div>
 <div id="content">
+<h2 id="_ccache_3_1_1">ccache 3.1.1</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Release date: 2010-11-07</p></div>
+<h3 id="_bug_fixes">Bug fixes</h3><div style="clear:left"></div>
+<div class="ulist"><ul>
+<li>
+<p>
+ccache now falls back to preprocessor mode when a non-regular include
+      file (device, socket, etc) has been detected so that potential hanging
+      due to blocking reads is avoided.
+</p>
+</li>
+<li>
+<p>
+CRC errors are now detected when decompressing compressed files in the
+      cache.
+</p>
+</li>
+<li>
+<p>
+Fixed potential object file corruption race on NFS.
+</p>
+</li>
+<li>
+<p>
+Minor documentation corrections.
+</p>
+</li>
+<li>
+<p>
+Fixed configure detection of ar.
+</p>
+</li>
+<li>
+<p>
+ccache development version (set by dev.mk) now works with gits whose
+      <tt>describe</tt> command doesn&#8217;t understand <tt>--dirty</tt>.
+</p>
+</li>
+</ul></div>
+<h3 id="_other">Other</h3><div style="clear:left"></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Minor debug log message improvements.
+</p>
+</li>
+</ul></div>
+</div>
 <h2 id="_ccache_3_1">ccache 3.1</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-09-16</p></div>
@@ -566,10 +615,11 @@ footnotes: function () {
 <div class="ulist"><ul>
 <li>
 <p>
-Added support for hashing the output of a custom command (e.g. <tt>$compiler
-      --version</tt>) to identify the compiler instead of stat-ing or hashing the
-      compiler binary. This can improve robustness when the compiler (as seen
-      by ccache) actually isn&#8217;t the real compiler but another compiler wrapper.
+Added support for hashing the output of a custom command (e.g.
+      <tt>%compiler% --version</tt>) to identify the compiler instead of stat-ing or
+      hashing the compiler binary. This can improve robustness when the
+      compiler (as seen by ccache) actually isn&#8217;t the real compiler but another
+      compiler wrapper.
 </p>
 </li>
 <li>
@@ -628,7 +678,7 @@ Added <tt>-install_name</tt> as an option known to take an argument. (This
 </p>
 </li>
 </ul></div>
-<h3 id="_bug_fixes">Bug fixes</h3><div style="clear:left"></div>
+<h3 id="_bug_fixes_2">Bug fixes</h3><div style="clear:left"></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -652,7 +702,7 @@ EINTR is now handled correctly.
 </p>
 </li>
 </ul></div>
-<h3 id="_other">Other</h3><div style="clear:left"></div>
+<h3 id="_other_2">Other</h3><div style="clear:left"></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -710,7 +760,7 @@ New <tt>HACKING.txt</tt> file with some notes about ccache code conventions.
 <h2 id="_ccache_3_0_1">ccache 3.0.1</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-07-15</p></div>
-<h3 id="_bug_fixes_2">Bug fixes</h3><div style="clear:left"></div>
+<h3 id="_bug_fixes_3">Bug fixes</h3><div style="clear:left"></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -894,7 +944,7 @@ The following options are no longer hashed in the preprocessor mode:
 </p>
 </li>
 </ul></div>
-<h3 id="_bug_fixes_3">Bug fixes</h3><div style="clear:left"></div>
+<h3 id="_bug_fixes_4">Bug fixes</h3><div style="clear:left"></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1037,8 +1087,8 @@ Statistics counters are now correctly updated for -E option failures and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.1<br />
-Last updated 2010-09-16 18:56:48 CEST
+Version 3.1.1<br />
+Last updated 2010-11-07 18:46:25 CEST
 </div>
 </div>
 </body>

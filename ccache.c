@@ -440,6 +440,11 @@ process_preprocessed_file(struct mdfour *hash, const char *path)
 		 *
 		 *   #line N "file"
 		 *
+		 * AIX's compiler:
+		 *
+		 *   #line N "file"
+		 *   #line N
+		 *
 		 * Note that there may be other lines starting with '#' left after
 		 * preprocessing as well, for instance "#    pragma".
 		 */
@@ -449,14 +454,18 @@ process_preprocessed_file(struct mdfour *hash, const char *path)
 		        /* GCC precompiled header: */
 		        || (q[1] == 'p'
 		            && str_startswith(&q[2], "ragma GCC pch_preprocess "))
-		        /* HP: */
+		        /* HP/AIX: */
 		        || (q[1] == 'l' && q[2] == 'i' && q[3] == 'n' && q[4] == 'e'
 		            && q[5] == ' '))
 		    && (q == data || q[-1] == '\n')) {
 			char *path;
 
-			while (q < end && *q != '"') {
+			while (q < end && *q != '"' && *q != '\n') {
 				q++;
+			}
+			if (q < end && *q == '\n') {
+				/* A newline before the quotation mark -> no match. */
+				continue;
 			}
 			q++;
 			if (q >= end) {
@@ -1228,16 +1237,10 @@ cc_process_args(struct args *orig_args, struct args **preprocessor_args,
 			continue;
 		}
 
-		/* some options will never work ... */
-		if (str_eq(argv[i], "-E")) {
-			cc_log("Compiler option -E is unsupported");
-			stats_update(STATS_UNSUPPORTED);
-			result = false;
-			goto out;
-		}
-
-		/* these are too hard */
-		if (compopt_too_hard(argv[i]) || str_startswith(argv[i], "@")) {
+		/* These are always too hard. */
+		if (compopt_too_hard(argv[i])
+		    || str_startswith(argv[i], "@")
+		    || str_startswith(argv[i], "-fdump-")) {
 			cc_log("Compiler option %s is unsupported", argv[i]);
 			stats_update(STATS_UNSUPPORTED);
 			result = false;

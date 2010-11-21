@@ -1109,21 +1109,12 @@ EOF
     cat <<EOF >new.h
 int test;
 EOF
-    touchy_compiler=touchy-compiler.sh
-    cat <<EOF >$touchy_compiler
-#!/bin/sh
-CCACHE_DISABLE=1 # If $COMPILER happens to be a ccache symlink...
-export CCACHE_DISABLE
-[ x\$2 = "x-E" ] && touch -t `date +%Y%m%d%H%M.%S` new.h # Be sure that mtime >= time_of_compilation
-exec $COMPILER "\$@"
-EOF
-    chmod +x $touchy_compiler
-
-    $CCACHE ./$touchy_compiler -c new.c
+    touch -t 203801010000 new.h
+    $CCACHE $COMPILER -c new.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
-    $CCACHE ./$touchy_compiler -c new.c
+    $CCACHE $COMPILER -c new.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 1
     checkstat 'cache miss' 1
@@ -1138,21 +1129,12 @@ EOF
     cat <<EOF >new.h
 int test;
 EOF
-    touchy_compiler=touchy-compiler.sh
-    cat <<EOF >$touchy_compiler
-#!/bin/sh
-CCACHE_DISABLE=1 # If $COMPILER happens to be a ccache symlink...
-export CCACHE_DISABLE
-[ x\$2 = "x-E" ] && touch -t `date +%Y%m%d%H%M.%S` new.h # Be sure that mtime >= time_of_compilation
-exec $COMPILER "\$@"
-EOF
-    chmod +x $touchy_compiler
-
-    CCACHE_SLOPPINESS=include_file_mtime $CCACHE ./$touchy_compiler -c new.c
+    touch -t 203801010000 new.h
+    CCACHE_SLOPPINESS=include_file_mtime $CCACHE $COMPILER -c new.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
-    CCACHE_SLOPPINESS=include_file_mtime $CCACHE ./$touchy_compiler -c new.c
+    CCACHE_SLOPPINESS=include_file_mtime $CCACHE $COMPILER -c new.c
     checkstat 'cache hit (direct)' 1
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
@@ -1430,7 +1412,7 @@ prepare_cleanup_test() {
     mkdir -p $dir
     i=0
     while [ $i -lt 10 ]; do
-        dd if=/dev/zero of=$dir/result$i-4017.o count=1 bs=4017 2>/dev/null
+        perl -e 'print "A" x 4017' >$dir/result$i-4017.o
         touch $dir/result$i-4017.stderr
         touch $dir/result$i-4017.d
         if [ $i -gt 5 ]; then

@@ -552,17 +552,59 @@ footnotes: function () {
 <body>
 <div id="header">
 <h1>ccache news</h1>
-<span id="revnumber">version 3.1.1</span>
+<span id="revnumber">version 3.1.2</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
 </div>
 </div>
 <div id="content">
+<h2 id="_ccache_3_1_2">ccache 3.1.2</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Release date: 2010-11-21</p></div>
+<h3 id="_bug_fixes">Bug fixes</h3><div style="clear:left"></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Bail out on too hard compiler options <tt>-fdump-*</tt>.
+</p>
+</li>
+<li>
+<p>
+NULL return values from malloc/calloc of zero bytes are now handled
+      correctly.
+</p>
+</li>
+<li>
+<p>
+Fixed issue when parsing precompiler output on AIX.
+</p>
+</li>
+</ul></div>
+<h3 id="_other">Other</h3><div style="clear:left"></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Improved documentation on which information is included in the hash sum.
+</p>
+</li>
+<li>
+<p>
+Made the &#8220;too new header file&#8221; test case work on file systems with
+      unsynchronized clocks.
+</p>
+</li>
+<li>
+<p>
+The test suite now also works on systems that lack a /dev/zero.
+</p>
+</li>
+</ul></div>
+</div>
 <h2 id="_ccache_3_1_1">ccache 3.1.1</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-07</p></div>
-<h3 id="_bug_fixes">Bug fixes</h3><div style="clear:left"></div>
+<h3 id="_bug_fixes_2">Bug fixes</h3><div style="clear:left"></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -599,7 +641,7 @@ ccache development version (set by dev.mk) now works with gits whose
 </p>
 </li>
 </ul></div>
-<h3 id="_other">Other</h3><div style="clear:left"></div>
+<h3 id="_other_2">Other</h3><div style="clear:left"></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -678,7 +720,7 @@ Added <tt>-install_name</tt> as an option known to take an argument. (This
 </p>
 </li>
 </ul></div>
-<h3 id="_bug_fixes_2">Bug fixes</h3><div style="clear:left"></div>
+<h3 id="_bug_fixes_3">Bug fixes</h3><div style="clear:left"></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -702,7 +744,7 @@ EINTR is now handled correctly.
 </p>
 </li>
 </ul></div>
-<h3 id="_other_2">Other</h3><div style="clear:left"></div>
+<h3 id="_other_3">Other</h3><div style="clear:left"></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -760,7 +802,7 @@ New <tt>HACKING.txt</tt> file with some notes about ccache code conventions.
 <h2 id="_ccache_3_0_1">ccache 3.0.1</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-07-15</p></div>
-<h3 id="_bug_fixes_3">Bug fixes</h3><div style="clear:left"></div>
+<h3 id="_bug_fixes_4">Bug fixes</h3><div style="clear:left"></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -944,7 +986,7 @@ The following options are no longer hashed in the preprocessor mode:
 </p>
 </li>
 </ul></div>
-<h3 id="_bug_fixes_4">Bug fixes</h3><div style="clear:left"></div>
+<h3 id="_bug_fixes_5">Bug fixes</h3><div style="clear:left"></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1087,8 +1129,8 @@ Statistics counters are now correctly updated for -E option failures and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.1.1<br />
-Last updated 2010-11-07 18:46:25 CEST
+Version 3.1.2<br />
+Last updated 2010-11-21 17:30:49 CEST
 </div>
 </div>
 </body>

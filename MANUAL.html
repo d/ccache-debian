@@ -552,7 +552,7 @@ footnotes: function () {
 <body>
 <div id="header">
 <h1>CCACHE(1)</h1>
-<span id="revnumber">version 3.1.1</span>
+<span id="revnumber">version 3.1.2</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1218,8 +1218,39 @@ the <strong>preprocessor mode</strong>, where ccache runs the preprocessor on th
 </ul></div>
 <div class="paragraph"><p>The direct mode is generally faster since running the preprocessor has some
 overhead.</p></div>
+<h3 id="_common_hashed_information">Common hashed information</h3><div style="clear:left"></div>
+<div class="paragraph"><p>For both modes, the following information is included in the hash:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+the extension used by the compiler for a file with preprocessor output
+  (normally <strong>.i</strong> for C code and <strong>.ii</strong> for C++ code)
+</p>
+</li>
+<li>
+<p>
+the compiler&#8217;s size and modification time (or other compiler-specific
+  information specified by <strong>CCACHE_COMPILERCHECK</strong>)
+</p>
+</li>
+<li>
+<p>
+the name of the compiler
+</p>
+</li>
+<li>
+<p>
+the current directory (if <strong>CCACHE_HASHDIR</strong> is set)
+</p>
+</li>
+<li>
+<p>
+contents of files specified by <strong>CCACHE_EXTRAFILES</strong> (if any)
+</p>
+</li>
+</ul></div>
 <h3 id="_the_direct_mode">The direct mode</h3><div style="clear:left"></div>
-<div class="paragraph"><p>In the direct mode, the hash is formed of:</p></div>
+<div class="paragraph"><p>In the direct mode, the hash is formed of the common information and:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1229,12 +1260,6 @@ the input source file
 <li>
 <p>
 the command line options
-</p>
-</li>
-<li>
-<p>
-the real compiler&#8217;s size and modification time (unless <strong>CCACHE_COMPILERCHECK</strong>
-  says something else)
 </p>
 </li>
 </ul></div>
@@ -1311,7 +1336,7 @@ the string &#8220;__TIME__&#8221; is present outside comments and string literal
 </li>
 </ul></div>
 <h3 id="_the_preprocessor_mode">The preprocessor mode</h3><div style="clear:left"></div>
-<div class="paragraph"><p>In the preprocessor mode, the hash is formed of:</p></div>
+<div class="paragraph"><p>In the preprocessor mode, the hash is formed of the common information and:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1323,12 +1348,6 @@ the preprocessor output from running the compiler with <strong>-E</strong>
 the command line options except options that affect include files (<strong>-I</strong>,
   <strong>-include</strong>, <strong>-D</strong>, etc; the theory is that these options will change the
   preprocessor output if they have any effect at all)
-</p>
-</li>
-<li>
-<p>
-the real compiler&#8217;s size and modification time (unless <strong>CCACHE_COMPILERCHECK</strong>
-  says something else)
 </p>
 </li>
 <li>
@@ -1714,8 +1733,8 @@ maintained by Joel Rosdahl. See AUTHORS.txt or AUTHORS.html and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.1.1<br />
-Last updated 2010-11-01 18:31:35 CEST
+Version 3.1.2<br />
+Last updated 2010-11-14 11:05:10 CEST
 </div>
 </div>
 </body>

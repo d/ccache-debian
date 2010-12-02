@@ -590,6 +590,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
+ac_header_list=
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
 EGREP
@@ -1757,6 +1758,63 @@ $as_echo "$ac_res" >&6; }
   eval $as_lineno_stack; test "x$as_lineno_stack" = x && { as_lineno=; unset as_lineno;}
 
 } # ac_fn_c_check_func
+
+# ac_fn_c_check_member LINENO AGGR MEMBER VAR INCLUDES
+# ----------------------------------------------------
+# Tries to find if the field MEMBER exists in type AGGR, after including
+# INCLUDES, setting cache variable VAR accordingly.
+ac_fn_c_check_member ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $2.$3" >&5
+$as_echo_n "checking for $2.$3... " >&6; }
+if eval "test \"\${$4+set}\"" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$5
+int
+main ()
+{
+static $2 ac_aggr;
+if (ac_aggr.$3)
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  eval "$4=yes"
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$5
+int
+main ()
+{
+static $2 ac_aggr;
+if (sizeof ac_aggr.$3)
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  eval "$4=yes"
+else
+  eval "$4=no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+eval ac_res=\$$4
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+  eval $as_lineno_stack; test "x$as_lineno_stack" = x && { as_lineno=; unset as_lineno;}
+
+} # ac_fn_c_check_member
 cat >config.log <<_ACEOF
 This file contains any messages produced by compilers while
 running configure, to aid debugging if configure makes a mistake.
@@ -2041,6 +2099,8 @@ $as_echo "$as_me: creating cache $cache_file" >&6;}
   >$cache_file
 fi
 
+as_fn_append ac_header_list " stdarg.h"
+as_fn_append ac_header_list " varargs.h"
 # Check that the precious variables saved in the cache have kept the same
 # value.
 ac_cache_corrupted=false
@@ -4154,17 +4214,6 @@ fi
 done
 
 
-for ac_func in asprintf
-do :
-  ac_fn_c_check_func "$LINENO" "asprintf" "ac_cv_func_asprintf"
-if test "x$ac_cv_func_asprintf" = x""yes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_ASPRINTF 1
-_ACEOF
-
-fi
-done
-
 for ac_func in gethostname
 do :
   ac_fn_c_check_func "$LINENO" "gethostname" "ac_cv_func_gethostname"
@@ -4231,17 +4280,6 @@ _ACEOF
 fi
 done
 
-for ac_func in snprintf
-do :
-  ac_fn_c_check_func "$LINENO" "snprintf" "ac_cv_func_snprintf"
-if test "x$ac_cv_func_snprintf" = x""yes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_SNPRINTF 1
-_ACEOF
-
-fi
-done
-
 for ac_func in strndup
 do :
   ac_fn_c_check_func "$LINENO" "strndup" "ac_cv_func_strndup"
@@ -4259,28 +4297,6 @@ do :
 if test "x$ac_cv_func_utimes" = x""yes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_UTIMES 1
-_ACEOF
-
-fi
-done
-
-for ac_func in vasprintf
-do :
-  ac_fn_c_check_func "$LINENO" "vasprintf" "ac_cv_func_vasprintf"
-if test "x$ac_cv_func_vasprintf" = x""yes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_VASPRINTF 1
-_ACEOF
-
-fi
-done
-
-for ac_func in vsnprintf
-do :
-  ac_fn_c_check_func "$LINENO" "vsnprintf" "ac_cv_func_vsnprintf"
-if test "x$ac_cv_func_vsnprintf" = x""yes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_VSNPRINTF 1
 _ACEOF
 
 fi
@@ -4319,55 +4335,1019 @@ $as_echo "#define HAVE_COMPAR_FN_T 1" >>confdefs.h
 
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for C99 vsnprintf" >&5
-$as_echo_n "checking for C99 vsnprintf... " >&6; }
-if test "${ccache_cv_HAVE_C99_VSNPRINTF+set}" = set; then :
+# $Id: snprintf.m4,v 1.1.1.1 2008/01/06 03:24:00 holger Exp $
+
+# Copyright (c) 2008 Holger Weiss <holger@jhweiss.de>.
+#
+# This code may freely be used, modified and/or redistributed for any purpose.
+# It would be nice if additions and fixes to this file (including trivial code
+# cleanups) would be sent back in order to let me include them in the version
+# available at <http://www.jhweiss.de/software/snprintf.html>.  However, this is
+# not a requirement for using or redistributing (possibly modified) versions of
+# this file, nor is leaving this notice intact mandatory.
+
+# HW_HEADER_STDARG_H
+# ------------------
+# Define HAVE_STDARG_H to 1 if <stdarg.h> is available.
+# HW_HEADER_STDARG_H
+
+# HW_HEADER_VARARGS_H
+# -------------------
+# Define HAVE_VARARGS_H to 1 if <varargs.h> is available.
+# HW_HEADER_VARARGS_H
+
+# HW_FUNC_VA_COPY
+# ---------------
+# Set $hw_cv_func_va_copy to "yes" or "no".  Define HAVE_VA_COPY to 1 if
+# $hw_cv_func_va_copy is set to "yes".  Note that it's "unspecified whether
+# va_copy and va_end are macros or identifiers declared with external linkage."
+# (C99: 7.15.1, 1)  Therefore, the presence of va_copy(3) cannot simply "be
+# tested with #ifdef", as suggested by the Autoconf manual (5.5.1).
+# HW_FUNC_VA_COPY
+
+# HW_FUNC___VA_COPY
+# -----------------
+# Set $hw_cv_func___va_copy to "yes" or "no".  Define HAVE___VA_COPY to 1 if
+# $hw_cv_func___va_copy is set to "yes".
+# HW_FUNC___VA_COPY
+
+# HW_FUNC_VSNPRINTF
+# -----------------
+# Set $hw_cv_func_vsnprintf and $hw_cv_func_vsnprintf_c99 to "yes" or "no",
+# respectively.  Define HAVE_VSNPRINTF to 1 only if $hw_cv_func_vsnprintf_c99
+# is set to "yes".  Otherwise, define vsnprintf to rpl_vsnprintf and make sure
+# the replacement function will be built.
+# HW_FUNC_VSNPRINTF
+
+# HW_FUNC_SNPRINTF
+# ----------------
+# Set $hw_cv_func_snprintf and $hw_cv_func_snprintf_c99 to "yes" or "no",
+# respectively.  Define HAVE_SNPRINTF to 1 only if $hw_cv_func_snprintf_c99
+# is set to "yes".  Otherwise, define snprintf to rpl_snprintf and make sure
+# the replacement function will be built.
+# HW_FUNC_SNPRINTF
+
+# HW_FUNC_VASPRINTF
+# -----------------
+# Set $hw_cv_func_vasprintf to "yes" or "no".  Define HAVE_VASPRINTF to 1 if
+# $hw_cv_func_vasprintf is set to "yes".  Otherwise, define vasprintf to
+# rpl_vasprintf and make sure the replacement function will be built.
+# HW_FUNC_VASPRINTF
+
+# HW_FUNC_ASPRINTF
+# ----------------
+# Set $hw_cv_func_asprintf to "yes" or "no".  Define HAVE_ASPRINTF to 1 if
+# $hw_cv_func_asprintf is set to "yes".  Otherwise, define asprintf to
+# rpl_asprintf and make sure the replacement function will be built.
+# HW_FUNC_ASPRINTF
+
+# _HW_FUNC_XPRINTF_REPLACE
+# ------------------------
+# Arrange for building snprintf.c.  Must be called if one or more of the
+# functions provided by snprintf.c are needed.
+# _HW_FUNC_XPRINTF_REPLACE
+
+
+
+
+
+  for ac_header in $ac_header_list
+do :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default
+"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
+
+
+
+
+
+
+      ac_fn_c_check_func "$LINENO" "vsnprintf" "ac_cv_func_vsnprintf"
+if test "x$ac_cv_func_vsnprintf" = x""yes; then :
+  hw_cv_func_vsnprintf=yes
+else
+  hw_cv_func_vsnprintf=no
+fi
+
+  if test "$hw_cv_func_vsnprintf" = yes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether vsnprintf is C99 compliant" >&5
+$as_echo_n "checking whether vsnprintf is C99 compliant... " >&6; }
+if test "${hw_cv_func_vsnprintf_c99+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-
-if test "$cross_compiling" = yes; then :
-  ccache_cv_HAVE_C99_VSNPRINTF=cross
+  if test "$cross_compiling" = yes; then :
+  hw_cv_func_vsnprintf_c99=no
 else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-
-#include <sys/types.h>
-#include <stdarg.h>
-#include <stdio.h>
-void foo(const char *format, ...) {
-    va_list ap;
-    int len;
-    char buf[5];
-
-    va_start(ap, format);
-    len = vsnprintf(0, 0, format, ap);
-    va_end(ap);
-    if (len != 5) exit(1);
-
-    if (snprintf(buf, 3, "hello") != 5 || strcmp(buf, "he") != 0) exit(1);
-
-    exit(0);
+#if HAVE_STDARG_H
+          #include <stdarg.h>
+          #endif
+          #include <stdio.h>
+          static int testprintf(char *buf, size_t size, const char *format, ...)
+          {
+            int result;
+            va_list ap;
+            va_start(ap, format);
+            result = vsnprintf(buf, size, format, ap);
+            va_end(ap);
+            return result;
+          }
+int
+main ()
+{
+char buf[43];
+          if (testprintf(buf, 4, "The answer is %27.2g.", 42.0) != 42 ||
+              testprintf(buf, 0, "No, it's %32zu.", (size_t)42) != 42 ||
+              buf[0] != 'T' || buf[3] != '\0')
+            return 1;
+  ;
+  return 0;
 }
-main() { foo("hello"); }
-
 _ACEOF
 if ac_fn_c_try_run "$LINENO"; then :
-  ccache_cv_HAVE_C99_VSNPRINTF=yes
+  hw_cv_func_vsnprintf_c99=yes
 else
-  ccache_cv_HAVE_C99_VSNPRINTF=no
+  hw_cv_func_vsnprintf_c99=no
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ccache_cv_HAVE_C99_VSNPRINTF" >&5
-$as_echo "$ccache_cv_HAVE_C99_VSNPRINTF" >&6; }
-if test x"$ccache_cv_HAVE_C99_VSNPRINTF" = x"yes"; then
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $hw_cv_func_vsnprintf_c99" >&5
+$as_echo "$hw_cv_func_vsnprintf_c99" >&6; }
+else
+  hw_cv_func_snprintf_c99=no
+fi
+  if test "$hw_cv_func_vsnprintf_c99" = yes; then :
 
-$as_echo "#define HAVE_C99_VSNPRINTF 1" >>confdefs.h
+$as_echo "#define HAVE_VSNPRINTF 1" >>confdefs.h
+
+else
+  for ac_header in inttypes.h locale.h stddef.h stdint.h
+do :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
 
 fi
+
+done
+
+    ac_fn_c_check_member "$LINENO" "struct lconv" "decimal_point" "ac_cv_member_struct_lconv_decimal_point" "#include <locale.h>
+"
+if test "x$ac_cv_member_struct_lconv_decimal_point" = x""yes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_STRUCT_LCONV_DECIMAL_POINT 1
+_ACEOF
+
+
+fi
+ac_fn_c_check_member "$LINENO" "struct lconv" "thousands_sep" "ac_cv_member_struct_lconv_thousands_sep" "#include <locale.h>
+"
+if test "x$ac_cv_member_struct_lconv_thousands_sep" = x""yes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_STRUCT_LCONV_THOUSANDS_SEP 1
+_ACEOF
+
+
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for long long int" >&5
+$as_echo_n "checking for long long int... " >&6; }
+if test "${ac_cv_type_long_long_int+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+  /* For now, do not test the preprocessor; as of 2007 there are too many
+	 implementations with broken preprocessors.  Perhaps this can
+	 be revisited in 2012.  In the meantime, code should not expect
+	 #if to work with literals wider than 32 bits.  */
+      /* Test literals.  */
+      long long int ll = 9223372036854775807ll;
+      long long int nll = -9223372036854775807LL;
+      unsigned long long int ull = 18446744073709551615ULL;
+      /* Test constant expressions.   */
+      typedef int a[((-9223372036854775807LL < 0 && 0 < 9223372036854775807ll)
+		     ? 1 : -1)];
+      typedef int b[(18446744073709551615ULL <= (unsigned long long int) -1
+		     ? 1 : -1)];
+      int i = 63;
+int
+main ()
+{
+/* Test availability of runtime routines for shift and division.  */
+      long long int llmax = 9223372036854775807ll;
+      unsigned long long int ullmax = 18446744073709551615ull;
+      return ((ll << 63) | (ll >> 63) | (ll < i) | (ll > i)
+	      | (llmax / ll) | (llmax % ll)
+	      | (ull << 63) | (ull >> 63) | (ull << i) | (ull >> i)
+	      | (ullmax / ull) | (ullmax % ull));
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  			if test "$cross_compiling" = yes; then :
+  ac_cv_type_long_long_int=yes
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <limits.h>
+	       #ifndef LLONG_MAX
+	       # define HALF \
+			(1LL << (sizeof (long long int) * CHAR_BIT - 2))
+	       # define LLONG_MAX (HALF - 1 + HALF)
+	       #endif
+int
+main ()
+{
+long long int n = 1;
+	       int i;
+	       for (i = 0; ; i++)
+		 {
+		   long long int m = n << i;
+		   if (m >> i != n)
+		     return 1;
+		   if (LLONG_MAX / 2 < m)
+		     break;
+		 }
+	       return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_run "$LINENO"; then :
+  ac_cv_type_long_long_int=yes
+else
+  ac_cv_type_long_long_int=no
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+else
+  ac_cv_type_long_long_int=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_type_long_long_int" >&5
+$as_echo "$ac_cv_type_long_long_int" >&6; }
+  if test $ac_cv_type_long_long_int = yes; then
+
+$as_echo "#define HAVE_LONG_LONG_INT 1" >>confdefs.h
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for unsigned long long int" >&5
+$as_echo_n "checking for unsigned long long int... " >&6; }
+if test "${ac_cv_type_unsigned_long_long_int+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+  /* For now, do not test the preprocessor; as of 2007 there are too many
+	 implementations with broken preprocessors.  Perhaps this can
+	 be revisited in 2012.  In the meantime, code should not expect
+	 #if to work with literals wider than 32 bits.  */
+      /* Test literals.  */
+      long long int ll = 9223372036854775807ll;
+      long long int nll = -9223372036854775807LL;
+      unsigned long long int ull = 18446744073709551615ULL;
+      /* Test constant expressions.   */
+      typedef int a[((-9223372036854775807LL < 0 && 0 < 9223372036854775807ll)
+		     ? 1 : -1)];
+      typedef int b[(18446744073709551615ULL <= (unsigned long long int) -1
+		     ? 1 : -1)];
+      int i = 63;
+int
+main ()
+{
+/* Test availability of runtime routines for shift and division.  */
+      long long int llmax = 9223372036854775807ll;
+      unsigned long long int ullmax = 18446744073709551615ull;
+      return ((ll << 63) | (ll >> 63) | (ll < i) | (ll > i)
+	      | (llmax / ll) | (llmax % ll)
+	      | (ull << 63) | (ull >> 63) | (ull << i) | (ull >> i)
+	      | (ullmax / ull) | (ullmax % ull));
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_type_unsigned_long_long_int=yes
+else
+  ac_cv_type_unsigned_long_long_int=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_type_unsigned_long_long_int" >&5
+$as_echo "$ac_cv_type_unsigned_long_long_int" >&6; }
+  if test $ac_cv_type_unsigned_long_long_int = yes; then
+
+$as_echo "#define HAVE_UNSIGNED_LONG_LONG_INT 1" >>confdefs.h
+
+  fi
+
+    ac_fn_c_check_type "$LINENO" "size_t" "ac_cv_type_size_t" "$ac_includes_default"
+if test "x$ac_cv_type_size_t" = x""yes; then :
+
+else
+
+cat >>confdefs.h <<_ACEOF
+#define size_t unsigned int
+_ACEOF
+
+fi
+
+
+
+  ac_fn_c_check_type "$LINENO" "intmax_t" "ac_cv_type_intmax_t" "$ac_includes_default"
+if test "x$ac_cv_type_intmax_t" = x""yes; then :
+
+$as_echo "#define HAVE_INTMAX_T 1" >>confdefs.h
+
+else
+  test $ac_cv_type_long_long_int = yes \
+       && ac_type='long long int' \
+       || ac_type='long int'
+
+cat >>confdefs.h <<_ACEOF
+#define intmax_t $ac_type
+_ACEOF
+
+fi
+
+
+
+
+  ac_fn_c_check_type "$LINENO" "uintmax_t" "ac_cv_type_uintmax_t" "$ac_includes_default"
+if test "x$ac_cv_type_uintmax_t" = x""yes; then :
+
+$as_echo "#define HAVE_UINTMAX_T 1" >>confdefs.h
+
+else
+  test $ac_cv_type_unsigned_long_long_int = yes \
+       && ac_type='unsigned long long int' \
+       || ac_type='unsigned long int'
+
+cat >>confdefs.h <<_ACEOF
+#define uintmax_t $ac_type
+_ACEOF
+
+fi
+
+
+
+  ac_fn_c_check_type "$LINENO" "uintptr_t" "ac_cv_type_uintptr_t" "$ac_includes_default"
+if test "x$ac_cv_type_uintptr_t" = x""yes; then :
+
+$as_echo "#define HAVE_UINTPTR_T 1" >>confdefs.h
+
+else
+  for ac_type in 'unsigned int' 'unsigned long int' \
+	'unsigned long long int'; do
+       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$ac_includes_default
+int
+main ()
+{
+static int test_array [1 - 2 * !(sizeof (void *) <= sizeof ($ac_type))];
+test_array [0] = 0
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define uintptr_t $ac_type
+_ACEOF
+
+	  ac_type=
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+       test -z "$ac_type" && break
+     done
+fi
+
+
+    ac_fn_c_check_type "$LINENO" "ptrdiff_t" "ac_cv_type_ptrdiff_t" "$ac_includes_default"
+if test "x$ac_cv_type_ptrdiff_t" = x""yes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_PTRDIFF_T 1
+_ACEOF
+
+
+fi
+
+    for ac_func in localeconv
+do :
+  ac_fn_c_check_func "$LINENO" "localeconv" "ac_cv_func_localeconv"
+if test "x$ac_cv_func_localeconv" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LOCALECONV 1
+_ACEOF
+
+fi
+done
+
+
+  if test "x$_hw_cv_func_xprintf_replace_done" != xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for an ANSI C-conforming const" >&5
+$as_echo_n "checking for an ANSI C-conforming const... " >&6; }
+if test "${ac_cv_c_const+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+/* FIXME: Include the comments suggested by Paul. */
+#ifndef __cplusplus
+  /* Ultrix mips cc rejects this.  */
+  typedef int charset[2];
+  const charset cs;
+  /* SunOS 4.1.1 cc rejects this.  */
+  char const *const *pcpcc;
+  char **ppc;
+  /* NEC SVR4.0.2 mips cc rejects this.  */
+  struct point {int x, y;};
+  static struct point const zero = {0,0};
+  /* AIX XL C 1.02.0.0 rejects this.
+     It does not let you subtract one const X* pointer from another in
+     an arm of an if-expression whose if-part is not a constant
+     expression */
+  const char *g = "string";
+  pcpcc = &g + (g ? g-g : 0);
+  /* HPUX 7.0 cc rejects these. */
+  ++pcpcc;
+  ppc = (char**) pcpcc;
+  pcpcc = (char const *const *) ppc;
+  { /* SCO 3.2v4 cc rejects this.  */
+    char *t;
+    char const *s = 0 ? (char *) 0 : (char const *) 0;
+
+    *t++ = 0;
+    if (s) return 0;
+  }
+  { /* Someone thinks the Sun supposedly-ANSI compiler will reject this.  */
+    int x[] = {25, 17};
+    const int *foo = &x[0];
+    ++foo;
+  }
+  { /* Sun SC1.0 ANSI compiler rejects this -- but not the above. */
+    typedef const int *iptr;
+    iptr p = 0;
+    ++p;
+  }
+  { /* AIX XL C 1.02.0.0 rejects this saying
+       "k.c", line 2.27: 1506-025 (S) Operand must be a modifiable lvalue. */
+    struct s { int j; const int *ap[3]; };
+    struct s *b; b->j = 5;
+  }
+  { /* ULTRIX-32 V3.1 (Rev 9) vcc rejects this */
+    const int foo = 10;
+    if (!foo) return 0;
+  }
+  return !cs[0] && !zero.x;
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_c_const=yes
+else
+  ac_cv_c_const=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_const" >&5
+$as_echo "$ac_cv_c_const" >&6; }
+if test $ac_cv_c_const = no; then
+
+$as_echo "#define const /**/" >>confdefs.h
+
+fi
+
+
+
+
+    case " $LIBOBJS " in
+  *" snprintf.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS snprintf.$ac_objext"
+ ;;
+esac
+
+    _hw_cv_func_xprintf_replace_done=yes
+fi
+
+fi
+
+
+    ac_fn_c_check_func "$LINENO" "snprintf" "ac_cv_func_snprintf"
+if test "x$ac_cv_func_snprintf" = x""yes; then :
+  hw_cv_func_snprintf=yes
+else
+  hw_cv_func_snprintf=no
+fi
+
+  if test "$hw_cv_func_snprintf" = yes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether snprintf is C99 compliant" >&5
+$as_echo_n "checking whether snprintf is C99 compliant... " >&6; }
+if test "${hw_cv_func_snprintf_c99+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test "$cross_compiling" = yes; then :
+  hw_cv_func_snprintf_c99=no
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+int
+main ()
+{
+char buf[43];
+          if (snprintf(buf, 4, "The answer is %27.2g.", 42.0) != 42 ||
+              snprintf(buf, 0, "No, it's %32zu.", (size_t)42) != 42 ||
+              buf[0] != 'T' || buf[3] != '\0')
+            return 1;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_run "$LINENO"; then :
+  hw_cv_func_snprintf_c99=yes
+else
+  hw_cv_func_snprintf_c99=no
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $hw_cv_func_snprintf_c99" >&5
+$as_echo "$hw_cv_func_snprintf_c99" >&6; }
+else
+  hw_cv_func_snprintf_c99=no
+fi
+  if test "$hw_cv_func_snprintf_c99" = yes; then :
+
+$as_echo "#define HAVE_SNPRINTF 1" >>confdefs.h
+
+else
+
+  if test "x$_hw_cv_func_xprintf_replace_done" != xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for an ANSI C-conforming const" >&5
+$as_echo_n "checking for an ANSI C-conforming const... " >&6; }
+if test "${ac_cv_c_const+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+/* FIXME: Include the comments suggested by Paul. */
+#ifndef __cplusplus
+  /* Ultrix mips cc rejects this.  */
+  typedef int charset[2];
+  const charset cs;
+  /* SunOS 4.1.1 cc rejects this.  */
+  char const *const *pcpcc;
+  char **ppc;
+  /* NEC SVR4.0.2 mips cc rejects this.  */
+  struct point {int x, y;};
+  static struct point const zero = {0,0};
+  /* AIX XL C 1.02.0.0 rejects this.
+     It does not let you subtract one const X* pointer from another in
+     an arm of an if-expression whose if-part is not a constant
+     expression */
+  const char *g = "string";
+  pcpcc = &g + (g ? g-g : 0);
+  /* HPUX 7.0 cc rejects these. */
+  ++pcpcc;
+  ppc = (char**) pcpcc;
+  pcpcc = (char const *const *) ppc;
+  { /* SCO 3.2v4 cc rejects this.  */
+    char *t;
+    char const *s = 0 ? (char *) 0 : (char const *) 0;
+
+    *t++ = 0;
+    if (s) return 0;
+  }
+  { /* Someone thinks the Sun supposedly-ANSI compiler will reject this.  */
+    int x[] = {25, 17};
+    const int *foo = &x[0];
+    ++foo;
+  }
+  { /* Sun SC1.0 ANSI compiler rejects this -- but not the above. */
+    typedef const int *iptr;
+    iptr p = 0;
+    ++p;
+  }
+  { /* AIX XL C 1.02.0.0 rejects this saying
+       "k.c", line 2.27: 1506-025 (S) Operand must be a modifiable lvalue. */
+    struct s { int j; const int *ap[3]; };
+    struct s *b; b->j = 5;
+  }
+  { /* ULTRIX-32 V3.1 (Rev 9) vcc rejects this */
+    const int foo = 10;
+    if (!foo) return 0;
+  }
+  return !cs[0] && !zero.x;
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_c_const=yes
+else
+  ac_cv_c_const=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_const" >&5
+$as_echo "$ac_cv_c_const" >&6; }
+if test $ac_cv_c_const = no; then
+
+$as_echo "#define const /**/" >>confdefs.h
+
+fi
+
+
+
+
+    case " $LIBOBJS " in
+  *" snprintf.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS snprintf.$ac_objext"
+ ;;
+esac
+
+    _hw_cv_func_xprintf_replace_done=yes
+fi
+
+fi
+
+
+
+
+
+
+
+    for ac_func in vasprintf
+do :
+  ac_fn_c_check_func "$LINENO" "vasprintf" "ac_cv_func_vasprintf"
+if test "x$ac_cv_func_vasprintf" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_VASPRINTF 1
+_ACEOF
+ hw_cv_func_vasprintf=yes
+else
+  hw_cv_func_vasprintf=no
+fi
+done
+
+  if test "$hw_cv_func_vasprintf" = no; then :
+  for ac_header in stdlib.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "stdlib.h" "ac_cv_header_stdlib_h" "$ac_includes_default"
+if test "x$ac_cv_header_stdlib_h" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_STDLIB_H 1
+_ACEOF
+
+fi
+
+done
+
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for va_copy" >&5
+$as_echo_n "checking for va_copy... " >&6; }
+if test "${hw_cv_func_va_copy+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test "$cross_compiling" = yes; then :
+  hw_cv_func_va_copy=no
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#if HAVE_STDARG_H
+        #include <stdarg.h>
+        #elif HAVE_VARARGS_H
+        #include <varargs.h>
+        #endif
+int
+main ()
+{
+va_list ap, aq; va_copy(aq, ap);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_run "$LINENO"; then :
+  hw_cv_func_va_copy=yes
+else
+  hw_cv_func_va_copy=no
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $hw_cv_func_va_copy" >&5
+$as_echo "$hw_cv_func_va_copy" >&6; }
+  if test "$hw_cv_func_va_copy" = yes; then :
+
+$as_echo "#define HAVE_VA_COPY 1" >>confdefs.h
+
+fi
+
+    if test "$hw_cv_func_va_copy" = no; then :
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for __va_copy" >&5
+$as_echo_n "checking for __va_copy... " >&6; }
+if test "${hw_cv_func___va_copy+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test "$cross_compiling" = yes; then :
+  hw_cv_func___va_copy=no
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#if HAVE_STDARG_H
+        #include <stdarg.h>
+        #elif HAVE_VARARGS_H
+        #include <varargs.h>
+        #endif
+int
+main ()
+{
+va_list ap, aq; __va_copy(aq, ap);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_run "$LINENO"; then :
+  hw_cv_func___va_copy=yes
+else
+  hw_cv_func___va_copy=no
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $hw_cv_func___va_copy" >&5
+$as_echo "$hw_cv_func___va_copy" >&6; }
+  if test "$hw_cv_func___va_copy" = yes; then :
+
+$as_echo "#define HAVE___VA_COPY 1" >>confdefs.h
+
+fi
+
+fi
+
+  if test "x$_hw_cv_func_xprintf_replace_done" != xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for an ANSI C-conforming const" >&5
+$as_echo_n "checking for an ANSI C-conforming const... " >&6; }
+if test "${ac_cv_c_const+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+/* FIXME: Include the comments suggested by Paul. */
+#ifndef __cplusplus
+  /* Ultrix mips cc rejects this.  */
+  typedef int charset[2];
+  const charset cs;
+  /* SunOS 4.1.1 cc rejects this.  */
+  char const *const *pcpcc;
+  char **ppc;
+  /* NEC SVR4.0.2 mips cc rejects this.  */
+  struct point {int x, y;};
+  static struct point const zero = {0,0};
+  /* AIX XL C 1.02.0.0 rejects this.
+     It does not let you subtract one const X* pointer from another in
+     an arm of an if-expression whose if-part is not a constant
+     expression */
+  const char *g = "string";
+  pcpcc = &g + (g ? g-g : 0);
+  /* HPUX 7.0 cc rejects these. */
+  ++pcpcc;
+  ppc = (char**) pcpcc;
+  pcpcc = (char const *const *) ppc;
+  { /* SCO 3.2v4 cc rejects this.  */
+    char *t;
+    char const *s = 0 ? (char *) 0 : (char const *) 0;
+
+    *t++ = 0;
+    if (s) return 0;
+  }
+  { /* Someone thinks the Sun supposedly-ANSI compiler will reject this.  */
+    int x[] = {25, 17};
+    const int *foo = &x[0];
+    ++foo;
+  }
+  { /* Sun SC1.0 ANSI compiler rejects this -- but not the above. */
+    typedef const int *iptr;
+    iptr p = 0;
+    ++p;
+  }
+  { /* AIX XL C 1.02.0.0 rejects this saying
+       "k.c", line 2.27: 1506-025 (S) Operand must be a modifiable lvalue. */
+    struct s { int j; const int *ap[3]; };
+    struct s *b; b->j = 5;
+  }
+  { /* ULTRIX-32 V3.1 (Rev 9) vcc rejects this */
+    const int foo = 10;
+    if (!foo) return 0;
+  }
+  return !cs[0] && !zero.x;
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_c_const=yes
+else
+  ac_cv_c_const=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_const" >&5
+$as_echo "$ac_cv_c_const" >&6; }
+if test $ac_cv_c_const = no; then
+
+$as_echo "#define const /**/" >>confdefs.h
+
+fi
+
+
+
+
+    case " $LIBOBJS " in
+  *" snprintf.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS snprintf.$ac_objext"
+ ;;
+esac
+
+    _hw_cv_func_xprintf_replace_done=yes
+fi
+
+fi
+
+
+    for ac_func in asprintf
+do :
+  ac_fn_c_check_func "$LINENO" "asprintf" "ac_cv_func_asprintf"
+if test "x$ac_cv_func_asprintf" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_ASPRINTF 1
+_ACEOF
+ hw_cv_func_asprintf=yes
+else
+  hw_cv_func_asprintf=no
+fi
+done
+
+  if test "$hw_cv_func_asprintf" = no; then :
+
+  if test "x$_hw_cv_func_xprintf_replace_done" != xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for an ANSI C-conforming const" >&5
+$as_echo_n "checking for an ANSI C-conforming const... " >&6; }
+if test "${ac_cv_c_const+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+/* FIXME: Include the comments suggested by Paul. */
+#ifndef __cplusplus
+  /* Ultrix mips cc rejects this.  */
+  typedef int charset[2];
+  const charset cs;
+  /* SunOS 4.1.1 cc rejects this.  */
+  char const *const *pcpcc;
+  char **ppc;
+  /* NEC SVR4.0.2 mips cc rejects this.  */
+  struct point {int x, y;};
+  static struct point const zero = {0,0};
+  /* AIX XL C 1.02.0.0 rejects this.
+     It does not let you subtract one const X* pointer from another in
+     an arm of an if-expression whose if-part is not a constant
+     expression */
+  const char *g = "string";
+  pcpcc = &g + (g ? g-g : 0);
+  /* HPUX 7.0 cc rejects these. */
+  ++pcpcc;
+  ppc = (char**) pcpcc;
+  pcpcc = (char const *const *) ppc;
+  { /* SCO 3.2v4 cc rejects this.  */
+    char *t;
+    char const *s = 0 ? (char *) 0 : (char const *) 0;
+
+    *t++ = 0;
+    if (s) return 0;
+  }
+  { /* Someone thinks the Sun supposedly-ANSI compiler will reject this.  */
+    int x[] = {25, 17};
+    const int *foo = &x[0];
+    ++foo;
+  }
+  { /* Sun SC1.0 ANSI compiler rejects this -- but not the above. */
+    typedef const int *iptr;
+    iptr p = 0;
+    ++p;
+  }
+  { /* AIX XL C 1.02.0.0 rejects this saying
+       "k.c", line 2.27: 1506-025 (S) Operand must be a modifiable lvalue. */
+    struct s { int j; const int *ap[3]; };
+    struct s *b; b->j = 5;
+  }
+  { /* ULTRIX-32 V3.1 (Rev 9) vcc rejects this */
+    const int foo = 10;
+    if (!foo) return 0;
+  }
+  return !cs[0] && !zero.x;
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_c_const=yes
+else
+  ac_cv_c_const=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_const" >&5
+$as_echo "$ac_cv_c_const" >&6; }
+if test $ac_cv_c_const = no; then
+
+$as_echo "#define const /**/" >>confdefs.h
+
+fi
+
+
+
+
+    case " $LIBOBJS " in
+  *" snprintf.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS snprintf.$ac_objext"
+ ;;
+esac
+
+    _hw_cv_func_xprintf_replace_done=yes
+fi
+
+fi
+
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for zlib >= 1.2.3" >&5
 $as_echo_n "checking for zlib >= 1.2.3... " >&6; }

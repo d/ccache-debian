@@ -37,6 +37,7 @@ foreach my $dir (<$gcc_dir/*>) {
     foreach (<$dir/*>) {
         if (! -l $_ and -d $_) {
             s|.*/||;
+            consider_gcc "", "-$_";
             consider_gcc "$kind-", "-$_";
         }
     }

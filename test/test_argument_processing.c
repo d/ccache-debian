@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Joel Rosdahl
+ * Copyright (C) 2010-2011 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -26,9 +26,21 @@
 
 TEST_SUITE(argument_processing)
 
-TEST(dash_E_should_be_unsupported)
+TEST(dash_E_should_result_in_called_for_preprocessing)
 {
 	struct args *orig = args_init_from_string("cc -c foo.c -E");
+	struct args *preprocessed, *compiler;
+
+	create_file("foo.c", "");
+	CHECK(!cc_process_args(orig, &preprocessed, &compiler));
+	CHECK_UNS_EQ(1, stats_get_pending(STATS_PREPROCESSING));
+
+	args_free(orig);
+}
+
+TEST(dash_M_should_be_unsupported)
+{
+	struct args *orig = args_init_from_string("cc -c foo.c -M");
 	struct args *preprocessed, *compiler;
 
 	create_file("foo.c", "");
@@ -60,9 +72,9 @@ TEST(dependency_flags_should_only_be_sent_to_the_preprocessor)
 TEST(dependency_flags_that_take_an_argument_should_not_require_space_delimiter)
 {
 	struct args *orig = args_init_from_string(
-		"cc -c -MMD -MFfoo.d -MTmt -MQmq foo.c -o foo.o");
+		"cc -c -MMD -MFfoo.d -MT mt -MTmt -MQmq foo.c -o foo.o");
 	struct args *exp_cpp = args_init_from_string(
-		"cc -c -MMD -MFfoo.d -MTmt -MQmq");
+		"cc -c -MMD -MFfoo.d -MT mt -MTmt -MQmq");
 	struct args *exp_cc = args_init_from_string("cc -c");
 	struct args *act_cpp = NULL, *act_cc = NULL;
 	create_file("foo.c", "");
@@ -73,5 +85,129 @@ TEST(dependency_flags_that_take_an_argument_should_not_require_space_delimiter)
 
 	args_free(orig);
 }
+
+TEST(MF_flag_with_immediate_argument_should_work_as_last_argument)
+{
+	struct args *orig = args_init_from_string(
+		"cc -c foo.c -o foo.o -MMD -MT bar -MFfoo.d");
+	struct args *exp_cpp = args_init_from_string(
+		"cc -c -MMD -MT bar -MFfoo.d");
+	struct args *exp_cc = args_init_from_string("cc -c");
+	struct args *act_cpp = NULL, *act_cc = NULL;
+	create_file("foo.c", "");
+
+	CHECK(cc_process_args(orig, &act_cpp, &act_cc));
+	CHECK_ARGS_EQ_FREE12(exp_cpp, act_cpp);
+	CHECK_ARGS_EQ_FREE12(exp_cc, act_cc);
+
+	args_free(orig);
+}
+
+TEST(MT_flag_with_immediate_argument_should_work_as_last_argument)
+{
+	struct args *orig = args_init_from_string(
+		"cc -c foo.c -o foo.o -MMD -MFfoo.d -MT foo -MTbar");
+	struct args *exp_cpp = args_init_from_string(
+		"cc -c -MMD -MFfoo.d -MT foo -MTbar");
+	struct args *exp_cc = args_init_from_string("cc -c");
+	struct args *act_cpp = NULL, *act_cc = NULL;
+	create_file("foo.c", "");
+
+	CHECK(cc_process_args(orig, &act_cpp, &act_cc));
+	CHECK_ARGS_EQ_FREE12(exp_cpp, act_cpp);
+	CHECK_ARGS_EQ_FREE12(exp_cc, act_cc);
+
+	args_free(orig);
+}
+
+TEST(MQ_flag_with_immediate_argument_should_work_as_last_argument)
+{
+	struct args *orig = args_init_from_string(
+		"cc -c foo.c -o foo.o -MMD -MFfoo.d -MQ foo -MQbar");
+	struct args *exp_cpp = args_init_from_string(
+		"cc -c -MMD -MFfoo.d -MQ foo -MQbar");
+	struct args *exp_cc = args_init_from_string("cc -c");
+	struct args *act_cpp = NULL, *act_cc = NULL;
+	create_file("foo.c", "");
+
+	CHECK(cc_process_args(orig, &act_cpp, &act_cc));
+	CHECK_ARGS_EQ_FREE12(exp_cpp, act_cpp);
+	CHECK_ARGS_EQ_FREE12(exp_cc, act_cc);
+
+	args_free(orig);
+}
+
+TEST(MQ_flag_without_immediate_argument_should_not_add_MQobj)
+{
+	struct args *orig = args_init_from_string(
+		"gcc -c -MD -MP -MFfoo.d -MQ foo.d foo.c");
+	struct args *exp_cpp = args_init_from_string(
+		"gcc -c -MD -MP -MFfoo.d -MQ foo.d");
+	struct args *exp_cc = args_init_from_string(
+		"gcc -c");
+	struct args *act_cpp = NULL, *act_cc = NULL;
+	create_file("foo.c", "");
+
+	CHECK(cc_process_args(orig, &act_cpp, &act_cc));
+	CHECK_ARGS_EQ_FREE12(exp_cpp, act_cpp);
+	CHECK_ARGS_EQ_FREE12(exp_cc, act_cc);
+
+	args_free(orig);
+}
+
+TEST(MT_flag_without_immediate_argument_should_not_add_MTobj)
+{
+	struct args *orig = args_init_from_string(
+		"gcc -c -MD -MP -MFfoo.d -MT foo.d foo.c");
+	struct args *exp_cpp = args_init_from_string(
+		"gcc -c -MD -MP -MFfoo.d -MT foo.d");
+	struct args *exp_cc = args_init_from_string(
+		"gcc -c");
+	struct args *act_cpp = NULL, *act_cc = NULL;
+	create_file("foo.c", "");
+
+	CHECK(cc_process_args(orig, &act_cpp, &act_cc));
+	CHECK_ARGS_EQ_FREE12(exp_cpp, act_cpp);
+	CHECK_ARGS_EQ_FREE12(exp_cc, act_cc);
+
+	args_free(orig);
+}
+
+TEST(MQ_flag_with_immediate_argument_should_add_MQobj)
+{
+	struct args *orig = args_init_from_string(
+		"gcc -c -MD -MP -MFfoo.d -MQfoo.d foo.c");
+	struct args *exp_cpp = args_init_from_string(
+		"gcc -c -MD -MP -MFfoo.d -MQfoo.d -MQ foo.o");
+	struct args *exp_cc = args_init_from_string(
+		"gcc -c");
+	struct args *act_cpp = NULL, *act_cc = NULL;
+	create_file("foo.c", "");
+
+	CHECK(cc_process_args(orig, &act_cpp, &act_cc));
+	CHECK_ARGS_EQ_FREE12(exp_cpp, act_cpp);
+	CHECK_ARGS_EQ_FREE12(exp_cc, act_cc);
+
+	args_free(orig);
+}
+
+TEST(MT_flag_with_immediate_argument_should_add_MQobj)
+{
+	struct args *orig = args_init_from_string(
+		"gcc -c -MD -MP -MFfoo.d -MTfoo.d foo.c");
+	struct args *exp_cpp = args_init_from_string(
+		"gcc -c -MD -MP -MFfoo.d -MTfoo.d -MQ foo.o");
+	struct args *exp_cc = args_init_from_string(
+		"gcc -c");
+	struct args *act_cpp = NULL, *act_cc = NULL;
+	create_file("foo.c", "");
+
+	CHECK(cc_process_args(orig, &act_cpp, &act_cc));
+	CHECK_ARGS_EQ_FREE12(exp_cpp, act_cpp);
+	CHECK_ARGS_EQ_FREE12(exp_cc, act_cc);
+
+	args_free(orig);
+}
+
 
 TEST_SUITE_END

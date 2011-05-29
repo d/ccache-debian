@@ -2,7 +2,7 @@
  * ccache -- a fast C/C++ compiler cache
  *
  * Copyright (C) 2002-2007 Andrew Tridgell
- * Copyright (C) 2009-2010 Joel Rosdahl
+ * Copyright (C) 2009-2011 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -36,7 +36,7 @@ static const char VERSION_TEXT[] =
 MYNAME " version %s\n"
 "\n"
 "Copyright (C) 2002-2007 Andrew Tridgell\n"
-"Copyright (C) 2009-2010 Joel Rosdahl\n"
+"Copyright (C) 2009-2011 Joel Rosdahl\n"
 "\n"
 "This program is free software; you can redistribute it and/or modify it under\n"
 "the terms of the GNU General Public License as published by the Free Software\n"
@@ -267,7 +267,7 @@ get_path_in_cache(const char *name, const char *suffix)
 		free(path);
 		path = p;
 		if (create_dir(path) != 0) {
-			cc_log("Failed to create %s", path);
+			cc_log("Failed to create %s: %s", path, strerror(errno));
 			failed();
 		}
 	}
@@ -307,7 +307,7 @@ remember_include_file(char *path, size_t path_len, struct mdfour *cpp_hash)
 	}
 
 	if (stat(path, &st) != 0) {
-		cc_log("Failed to stat include file %s", path);
+		cc_log("Failed to stat include file %s: %s", path, strerror(errno));
 		goto failure;
 	}
 	if (S_ISDIR(st.st_mode)) {
@@ -552,22 +552,23 @@ to_cache(struct args *args)
 
 		tmp_stderr2 = format("%s.tmp.stderr2.%s", cached_obj, tmp_string());
 		if (x_rename(tmp_stderr, tmp_stderr2)) {
-			cc_log("Failed to rename %s to %s", tmp_stderr, tmp_stderr2);
+			cc_log("Failed to rename %s to %s: %s", tmp_stderr, tmp_stderr2,
+			       strerror(errno));
 			failed();
 		}
 		fd_cpp_stderr = open(cpp_stderr, O_RDONLY | O_BINARY);
 		if (fd_cpp_stderr == -1) {
-			cc_log("Failed opening %s", cpp_stderr);
+			cc_log("Failed opening %s: %s", cpp_stderr, strerror(errno));
 			failed();
 		}
 		fd_real_stderr = open(tmp_stderr2, O_RDONLY | O_BINARY);
 		if (fd_real_stderr == -1) {
-			cc_log("Failed opening %s", tmp_stderr2);
+			cc_log("Failed opening %s: %s", tmp_stderr2, strerror(errno));
 			failed();
 		}
 		fd_result = open(tmp_stderr, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0666);
 		if (fd_result == -1) {
-			cc_log("Failed opening %s", tmp_stderr);
+			cc_log("Failed opening %s: %s", tmp_stderr, strerror(errno));
 			failed();
 		}
 		copy_fd(fd_cpp_stderr, fd_result);
@@ -615,14 +616,15 @@ to_cache(struct args *args)
 	}
 
 	if (stat(tmp_stderr, &st) != 0) {
-		cc_log("Failed to stat %s", tmp_stderr);
+		cc_log("Failed to stat %s: %s", tmp_stderr, strerror(errno));
 		stats_update(STATS_ERROR);
 		failed();
 	}
 	if (st.st_size > 0) {
 		if (move_uncompressed_file(tmp_stderr, cached_stderr,
 		                           enable_compression) != 0) {
-			cc_log("Failed to move %s to %s", tmp_stderr, cached_stderr);
+			cc_log("Failed to move %s to %s: %s", tmp_stderr, cached_stderr,
+			       strerror(errno));
 			stats_update(STATS_ERROR);
 			failed();
 		}
@@ -636,7 +638,7 @@ to_cache(struct args *args)
 		tmp_unlink(tmp_stderr);
 	}
 	if (move_uncompressed_file(tmp_obj, cached_obj, enable_compression) != 0) {
-		cc_log("Failed to move %s to %s", tmp_obj, cached_obj);
+		cc_log("Failed to move %s to %s: %s", tmp_obj, cached_obj, strerror(errno));
 		stats_update(STATS_ERROR);
 		failed();
 	} else {
@@ -651,7 +653,7 @@ to_cache(struct args *args)
 	 * size statistics.
 	 */
 	if (stat(cached_obj, &st) != 0) {
-		cc_log("Failed to stat %s", strerror(errno));
+		cc_log("Failed to stat %s: %s", cached_obj, strerror(errno));
 		stats_update(STATS_ERROR);
 		failed();
 	}
@@ -708,8 +710,8 @@ get_object_name_from_cpp(struct args *args, struct mdfour *hash)
 		   correct i_tmpfile */
 		path_stdout = input_file;
 		if (create_empty_file(path_stderr) != 0) {
+			cc_log("Failed to create %s: %s", path_stderr, strerror(errno));
 			stats_update(STATS_ERROR);
-			cc_log("Failed to create %s", path_stderr);
 			failed();
 		}
 		status = 0;
@@ -751,7 +753,7 @@ get_object_name_from_cpp(struct args *args, struct mdfour *hash)
 
 	hash_delimiter(hash, "cppstderr");
 	if (!hash_file(hash, path_stderr)) {
-		fatal("Failed to open %s", path_stderr);
+		fatal("Failed to open %s: %s", path_stderr, strerror(errno));
 	}
 
 	i_tmpfile = path_stdout;
@@ -809,7 +811,7 @@ calculate_common_hash(struct args *args, struct mdfour *hash)
 	hash_string(hash, i_extension);
 
 	if (stat(args->argv[0], &st) != 0) {
-		cc_log("Couldn't stat the compiler (%s)", args->argv[0]);
+		cc_log("Couldn't stat compiler %s: %s", args->argv[0], strerror(errno));
 		stats_update(STATS_COMPILER);
 		failed();
 	}
@@ -1022,7 +1024,7 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 			cc_log("Object file %s just disappeared from cache", cached_obj);
 			stats_update(STATS_MISSING);
 		} else {
-			cc_log("Failed to copy/link %s to %s (%s)",
+			cc_log("Failed to copy/link %s to %s: %s",
 			       cached_obj, output_obj, strerror(errno));
 			stats_update(STATS_ERROR);
 			failed();
@@ -1053,9 +1055,8 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 				cc_log("Dependency file %s just disappeared from cache", output_obj);
 				stats_update(STATS_MISSING);
 			} else {
-				cc_log("Failed to copy/link %s to %s (%s)",
-				       cached_dep, output_dep,
-				       strerror(errno));
+				cc_log("Failed to copy/link %s to %s: %s",
+				       cached_dep, output_dep, strerror(errno));
 				stats_update(STATS_ERROR);
 				failed();
 			}
@@ -1082,7 +1083,8 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 		/* Store the dependency file in the cache. */
 		ret = copy_file(output_dep, cached_dep, enable_compression);
 		if (ret == -1) {
-			cc_log("Failed to copy %s to %s", output_dep, cached_dep);
+			cc_log("Failed to copy %s to %s: %s", output_dep, cached_dep,
+			       strerror(errno));
 			/* Continue despite the error. */
 		} else {
 			cc_log("Stored in cache: %s", cached_dep);
@@ -1237,6 +1239,13 @@ cc_process_args(struct args *orig_args, struct args **preprocessor_args,
 			continue;
 		}
 
+		/* Special case for -E. */
+		if (str_eq(argv[i], "-E")) {
+			stats_update(STATS_PREPROCESSING);
+			result = false;
+			goto out;
+		}
+
 		/* These are always too hard. */
 		if (compopt_too_hard(argv[i])
 		    || str_startswith(argv[i], "@")
@@ -1356,34 +1365,50 @@ cc_process_args(struct args *orig_args, struct args **preprocessor_args,
 			args_add(dep_args, argv[i]);
 			continue;
 		}
-		if (i < argc - 1) {
-			if (str_startswith(argv[i], "-MF")) {
-				char *arg;
-				dependency_filename_specified = true;
-				free(output_dep);
-				args_add(dep_args, argv[i]);
-				if (strlen(argv[i]) == 3) {
-					/* -MF arg */
-					arg = argv[i + 1];
-					args_add(dep_args, argv[i + 1]);
-					i++;
-				} else {
-					/* -MFarg */
-					arg = &argv[i][3];
+		if (str_startswith(argv[i], "-MF")) {
+			char *arg;
+			dependency_filename_specified = true;
+			free(output_dep);
+			args_add(dep_args, argv[i]);
+			if (strlen(argv[i]) == 3) {
+				/* -MF arg */
+				if (i >= argc - 1) {
+					cc_log("Missing argument to %s", argv[i]);
+					stats_update(STATS_ARGS);
+					result = false;
+					goto out;
 				}
-				output_dep = make_relative_path(x_strdup(arg));
-				continue;
-			} else if (str_startswith(argv[i], "-MQ")
-			           || str_startswith(argv[i], "-MT")) {
-				dependency_target_specified = true;
-				args_add(dep_args, argv[i]);
-				if (strlen(argv[i]) == 3) {
-					/* -MQ arg or -MT arg */
-					args_add(dep_args, argv[i + 1]);
-					i++;
-				}
-				continue;
+				arg = argv[i + 1];
+				args_add(dep_args, argv[i + 1]);
+				i++;
+			} else {
+				/* -MFarg */
+				arg = &argv[i][3];
 			}
+			output_dep = make_relative_path(x_strdup(arg));
+			continue;
+		}
+		if (str_startswith(argv[i], "-MQ") || str_startswith(argv[i], "-MT")) {
+			args_add(dep_args, argv[i]);
+			if (strlen(argv[i]) == 3) {
+				/* -MQ arg or -MT arg */
+				if (i >= argc - 1) {
+					cc_log("Missing argument to %s", argv[i]);
+					stats_update(STATS_ARGS);
+					result = false;
+					goto out;
+				}
+				args_add(dep_args, argv[i + 1]);
+				i++;
+				/*
+				 * Yes, that's right. It's strange, but apparently, GCC behaves
+				 * differently for -MT arg and -MTarg (and similar for -MQ): in the
+				 * latter case, but not in the former, an implicit dependency for the
+				 * object file is added to the dependency file.
+				 */
+				dependency_target_specified = true;
+			}
+			continue;
 		}
 		if (str_startswith(argv[i], "-Wp,")) {
 			if (str_startswith(argv[i], "-Wp,-MD,") && !strchr(argv[i] + 8, ',')) {
@@ -1667,7 +1692,7 @@ cc_process_args(struct args *orig_args, struct args **preprocessor_args,
 		}
 
 		if (!dependency_target_specified) {
-			args_add(dep_args, "-MT");
+			args_add(dep_args, "-MQ");
 			args_add(dep_args, output_obj);
 		}
 	}
@@ -1793,6 +1818,7 @@ ccache(int argc, char *argv[])
 
 	sloppiness = parse_sloppiness(getenv("CCACHE_SLOPPINESS"));
 
+	cc_log_argv("Command line: ", argv);
 	cc_log("Hostname: %s", get_hostname());
 	cc_log("Working directory: %s", current_working_dir);
 
@@ -2041,7 +2067,7 @@ setup_uncached_err(void)
 
 	uncached_fd = dup(2);
 	if (uncached_fd == -1) {
-		cc_log("dup(2) failed");
+		cc_log("dup(2) failed: %s", strerror(errno));
 		failed();
 	}
 
@@ -2049,7 +2075,7 @@ setup_uncached_err(void)
 	buf = format("UNCACHED_ERR_FD=%d", uncached_fd);
 
 	if (putenv(buf) == -1) {
-		cc_log("putenv failed");
+		cc_log("putenv failed: %s", strerror(errno));
 		failed();
 	}
 }

@@ -1,3 +1,9 @@
+ccache (3.1.5-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Joel Rosdahl <joel@debian.org>  Sun, 29 May 2011 17:56:48 +0200
+
 ccache (3.1.4-3) unstable; urgency=low
 
   * Fix errors in update-ccache-symlinks man page. Closes: #616619.

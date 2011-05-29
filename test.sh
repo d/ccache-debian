@@ -3,7 +3,7 @@
 # A simple test suite for ccache.
 #
 # Copyright (C) 2002-2007 Andrew Tridgell
-# Copyright (C) 2009-2010 Joel Rosdahl
+# Copyright (C) 2009-2011 Joel Rosdahl
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -175,6 +175,10 @@ base_tests() {
     testname="linkobj"
     $CCACHE_COMPILE foo.o -o test 2> /dev/null
     checkstat 'called for link' 2
+
+    testname="preprocessing"
+    $CCACHE_COMPILE -E -c test1.c > /dev/null 2>&1
+    checkstat 'called for preprocessing' 1
 
     testname="multiple"
     $CCACHE_COMPILE -c test1.c test2.c

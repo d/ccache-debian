@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2002-2004 Andrew Tridgell
- * Copyright (C) 2009-2010 Joel Rosdahl
+ * Copyright (C) 2009-2011 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -60,6 +60,7 @@ static struct {
 	{ STATS_CACHEHIT_CPP, "cache hit (preprocessed)       ", NULL, FLAG_ALWAYS },
 	{ STATS_TOCACHE,      "cache miss                     ", NULL, FLAG_ALWAYS },
 	{ STATS_LINK,         "called for link                ", NULL, 0 },
+	{ STATS_PREPROCESSING, "called for preprocessing      ", NULL, 0 },
 	{ STATS_MULTIPLE,     "multiple source files          ", NULL, 0 },
 	{ STATS_STDOUT,       "compiler produced stdout       ", NULL, 0 },
 	{ STATS_NOOUTPUT,     "compiler produced no output    ", NULL, 0 },
@@ -67,6 +68,7 @@ static struct {
 	{ STATS_STATUS,       "compile failed                 ", NULL, 0 },
 	{ STATS_ERROR,        "ccache internal error          ", NULL, 0 },
 	{ STATS_PREPROCESSOR, "preprocessor error             ", NULL, 0 },
+	{ STATS_CANTUSEPCH,   "can't use precompiled header   ", NULL, 0 },
 	{ STATS_COMPILER,     "couldn't find the compiler     ", NULL, 0 },
 	{ STATS_MISSING,      "cache file missing             ", NULL, 0 },
 	{ STATS_ARGS,         "bad compiler arguments         ", NULL, 0 },
@@ -82,7 +84,6 @@ static struct {
 	{ STATS_TOTALSIZE,    "cache size                     ", display_size , FLAG_NOZERO|FLAG_ALWAYS },
 	{ STATS_MAXFILES,     "max files                      ", NULL, FLAG_NOZERO },
 	{ STATS_MAXSIZE,      "max cache size                 ", display_size, FLAG_NOZERO },
-	{ STATS_CANTUSEPCH,   "can't use precompiled header   ", NULL, 0 },
 	{ STATS_NONE, NULL, NULL, 0 }
 };
 

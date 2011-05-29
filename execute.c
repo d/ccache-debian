@@ -1,5 +1,6 @@
 /*
  * Copyright (C) Andrew Tridgell 2002
+ * Copyright (C) Joel Rosdahl 2011
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -170,7 +171,7 @@ execute(char **argv, const char *path_stdout, const char *path_stderr)
 	cc_log_argv("Executing ", argv);
 
 	pid = fork();
-	if (pid == -1) fatal("Failed to fork");
+	if (pid == -1) fatal("Failed to fork: %s", strerror(errno));
 
 	if (pid == 0) {
 		int fd;
@@ -195,7 +196,7 @@ execute(char **argv, const char *path_stdout, const char *path_stderr)
 	}
 
 	if (waitpid(pid, &status, 0) != pid) {
-		fatal("waitpid failed");
+		fatal("waitpid failed: %s", strerror(errno));
 	}
 
 	if (WEXITSTATUS(status) == 0 && WIFSIGNALED(status)) {

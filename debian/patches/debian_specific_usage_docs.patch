@@ -1,3 +1,6 @@
+Description: Update manual page with Debian-specific instructions
+Author: Joel Rosdahl <joel@debian.org>
+
 Index: ccache/ccache.1
 ===================================================================
 --- ccache.orig/ccache.1	2011-05-29 17:56:17.000000000 +0200

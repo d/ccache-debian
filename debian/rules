@@ -7,6 +7,7 @@
 # from having to guess our platform (since we know it already)
 export DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 export DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+DEB_HOST_MULTIARCH := $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 ifeq ($(DEB_BUILD_GNU_TYPE), $(DEB_HOST_GNU_TYPE))
         confflags += --build $(DEB_HOST_GNU_TYPE)
@@ -52,9 +53,10 @@ install: build
 	dh_testroot
 	dh_clean -k
 	dh_installdirs
-
+	sed s/%DEB_HOST_MULTIARCH%/$(DEB_HOST_MULTIARCH)/ debian/ccache.triggers.in >debian/ccache.triggers
+	sed s/%DEB_HOST_MULTIARCH%/$(DEB_HOST_MULTIARCH)/ debian/update-ccache-symlinks.in >debian/ccache/usr/sbin/update-ccache-symlinks
 	$(MAKE) install prefix=$(CURDIR)/debian/ccache/usr
-	cp debian/update-ccache-symlinks debian/ccache/usr/sbin
+	chmod +x debian/ccache/usr/sbin/update-ccache-symlinks
 
 # Build architecture-independent files here.
 binary-indep: build install

@@ -4,7 +4,8 @@ ccache (3.1.5-2) unstable; urgency=low
     the new GCC library location. Closes: #630352.
   * Use dh_prep instead of deprecated "dh_clean -k".
   * Move patches to debian directory.
-  * Drop obsolete dont_distclean_version.c.patch
+  * Drop obsolete dont_distclean_version.c.patch.
+  * Add build-arch and build-indep targets as hinted by lintian.
 
  -- Joel Rosdahl <joel@debian.org>  Sat, 25 Jun 2011 23:17:56 +0200
 

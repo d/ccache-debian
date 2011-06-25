@@ -34,7 +34,9 @@ endif
 	./configure $(confflags) --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 	touch $@
 
-build: build-stamp
+build: build-arch build-indep
+build-arch: build-stamp
+build-indep: build-stamp
 build-stamp: config.status
 	dh_testdir
 	$(MAKE)
@@ -87,4 +89,5 @@ binary-arch: build install
 	dh_builddeb
 
 binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install
+
+.PHONY: build build-arch build-indep clean install binary binary-indep binary-arch

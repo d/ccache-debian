@@ -2,15 +2,28 @@
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.5.2" />
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.3" />
 <title>CCACHE(1)</title>
 <style type="text/css">
-/* Debug borders */
-p, li, dt, dd, div, pre, h1, h2, h3, h4, h5, h6 {
-/*
-  border: 1px solid red;
-*/
+/* Sans-serif font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+div#toctitle,
+span#author, span#revnumber, span#revdate, span#revremark,
+div#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+/* Serif font. */
+div.sectionbody {
+  font-family: Georgia,"Times New Roman",Times,serif;
+}
+
+/* Monospace font. */
+tt {
+  font-size: inherit;
 }
 
 body {
@@ -36,12 +49,12 @@ strong {
 }
 
 tt {
+  font-size: inherit;
   color: navy;
 }
 
 h1, h2, h3, h4, h5, h6 {
   color: #527bbd;
-  font-family: sans-serif;
   margin-top: 1.2em;
   margin-bottom: 0.5em;
   line-height: 1.3;
@@ -61,7 +74,6 @@ h3 + * {
 }
 
 div.sectionbody {
-  font-family: serif;
   margin-left: 0;
 }
 
@@ -77,6 +89,8 @@ p {
 ul, ol, li > p {
   margin-top: 0;
 }
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
 
 pre {
   padding: 0;
@@ -85,18 +99,15 @@ pre {
 
 span#author {
   color: #527bbd;
-  font-family: sans-serif;
   font-weight: bold;
   font-size: 1.1em;
 }
 span#email {
 }
 span#revnumber, span#revdate, span#revremark {
-  font-family: sans-serif;
 }
 
 div#footer {
-  font-family: sans-serif;
   font-size: small;
   border-top: 2px solid silver;
   padding-top: 0.5em;
@@ -135,7 +146,6 @@ div.content { /* Block element content. */
 /* Block element titles. */
 div.title, caption.title {
   color: #527bbd;
-  font-family: sans-serif;
   font-weight: bold;
   text-align: left;
   margin-top: 1.0em;
@@ -157,13 +167,15 @@ div.content + div.title {
 
 div.sidebarblock > div.content {
   background: #ffffee;
-  border: 1px solid silver;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
   padding: 0.5em;
 }
 
 div.listingblock > div.content {
-  border: 1px solid silver;
-  background: #f4f4f4;
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
   padding: 0.5em;
 }
 
@@ -171,7 +183,7 @@ div.quoteblock, div.verseblock {
   padding-left: 1.0em;
   margin-left: 1.0em;
   margin-right: 10%;
-  border-left: 5px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
   color: #777777;
 }
 
@@ -180,8 +192,9 @@ div.quoteblock > div.attribution {
   text-align: right;
 }
 
-div.verseblock > div.content {
-  white-space: pre;
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
 }
 div.verseblock > div.attribution {
   padding-top: 0.75em;
@@ -258,8 +271,8 @@ div.tableblock > table {
   border: 3px solid #527bbd;
 }
 thead, p.table.header {
-  font-family: sans-serif;
   font-weight: bold;
+  color: #527bbd;
 }
 tfoot {
   font-weight: bold;
@@ -339,6 +352,14 @@ span.footnote, span.footnoteref {
   min-width: 100px;
 }
 
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
 
 @media print {
   div#footer-badges { display: none; }
@@ -350,7 +371,6 @@ div#toc {
 
 div#toctitle {
   color: #527bbd;
-  font-family: sans-serif;
   font-size: 1.1em;
   font-weight: bold;
   margin-top: 1.0em;
@@ -373,47 +393,7 @@ div.toclevel4 {
   margin-left: 6em;
   font-size: 0.9em;
 }
-/* Workarounds for IE6's broken and incomplete CSS2. */
 
-div.sidebar-content {
-  background: #ffffee;
-  border: 1px solid silver;
-  padding: 0.5em;
-}
-div.sidebar-title, div.image-title {
-  color: #527bbd;
-  font-family: sans-serif;
-  font-weight: bold;
-  margin-top: 0.0em;
-  margin-bottom: 0.5em;
-}
-
-div.listingblock div.content {
-  border: 1px solid silver;
-  background: #f4f4f4;
-  padding: 0.5em;
-}
-
-div.quoteblock-attribution {
-  padding-top: 0.5em;
-  text-align: right;
-}
-
-div.verseblock-content {
-  white-space: pre;
-}
-div.verseblock-attribution {
-  padding-top: 0.75em;
-  text-align: left;
-}
-
-div.exampleblock-content {
-  border-left: 3px solid #dddddd;
-  padding-left: 0.5em;
-}
-
-/* IE6 sets dynamically generated links as visited. */
-div#toc a:visited { color: blue; }
 </style>
 <script type="text/javascript">
 /*<![CDATA[*/
@@ -549,29 +529,34 @@ footnotes: function () {
 /*]]>*/
 </script>
 </head>
-<body>
+<body class="article">
 <div id="header">
 <h1>CCACHE(1)</h1>
-<span id="revnumber">version 3.1.5</span>
+<span id="revnumber">version 3.1.6</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
 </div>
 </div>
 <div id="content">
+<div class="sect1">
 <h2 id="_name">Name</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>ccache - a fast C/C++ compiler cache</p></div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_synopsis">Synopsis</h2>
 <div class="sectionbody">
 <div class="verseblock">
-<div class="verseblock-content"><strong>ccache</strong> [<em>options</em>]
+<pre class="content"><strong>ccache</strong> [<em>options</em>]
 <strong>ccache</strong> <em>compiler</em> [<em>compiler options</em>]
-<em>compiler</em> [<em>compiler options</em>]                   (via symbolic link)</div>
-<div class="verseblock-attribution">
+<em>compiler</em> [<em>compiler options</em>]                   (via symbolic link)</pre>
+<div class="attribution">
 </div></div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_description">Description</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>ccache is a compiler cache. It speeds up recompilation by caching the result of
@@ -582,7 +567,8 @@ output that you would get without the cache. The only way you should be able to
 tell that you are using ccache is the speed. Currently known exceptions to this
 goal are listed under <a href="#_bugs">BUGS</a>. If you ever discover an undocumented case
 where ccache changes the output of your compiler, please let us know.</p></div>
-<h3 id="_features">Features</h3><div style="clear:left"></div>
+<div class="sect2">
+<h3 id="_features">Features</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -620,7 +606,9 @@ Optionally compresses files in the cache to reduce disk space.
 </p>
 </li>
 </ul></div>
-<h3 id="_limitations">Limitations</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_limitations">Limitations</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -643,6 +631,9 @@ Some compiler flags are not supported. If such a flag is detected, ccache
 </li>
 </ul></div>
 </div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_run_modes">Run modes</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>There are two ways to use ccache. You can either prefix your compilation
@@ -685,6 +676,8 @@ See <a href="#_using_ccache_with_other_compiler_wrappers">USING CCACHE WITH OTHE
 </tr></table>
 </div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_options">Options</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>These options only apply when you invoke ccache as &#8220;ccache&#8221;. When invoked as
@@ -769,6 +762,8 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 </dd>
 </dl></div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_extra_options">Extra options</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>When run as a compiler, ccache usually just takes the same command line options
@@ -786,6 +781,8 @@ file name and instead be passed along to the compiler as a command line option.<
 option specially but shouldn&#8217;t, since the option has another meaning for your
 compiler than what ccache thinks.</p></div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_environment_variables">Environment variables</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>ccache uses a number of environment variables to control operation. In most
@@ -822,6 +819,8 @@ cases you won&#8217;t need any of these as the defaults will be fine.</p></div>
     are accurate. The <strong>CCACHE_COMPILERCHECK</strong> environment variable can be used
     to select another strategy. Possible values are:
 </p>
+<div class="openblock">
+<div class="content">
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <strong>content</strong>
@@ -866,6 +865,8 @@ cases you won&#8217;t need any of these as the defaults will be fine.</p></div>
     path to the compiler. Several commands can be specified with semicolon as
     separator. Examples:
 </p>
+<div class="openblock">
+<div class="content">
 <div class="ulist"><ul>
 <li>
 <p>
@@ -890,8 +891,10 @@ command to identify the compiler is thus safer, but it&#8217;s also slower, so y
 should consider continue using the <strong>mtime</strong> method in combination with
 <strong>CCACHE_PREFIX</strong> if possible. See
 <a href="#_using_ccache_with_other_compiler_wrappers">USING CCACHE WITH OTHER COMPILER WRAPPERS</a>.</p></div>
+</div></div>
 </dd>
 </dl></div>
+</div></div>
 </dd>
 <dt class="hdlist1">
 <strong>CCACHE_COMPRESS</strong>
@@ -1095,6 +1098,8 @@ should consider continue using the <strong>mtime</strong> method in combination 
     the hit rate. The value should be a comma-separated string with options.
     Available options are:
 </p>
+<div class="openblock">
+<div class="content">
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <strong>file_macro</strong>
@@ -1121,6 +1126,7 @@ should consider continue using the <strong>mtime</strong> method in combination 
 </p>
 </dd>
 </dl></div>
+</div></div>
 <div class="paragraph"><p>See the discussion under <a href="#_troubleshooting">TROUBLESHOOTING</a> for more
 information.</p></div>
 </dd>
@@ -1174,6 +1180,8 @@ information.</p></div>
 </dd>
 </dl></div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_cache_size_management">Cache size management</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>By default ccache has a one gigabyte limit on the total size of files in the
@@ -1182,6 +1190,8 @@ cache and no maximum number of files. You can set different limits using the
 to see the cache size and the currently configured limits (in addition to other
 various statistics).</p></div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_cache_compression">Cache compression</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>ccache can optionally compress all files it puts into the cache using the
@@ -1190,6 +1200,8 @@ slowdown, it significantly increases the number of files that fit in the cache.
 You can turn on compression by setting the <strong>CCACHE_COMPRESS</strong> environment
 variable.</p></div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_how_ccache_works">How ccache works</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>The basic idea is to detect when you are compiling exactly the same code a
@@ -1218,7 +1230,8 @@ the <strong>preprocessor mode</strong>, where ccache runs the preprocessor on th
 </ul></div>
 <div class="paragraph"><p>The direct mode is generally faster since running the preprocessor has some
 overhead.</p></div>
-<h3 id="_common_hashed_information">Common hashed information</h3><div style="clear:left"></div>
+<div class="sect2">
+<h3 id="_common_hashed_information">Common hashed information</h3>
 <div class="paragraph"><p>For both modes, the following information is included in the hash:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -1249,7 +1262,9 @@ contents of files specified by <strong>CCACHE_EXTRAFILES</strong> (if any)
 </p>
 </li>
 </ul></div>
-<h3 id="_the_direct_mode">The direct mode</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_the_direct_mode">The direct mode</h3>
 <div class="paragraph"><p>In the direct mode, the hash is formed of the common information and:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -1335,7 +1350,9 @@ the string &#8220;__TIME__&#8221; is present outside comments and string literal
 </p>
 </li>
 </ul></div>
-<h3 id="_the_preprocessor_mode">The preprocessor mode</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_the_preprocessor_mode">The preprocessor mode</h3>
 <div class="paragraph"><p>In the preprocessor mode, the hash is formed of the common information and:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -1359,6 +1376,9 @@ any standard error output generated by the preprocessor
 <div class="paragraph"><p>Based on the hash, the cached compilation result can be looked up directly in
 the cache.</p></div>
 </div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_compiling_in_different_directories">Compiling in different directories</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Some information included in the hash that identifies a unique compilation may
@@ -1415,6 +1435,8 @@ If you specify an absolute path to the source code file and compile with
 </li>
 </ul></div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_precompiled_headers">Precompiled headers</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>ccache has support for GCC&#8217;s precompiled headers. However, you have to do some
@@ -1431,6 +1453,8 @@ You must set <strong>CCACHE_SLOPPINESS</strong> to <strong>time_macros</strong>.
 <p>
 You must either:
 </p>
+<div class="openblock">
+<div class="content">
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1448,9 +1472,12 @@ add the <strong>-fpch-preprocess</strong> compiler option when compiling.
 will be used (if available) or ccache will fall back to running the real
 compiler and increase the statistics counter &#8220;preprocessor error&#8221; (if the
 non-precompiled header file is not available).</p></div>
+</div></div>
 </li>
 </ul></div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_sharing_a_cache">Sharing a cache</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>A group of developers can increase the cache hit rate by sharing a cache
@@ -1497,6 +1524,8 @@ without reason.</p></div>
 <div class="paragraph"><p>You may also want to make sure that the developers have <strong>CCACHE_BASEDIR</strong> set
 appropriately, as discussed in the previous section.</p></div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_sharing_a_cache_on_nfs">Sharing a cache on NFS</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>It is possible to put the cache directory on an NFS filesystem (or similar
@@ -1517,6 +1546,8 @@ ccache hasn&#8217;t been tested very thoroughly on NFS.
 <div class="paragraph"><p>A tip is to set <strong>CCACHE_TEMPDIR</strong> to a directory on the local host to avoid NFS
 traffic for temporary files.</p></div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_using_ccache_with_other_compiler_wrappers">Using ccache with other compiler wrappers</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>The recommended way of combining ccache with another compiler wrapper (such as
@@ -1547,6 +1578,8 @@ The cached results will not be shared between compilations with and without
 <div class="paragraph"><p>Another minor thing is that if <strong>CCACHE_PREFIX</strong> is not used, ccache will
 needlessly invoke the other wrapper when running the preprocessor.</p></div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_bugs">Bugs</h2>
 <div class="sectionbody">
 <div class="ulist"><ul>
@@ -1562,14 +1595,19 @@ ccache doesn&#8217;t handle the GNU Assembler&#8217;s <strong>.incbin</strong> d
 </li>
 </ul></div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_troubleshooting">Troubleshooting</h2>
 <div class="sectionbody">
-<h3 id="_general">General</h3><div style="clear:left"></div>
+<div class="sect2">
+<h3 id="_general">General</h3>
 <div class="paragraph"><p>A general tip for getting information about what ccache is doing is to enable
 debug logging by setting <strong>CCACHE_LOGFILE</strong>. The log contains executed commands,
 important decisions that ccache makes, read and written files, etc. Another way
 of keeping track of what is happening is to check the output of <strong>ccache -s</strong>.</p></div>
-<h3 id="_performance">Performance</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_performance">Performance</h3>
 <div class="paragraph"><p>ccache has been written to perform well out of the box, but sometimes you may
 have to do some adjustments of how you use the compiler and ccache in order to
 improve performance.</p></div>
@@ -1700,12 +1738,16 @@ If &#8220;can&#8217;t use precompiled header&#8221; has been incremented, see
 </p>
 </li>
 </ul></div>
-<h3 id="_errors_when_compiling_with_ccache">Errors when compiling with ccache</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_errors_when_compiling_with_ccache">Errors when compiling with ccache</h3>
 <div class="paragraph"><p>If compilation doesn&#8217;t work with ccache, but it works without it, one possible
 reason is that the compiler can&#8217;t compile preprocessed output correctly. A
 workaround that may work is to set <strong>CCACHE_CPP2</strong>. This will make cache misses
 slower, though, so it is better to find and fix the root cause.</p></div>
-<h3 id="_corrupt_object_files">Corrupt object files</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_corrupt_object_files">Corrupt object files</h3>
 <div class="paragraph"><p>It should be noted that ccache is susceptible to general storage problems. If a
 bad object file sneaks into the cache for some reason, it will of course stay
 bad. Some possible reasons for erroneous object files are bad hardware (disk
@@ -1718,11 +1760,16 @@ with <strong>ccache -C</strong> if you don&#8217;t mind losing other cached resu
 reproducibly. That doesn&#8217;t mean it can&#8217;t happen, so if you find a repeatable
 case, please report it.</p></div>
 </div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_more_information">More information</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Credits, mailing list information, bug reporting instructions, source code,
 etc, can be found on ccache&#8217;s web site: <a href="http://ccache.samba.org">http://ccache.samba.org</a>.</p></div>
 </div>
+</div>
+<div class="sect1">
 <h2 id="_author">Author</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>ccache was originally written by Andrew Tridgell and is currently developed and
@@ -1730,11 +1777,12 @@ maintained by Joel Rosdahl. See AUTHORS.txt or AUTHORS.html and
 <a href="http://ccache.samba.org/credits.html">http://ccache.samba.org/credits.html</a> for a list of contributors.</p></div>
 </div>
 </div>
+</div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.1.5<br />
-Last updated 2010-11-14 11:05:10 CEST
+Version 3.1.6<br />
+Last updated 2011-08-14 21:46:15 CEST
 </div>
 </div>
 </body>

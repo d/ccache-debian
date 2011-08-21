@@ -1,3 +1,9 @@
+ccache (3.1.6-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Joel Rosdahl <joel@debian.org>  Sun, 21 Aug 2011 21:56:05 +0200
+
 ccache (3.1.5-2) unstable; urgency=low
 
   * Update dpkg triggers and update-ccache-symlinks to find compilers at

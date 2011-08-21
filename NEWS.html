@@ -2,15 +2,28 @@
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.5.2" />
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.3" />
 <title>ccache news</title>
 <style type="text/css">
-/* Debug borders */
-p, li, dt, dd, div, pre, h1, h2, h3, h4, h5, h6 {
-/*
-  border: 1px solid red;
-*/
+/* Sans-serif font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+div#toctitle,
+span#author, span#revnumber, span#revdate, span#revremark,
+div#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+/* Serif font. */
+div.sectionbody {
+  font-family: Georgia,"Times New Roman",Times,serif;
+}
+
+/* Monospace font. */
+tt {
+  font-size: inherit;
 }
 
 body {
@@ -36,12 +49,12 @@ strong {
 }
 
 tt {
+  font-size: inherit;
   color: navy;
 }
 
 h1, h2, h3, h4, h5, h6 {
   color: #527bbd;
-  font-family: sans-serif;
   margin-top: 1.2em;
   margin-bottom: 0.5em;
   line-height: 1.3;
@@ -61,7 +74,6 @@ h3 + * {
 }
 
 div.sectionbody {
-  font-family: serif;
   margin-left: 0;
 }
 
@@ -77,6 +89,8 @@ p {
 ul, ol, li > p {
   margin-top: 0;
 }
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
 
 pre {
   padding: 0;
@@ -85,18 +99,15 @@ pre {
 
 span#author {
   color: #527bbd;
-  font-family: sans-serif;
   font-weight: bold;
   font-size: 1.1em;
 }
 span#email {
 }
 span#revnumber, span#revdate, span#revremark {
-  font-family: sans-serif;
 }
 
 div#footer {
-  font-family: sans-serif;
   font-size: small;
   border-top: 2px solid silver;
   padding-top: 0.5em;
@@ -135,7 +146,6 @@ div.content { /* Block element content. */
 /* Block element titles. */
 div.title, caption.title {
   color: #527bbd;
-  font-family: sans-serif;
   font-weight: bold;
   text-align: left;
   margin-top: 1.0em;
@@ -157,13 +167,15 @@ div.content + div.title {
 
 div.sidebarblock > div.content {
   background: #ffffee;
-  border: 1px solid silver;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
   padding: 0.5em;
 }
 
 div.listingblock > div.content {
-  border: 1px solid silver;
-  background: #f4f4f4;
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
   padding: 0.5em;
 }
 
@@ -171,7 +183,7 @@ div.quoteblock, div.verseblock {
   padding-left: 1.0em;
   margin-left: 1.0em;
   margin-right: 10%;
-  border-left: 5px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
   color: #777777;
 }
 
@@ -180,8 +192,9 @@ div.quoteblock > div.attribution {
   text-align: right;
 }
 
-div.verseblock > div.content {
-  white-space: pre;
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
 }
 div.verseblock > div.attribution {
   padding-top: 0.75em;
@@ -258,8 +271,8 @@ div.tableblock > table {
   border: 3px solid #527bbd;
 }
 thead, p.table.header {
-  font-family: sans-serif;
   font-weight: bold;
+  color: #527bbd;
 }
 tfoot {
   font-weight: bold;
@@ -339,6 +352,14 @@ span.footnote, span.footnoteref {
   min-width: 100px;
 }
 
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
 
 @media print {
   div#footer-badges { display: none; }
@@ -350,7 +371,6 @@ div#toc {
 
 div#toctitle {
   color: #527bbd;
-  font-family: sans-serif;
   font-size: 1.1em;
   font-weight: bold;
   margin-top: 1.0em;
@@ -373,47 +393,7 @@ div.toclevel4 {
   margin-left: 6em;
   font-size: 0.9em;
 }
-/* Workarounds for IE6's broken and incomplete CSS2. */
 
-div.sidebar-content {
-  background: #ffffee;
-  border: 1px solid silver;
-  padding: 0.5em;
-}
-div.sidebar-title, div.image-title {
-  color: #527bbd;
-  font-family: sans-serif;
-  font-weight: bold;
-  margin-top: 0.0em;
-  margin-bottom: 0.5em;
-}
-
-div.listingblock div.content {
-  border: 1px solid silver;
-  background: #f4f4f4;
-  padding: 0.5em;
-}
-
-div.quoteblock-attribution {
-  padding-top: 0.5em;
-  text-align: right;
-}
-
-div.verseblock-content {
-  white-space: pre;
-}
-div.verseblock-attribution {
-  padding-top: 0.75em;
-  text-align: left;
-}
-
-div.exampleblock-content {
-  border-left: 3px solid #dddddd;
-  padding-left: 0.5em;
-}
-
-/* IE6 sets dynamically generated links as visited. */
-div#toc a:visited { color: blue; }
 </style>
 <script type="text/javascript">
 /*<![CDATA[*/
@@ -549,20 +529,53 @@ footnotes: function () {
 /*]]>*/
 </script>
 </head>
-<body>
+<body class="article">
 <div id="header">
 <h1>ccache news</h1>
-<span id="revnumber">version 3.1.5</span>
+<span id="revnumber">version 3.1.6</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
 </div>
 </div>
 <div id="content">
+<div class="sect1">
+<h2 id="_ccache_3_1_6">ccache 3.1.6</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Release date: 2011-08-21</p></div>
+<div class="sect2">
+<h3 id="_new_features_and_improvements">New features and improvements</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Rewrite argument to --sysroot if CCACHE_BASEDIR is used.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_bug_fixes">Bug fixes</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Don&#8217;t crash if getcwd() fails.
+</p>
+</li>
+<li>
+<p>
+Fixed alignment of "called for preprocessing" counter.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_ccache_3_1_5">ccache 3.1.5</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2011-05-29</p></div>
-<h3 id="_new_features_and_improvements">New features and improvements</h3><div style="clear:left"></div>
+<div class="sect2">
+<h3 id="_new_features_and_improvements_2">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -592,12 +605,14 @@ Improved order of statistics counters in <tt>ccache -s</tt> output.
 </p>
 </li>
 </ul></div>
-<h3 id="_bug_fixes">Bug fixes</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_bug_fixes_2">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
 The <tt>-MF</tt>/<tt>-MT</tt>/<tt>-MQ</tt> options with concatenated argument are now handled
-      correctly when they are last on the commandline.
+      correctly when they are last on the command line.
 </p>
 </li>
 <li>
@@ -619,10 +634,14 @@ Systems that lack (and don&#8217;t need to be linked with) libm are now
 </li>
 </ul></div>
 </div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_ccache_3_1_4">ccache 3.1.4</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2011-01-09</p></div>
-<h3 id="_bug_fixes_2">Bug fixes</h3><div style="clear:left"></div>
+<div class="sect2">
+<h3 id="_bug_fixes_3">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -648,10 +667,14 @@ The file handle in now correctly closed on write error when trying to
 </li>
 </ul></div>
 </div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_ccache_3_1_3">ccache 3.1.3</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-28</p></div>
-<h3 id="_bug_fixes_3">Bug fixes</h3><div style="clear:left"></div>
+<div class="sect2">
+<h3 id="_bug_fixes_4">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -660,7 +683,9 @@ The -MFarg, -MTarg and -MQarg compiler options (i.e, without space
 </p>
 </li>
 </ul></div>
-<h3 id="_other">Other</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_other">Other</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -669,10 +694,14 @@ Portability fixes for HP-UX 11.00 and other esoteric systems.
 </li>
 </ul></div>
 </div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_ccache_3_1_2">ccache 3.1.2</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-21</p></div>
-<h3 id="_bug_fixes_4">Bug fixes</h3><div style="clear:left"></div>
+<div class="sect2">
+<h3 id="_bug_fixes_5">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -691,7 +720,9 @@ Fixed issue when parsing precompiler output on AIX.
 </p>
 </li>
 </ul></div>
-<h3 id="_other_2">Other</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_other_2">Other</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -711,10 +742,14 @@ The test suite now also works on systems that lack a /dev/zero.
 </li>
 </ul></div>
 </div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_ccache_3_1_1">ccache 3.1.1</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-07</p></div>
-<h3 id="_bug_fixes_5">Bug fixes</h3><div style="clear:left"></div>
+<div class="sect2">
+<h3 id="_bug_fixes_6">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -751,7 +786,9 @@ ccache development version (set by dev.mk) now works with gits whose
 </p>
 </li>
 </ul></div>
-<h3 id="_other_3">Other</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_other_3">Other</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -760,10 +797,14 @@ Minor debug log message improvements.
 </li>
 </ul></div>
 </div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_ccache_3_1">ccache 3.1</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-09-16</p></div>
-<h3 id="_new_features_and_improvements_2">New features and improvements</h3><div style="clear:left"></div>
+<div class="sect2">
+<h3 id="_new_features_and_improvements_3">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -830,7 +871,9 @@ Added <tt>-install_name</tt> as an option known to take an argument. (This
 </p>
 </li>
 </ul></div>
-<h3 id="_bug_fixes_6">Bug fixes</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_bug_fixes_7">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -854,7 +897,9 @@ EINTR is now handled correctly.
 </p>
 </li>
 </ul></div>
-<h3 id="_other_4">Other</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_other_4">Other</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -909,10 +954,14 @@ New <tt>HACKING.txt</tt> file with some notes about ccache code conventions.
 </li>
 </ul></div>
 </div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_ccache_3_0_1">ccache 3.0.1</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-07-15</p></div>
-<h3 id="_bug_fixes_7">Bug fixes</h3><div style="clear:left"></div>
+<div class="sect2">
+<h3 id="_bug_fixes_8">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -927,10 +976,14 @@ Fixed a problem with out-of-source builds.
 </li>
 </ul></div>
 </div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_ccache_3_0">ccache 3.0</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-06-20</p></div>
-<h3 id="_general">General</h3><div style="clear:left"></div>
+<div class="sect2">
+<h3 id="_general">General</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -939,7 +992,9 @@ ccache is now licensed under the GNU General Public License (GPL) version
 </p>
 </li>
 </ul></div>
-<h3 id="_upgrade_notes">Upgrade notes</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_upgrade_notes">Upgrade notes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -951,7 +1006,9 @@ The way the hashes are calculated has changed, so you won&#8217;t get cache
 </p>
 </li>
 </ul></div>
-<h3 id="_new_features_and_improvements_3">New features and improvements</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_new_features_and_improvements_4">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1096,7 +1153,9 @@ The following options are no longer hashed in the preprocessor mode:
 </p>
 </li>
 </ul></div>
-<h3 id="_bug_fixes_8">Bug fixes</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_bug_fixes_9">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1236,11 +1295,13 @@ Statistics counters are now correctly updated for -E option failures and
 </ul></div>
 </div>
 </div>
+</div>
+</div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.1.5<br />
-Last updated 2011-05-29 17:13:56 CEST
+Version 3.1.6<br />
+Last updated 2011-08-21 16:34:07 CEST
 </div>
 </div>
 </body>

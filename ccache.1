@@ -2,12 +2,12 @@
 .\"     Title: ccache
 .\"    Author: [see the "Author" section]
 .\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 08/21/2011
+.\"      Date: 01/08/2012
 .\"    Manual: ccache Manual
-.\"    Source: ccache 3.1.6
+.\"    Source: ccache 3.1.7
 .\"  Language: English
 .\"
-.TH "CCACHE" "1" "08/21/2011" "ccache 3\&.1\&.6" "ccache Manual"
+.TH "CCACHE" "1" "01/08/2012" "ccache 3\&.1\&.7" "ccache Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -1354,7 +1354,44 @@ PRECOMPILED HEADERS\&.
 If compilation doesn\(cqt work with ccache, but it works without it, one possible reason is that the compiler can\(cqt compile preprocessed output correctly\&. A workaround that may work is to set \fBCCACHE_CPP2\fR\&. This will make cache misses slower, though, so it is better to find and fix the root cause\&.
 .SS "Corrupt object files"
 .sp
-It should be noted that ccache is susceptible to general storage problems\&. If a bad object file sneaks into the cache for some reason, it will of course stay bad\&. Some possible reasons for erroneous object files are bad hardware (disk drive, disk controller, memory, etc), buggy drivers or file systems, a bad \fBCCACHE_PREFIX\fR command or compiler wrapper\&. If this happens, you can either find out which object file is broken by reading the debug log and then delete the bad object file from the cache, or you can simply clear the whole cache with \fBccache \-C\fR if you don\(cqt mind losing other cached results\&.
+It should be noted that ccache is susceptible to general storage problems\&. If a bad object file sneaks into the cache for some reason, it will of course stay bad\&. Some possible reasons for erroneous object files are bad hardware (disk drive, disk controller, memory, etc), buggy drivers or file systems, a bad \fBCCACHE_PREFIX\fR command or compiler wrapper\&. If this happens, the easiest way of fixing it is this:
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  1." 4.2
+.\}
+Build so that the bad object file ends up in the build tree\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 2.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  2." 4.2
+.\}
+Remove the bad object file from the build tree\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 3.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  3." 4.2
+.\}
+Rebuild with
+\fBCCACHE_RECACHE\fR
+set\&.
+.RE
+.sp
+An alternative is to clear the whole cache with \fBccache \-C\fR if you don\(cqt mind losing other cached results\&.
 .sp
 There are no reported issues about ccache producing broken object files reproducibly\&. That doesn\(cqt mean it can\(cqt happen, so if you find a repeatable case, please report it\&.
 .SH "MORE INFORMATION"

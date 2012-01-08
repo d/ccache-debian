@@ -532,13 +532,87 @@ footnotes: function () {
 <body class="article">
 <div id="header">
 <h1>ccache news</h1>
-<span id="revnumber">version 3.1.6</span>
+<span id="revnumber">version 3.1.7</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
 </div>
 </div>
 <div id="content">
+<div class="sect1">
+<h2 id="_ccache_3_1_7">ccache 3.1.7</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Release date: 2012-01-08</p></div>
+<div class="sect2">
+<h3 id="_bug_fixes">Bug fixes</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Non-writable <tt>CCACHE_DIR</tt> is now handled gracefully when
+      <tt>CCACHE_READONLY</tt> is set.
+</p>
+</li>
+<li>
+<p>
+Made failure to create files (typically due to bad directory permissions)
+      in the cache directory fatal. Previously, such failures were silently and
+      erroneously flagged as "compiler produced stdout".
+</p>
+</li>
+<li>
+<p>
+Both the <tt>-specs=file</tt> and <tt>--specs=file</tt> forms are now recognized.
+</p>
+</li>
+<li>
+<p>
+Added recognition and hashing of GCC plugins specified with
+      <tt>-fplugin=file</tt>.
+</p>
+</li>
+<li>
+<p>
+<tt>CCACHE_COMPILERCHECK</tt> now also determines how to hash explicit specs
+      files (<tt>-specs=file</tt>).
+</p>
+</li>
+<li>
+<p>
+Added <tt>CPATH</tt>, <tt>C_INCLUDE_PATH</tt> and similar environment variables to the
+      hash to avoid false cache hits when such variables have changed.
+</p>
+</li>
+<li>
+<p>
+Corrected log message when unify mode is enabled.
+</p>
+</li>
+<li>
+<p>
+Reverted the GCC bug compatibility introduced in ccache 3.1.5 for
+      <tt>-MT</tt>/<tt>-MQ</tt> options with concatenated arguments. (The bug is fixed in
+      recent GCC versions.)
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_other">Other</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Corrected license header for <tt>mdfour.c</tt>.
+</p>
+</li>
+<li>
+<p>
+Improved documentation on how to fix bad object files in the cache.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
 <div class="sect1">
 <h2 id="_ccache_3_1_6">ccache 3.1.6</h2>
 <div class="sectionbody">
@@ -548,22 +622,22 @@ footnotes: function () {
 <div class="ulist"><ul>
 <li>
 <p>
-Rewrite argument to --sysroot if CCACHE_BASEDIR is used.
+Rewrite argument to <tt>--sysroot</tt> if <tt>CCACHE_BASEDIR</tt> is used.
 </p>
 </li>
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes">Bug fixes</h3>
+<h3 id="_bug_fixes_2">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
-Don&#8217;t crash if getcwd() fails.
+Don&#8217;t crash if <tt>getcwd()</tt> fails.
 </p>
 </li>
 <li>
 <p>
-Fixed alignment of "called for preprocessing" counter.
+Fixed alignment of &#8220;called for preprocessing&#8221; counter.
 </p>
 </li>
 </ul></div>
@@ -607,7 +681,7 @@ Improved order of statistics counters in <tt>ccache -s</tt> output.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_2">Bug fixes</h3>
+<h3 id="_bug_fixes_3">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -641,7 +715,7 @@ Systems that lack (and don&#8217;t need to be linked with) libm are now
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2011-01-09</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_3">Bug fixes</h3>
+<h3 id="_bug_fixes_4">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -674,7 +748,7 @@ The file handle in now correctly closed on write error when trying to
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-28</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_4">Bug fixes</h3>
+<h3 id="_bug_fixes_5">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -685,7 +759,7 @@ The -MFarg, -MTarg and -MQarg compiler options (i.e, without space
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_other">Other</h3>
+<h3 id="_other_2">Other</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -701,7 +775,7 @@ Portability fixes for HP-UX 11.00 and other esoteric systems.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-21</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_5">Bug fixes</h3>
+<h3 id="_bug_fixes_6">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -722,7 +796,7 @@ Fixed issue when parsing precompiler output on AIX.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_other_2">Other</h3>
+<h3 id="_other_3">Other</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -749,7 +823,7 @@ The test suite now also works on systems that lack a /dev/zero.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-07</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_6">Bug fixes</h3>
+<h3 id="_bug_fixes_7">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -788,7 +862,7 @@ ccache development version (set by dev.mk) now works with gits whose
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_other_3">Other</h3>
+<h3 id="_other_4">Other</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -873,7 +947,7 @@ Added <tt>-install_name</tt> as an option known to take an argument. (This
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_7">Bug fixes</h3>
+<h3 id="_bug_fixes_8">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -899,7 +973,7 @@ EINTR is now handled correctly.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_other_4">Other</h3>
+<h3 id="_other_5">Other</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -961,7 +1035,7 @@ New <tt>HACKING.txt</tt> file with some notes about ccache code conventions.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-07-15</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_8">Bug fixes</h3>
+<h3 id="_bug_fixes_9">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1155,7 +1229,7 @@ The following options are no longer hashed in the preprocessor mode:
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_9">Bug fixes</h3>
+<h3 id="_bug_fixes_10">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1300,8 +1374,8 @@ Statistics counters are now correctly updated for -E option failures and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.1.6<br />
-Last updated 2011-08-21 16:34:07 CEST
+Version 3.1.7<br />
+Last updated 2012-01-08 15:37:31 CET
 </div>
 </div>
 </body>

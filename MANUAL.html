@@ -532,7 +532,7 @@ footnotes: function () {
 <body class="article">
 <div id="header">
 <h1>CCACHE(1)</h1>
-<span id="revnumber">version 3.1.6</span>
+<span id="revnumber">version 3.1.7</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1752,10 +1752,27 @@ slower, though, so it is better to find and fix the root cause.</p></div>
 bad object file sneaks into the cache for some reason, it will of course stay
 bad. Some possible reasons for erroneous object files are bad hardware (disk
 drive, disk controller, memory, etc), buggy drivers or file systems, a bad
-<strong>CCACHE_PREFIX</strong> command or compiler wrapper. If this happens, you can either
-find out which object file is broken by reading the debug log and then delete
-the bad object file from the cache, or you can simply clear the whole cache
-with <strong>ccache -C</strong> if you don&#8217;t mind losing other cached results.</p></div>
+<strong>CCACHE_PREFIX</strong> command or compiler wrapper. If this happens, the easiest way
+of fixing it is this:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Build so that the bad object file ends up in the build tree.
+</p>
+</li>
+<li>
+<p>
+Remove the bad object file from the build tree.
+</p>
+</li>
+<li>
+<p>
+Rebuild with <strong>CCACHE_RECACHE</strong> set.
+</p>
+</li>
+</ol></div>
+<div class="paragraph"><p>An alternative is to clear the whole cache with <strong>ccache -C</strong> if you don&#8217;t mind
+losing other cached results.</p></div>
 <div class="paragraph"><p>There are no reported issues about ccache producing broken object files
 reproducibly. That doesn&#8217;t mean it can&#8217;t happen, so if you find a repeatable
 case, please report it.</p></div>
@@ -1781,8 +1798,8 @@ maintained by Joel Rosdahl. See AUTHORS.txt or AUTHORS.html and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.1.6<br />
-Last updated 2011-08-14 21:46:15 CEST
+Version 3.1.7<br />
+Last updated 2012-01-08 15:29:34 CET
 </div>
 </div>
 </body>

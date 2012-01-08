@@ -1,3 +1,9 @@
+ccache (3.1.7-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Joel Rosdahl <joel@debian.org>  Sun, 08 Jan 2012 22:19:24 +0100
+
 ccache (3.1.6-1) unstable; urgency=low
 
   * New upstream version.

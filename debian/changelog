@@ -1,3 +1,12 @@
+ccache (3.1.8-1) unstable; urgency=low
+
+  * New upstream release 3.1.8 (closes: #656022, #672570, #688508)
+  * Update Standards-Version to 3.9.4 (no changes required)
+  * Update debian/copyright to match current reality
+  * Update debian/copyright to version 1.0 of the machine-readable format
+
+ -- Joel Rosdahl <joel@debian.org>  Sun, 25 Nov 2012 12:20:16 +0100
+
 ccache (3.1.7-1) unstable; urgency=low
 
   * New upstream version.

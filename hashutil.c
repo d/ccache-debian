@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Joel Rosdahl
+ * Copyright (C) 2009-2010, 2012 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -69,6 +69,7 @@ hash_source_code_string(
 	size_t hashbuflen = 0;
 	int result = HASH_SOURCE_CODE_OK;
 	extern unsigned sloppiness;
+	bool seen_backslash;
 
 	p = str;
 	end = str + len;
@@ -86,8 +87,7 @@ hash_source_code_string(
 			case '*':
 				HASH(' '); /* Don't paste tokens together when removing the comment. */
 				p += 2;
-				while (p+1 < end
-				       && (*p != '*' || *(p+1) != '/')) {
+				while (p+1 < end && (*p != '*' || *(p+1) != '/')) {
 					if (*p == '\n') {
 						/* Keep line numbers. */
 						HASH('\n');
@@ -102,8 +102,7 @@ hash_source_code_string(
 
 			case '/':
 				p += 2;
-				while (p < end
-				       && (*p != '\n' || *(p-1) == '\\')) {
+				while (p < end && (*p != '\n' || *(p-1) == '\\')) {
 					p++;
 				}
 				continue;
@@ -117,7 +116,18 @@ hash_source_code_string(
 		case '"':
 			HASH(*p);
 			p++;
-			while (p < end && (*p != '"' || *(p-1) == '\\')) {
+			seen_backslash = false;
+			while (p < end) {
+				if (seen_backslash) {
+					seen_backslash = false;
+				} else if (*p == '"') {
+					/* Found end of string. */
+					HASH(*p);
+					p++;
+					break;
+				} else if (*p == '\\') {
+					seen_backslash = true;
+				}
 				HASH(*p);
 				p++;
 			}

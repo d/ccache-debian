@@ -380,16 +380,37 @@ ignore:
 }
 
 /*
- * Make a relative path from CCACHE_BASEDIR to path. Takes over ownership of
- * path. Caller frees.
+ * Make a relative path from current working directory to path if CCACHE_PREFIX
+ * is a prefix of path. Takes over ownership of path. Caller frees.
  */
 static char *
 make_relative_path(char *path)
 {
-	char *relpath;
+	char *relpath, *canon_path;
 
 	if (!base_dir || !str_startswith(path, base_dir)) {
 		return path;
+	}
+
+	if (!current_working_dir) {
+		char *cwd = get_cwd();
+		if (cwd) {
+			current_working_dir = x_realpath(cwd);
+			free(cwd);
+		}
+		if (!current_working_dir) {
+			cc_log("Unable to determine current working directory: %s",
+			       strerror(errno));
+			failed();
+		}
+	}
+
+	canon_path = x_realpath(path);
+	if (canon_path) {
+		free(path);
+		path = canon_path;
+	} else {
+		/* path doesn't exist, so leave it as it is. */
 	}
 
 	relpath = get_relative_path(current_working_dir, path);
@@ -951,6 +972,16 @@ calculate_object_hash(struct args *args, struct mdfour *hash, int direct_mode)
 			continue;
 		}
 
+		if (str_eq(args->argv[i], "-Xclang")
+		    && i + 3 < args->argc
+		    && str_eq(args->argv[i+1], "-load")
+		    && str_eq(args->argv[i+2], "-Xclang")
+		    && stat(args->argv[i+3], &st) == 0) {
+			hash_delimiter(hash, "plugin");
+			hash_compiler(hash, &st, args->argv[i+3], false);
+			continue;
+		}
+
 		/* All other arguments are included in the hash. */
 		hash_delimiter(hash, "arg");
 		hash_string(hash, args->argv[i]);
@@ -1371,14 +1402,14 @@ cc_process_args(struct args *orig_args, struct args **preprocessor_args,
 				result = false;
 				goto out;
 			}
-			output_obj = argv[i+1];
+			output_obj = make_relative_path(x_strdup(argv[i+1]));
 			i++;
 			continue;
 		}
 
 		/* alternate form of -o, with no space */
 		if (str_startswith(argv[i], "-o")) {
-			output_obj = &argv[i][2];
+			output_obj = make_relative_path(x_strdup(&argv[i][2]));
 			continue;
 		}
 
@@ -1412,10 +1443,10 @@ cc_process_args(struct args *orig_args, struct args **preprocessor_args,
 		}
 		if (str_startswith(argv[i], "-MF")) {
 			char *arg;
+			bool separate_argument = (strlen(argv[i]) == 3);
 			dependency_filename_specified = true;
 			free(output_dep);
-			args_add(dep_args, argv[i]);
-			if (strlen(argv[i]) == 3) {
+			if (separate_argument) {
 				/* -MF arg */
 				if (i >= argc - 1) {
 					cc_log("Missing argument to %s", argv[i]);
@@ -1424,18 +1455,26 @@ cc_process_args(struct args *orig_args, struct args **preprocessor_args,
 					goto out;
 				}
 				arg = argv[i + 1];
-				args_add(dep_args, argv[i + 1]);
 				i++;
 			} else {
 				/* -MFarg */
 				arg = &argv[i][3];
 			}
 			output_dep = make_relative_path(x_strdup(arg));
+			/* Keep the format of the args the same */
+			if (separate_argument) {
+				args_add(dep_args, "-MF");
+				args_add(dep_args, output_dep);
+			} else {
+				char *option = format("-MF%s", output_dep);
+				args_add(dep_args, option);
+				free(option);
+			}
 			continue;
 		}
 		if (str_startswith(argv[i], "-MQ") || str_startswith(argv[i], "-MT")) {
+			char *relpath;
 			dependency_target_specified = true;
-			args_add(dep_args, argv[i]);
 			if (strlen(argv[i]) == 3) {
 				/* -MQ arg or -MT arg */
 				if (i >= argc - 1) {
@@ -1444,8 +1483,21 @@ cc_process_args(struct args *orig_args, struct args **preprocessor_args,
 					result = false;
 					goto out;
 				}
-				args_add(dep_args, argv[i + 1]);
+				args_add(dep_args, argv[i]);
+				relpath = make_relative_path(x_strdup(argv[i + 1]));
+				args_add(dep_args, relpath);
+				free(relpath);
 				i++;
+			} else {
+				char *arg_opt;
+				char *option;
+				arg_opt = x_strndup(argv[i], 3);
+				relpath = make_relative_path(x_strdup(argv[i] + 3));
+				option = format("%s%s", arg_opt, relpath);
+				args_add(dep_args, option);
+				free(arg_opt);
+				free(relpath);
+				free(option);
 			}
 			continue;
 		}
@@ -1630,17 +1682,21 @@ cc_process_args(struct args *orig_args, struct args **preprocessor_args,
 	output_is_precompiled_header =
 		actual_language && strstr(actual_language, "-header") != NULL;
 
-	if (!found_c_opt && !output_is_precompiled_header) {
-		cc_log("No -c option found");
-		/* I find that having a separate statistic for autoconf tests is useful,
-		   as they are the dominant form of "called for link" in many cases */
-		if (strstr(input_file, "conftest.")) {
-			stats_update(STATS_CONFTEST);
+	if (!found_c_opt) {
+		if (output_is_precompiled_header) {
+			args_add(stripped_args, "-c");
 		} else {
-			stats_update(STATS_LINK);
+			cc_log("No -c option found");
+			/* I find that having a separate statistic for autoconf tests is useful,
+			   as they are the dominant form of "called for link" in many cases */
+			if (strstr(input_file, "conftest.")) {
+				stats_update(STATS_CONFTEST);
+			} else {
+				stats_update(STATS_LINK);
+			}
+			result = false;
+			goto out;
 		}
-		result = false;
-		goto out;
 	}
 
 	if (!actual_language) {
@@ -1782,7 +1838,7 @@ cc_reset(void)
 	base_dir = NULL;
 	args_free(orig_args); orig_args = NULL;
 	free(input_file); input_file = NULL;
-	output_obj = NULL;
+	free(output_obj); output_obj = NULL;
 	free(output_dep); output_dep = NULL;
 	free(cached_obj_hash); cached_obj_hash = NULL;
 	free(cached_obj); cached_obj = NULL;
@@ -1838,6 +1894,29 @@ parse_sloppiness(char *p)
 	return result;
 }
 
+/* Make a copy of stderr that will not be cached, so things like
+   distcc can send networking errors to it. */
+static void
+setup_uncached_err(void)
+{
+	char *buf;
+	int uncached_fd;
+
+	uncached_fd = dup(2);
+	if (uncached_fd == -1) {
+		cc_log("dup(2) failed: %s", strerror(errno));
+		failed();
+	}
+
+	/* leak a pointer to the environment */
+	buf = format("UNCACHED_ERR_FD=%d", uncached_fd);
+
+	if (putenv(buf) == -1) {
+		cc_log("putenv failed: %s", strerror(errno));
+		failed();
+	}
+}
+
 /* the main ccache driver function */
 static void
 ccache(int argc, char *argv[])
@@ -1857,6 +1936,7 @@ ccache(int argc, char *argv[])
 	struct args *compiler_args;
 
 	find_compiler(argc, argv);
+	setup_uncached_err();
 
 	if (getenv("CCACHE_DISABLE")) {
 		cc_log("ccache is disabled");
@@ -2111,30 +2191,6 @@ ccache_main_options(int argc, char *argv[])
 	return 0;
 }
 
-
-/* Make a copy of stderr that will not be cached, so things like
-   distcc can send networking errors to it. */
-static void
-setup_uncached_err(void)
-{
-	char *buf;
-	int uncached_fd;
-
-	uncached_fd = dup(2);
-	if (uncached_fd == -1) {
-		cc_log("dup(2) failed: %s", strerror(errno));
-		failed();
-	}
-
-	/* leak a pointer to the environment */
-	buf = format("UNCACHED_ERR_FD=%d", uncached_fd);
-
-	if (putenv(buf) == -1) {
-		cc_log("putenv failed: %s", strerror(errno));
-		failed();
-	}
-}
-
 int
 ccache_main(int argc, char *argv[])
 {
@@ -2160,11 +2216,6 @@ ccache_main(int argc, char *argv[])
 		}
 	}
 
-	current_working_dir = get_cwd();
-	if (!current_working_dir) {
-		cc_log("Could not determine current working directory");
-		failed();
-	}
 	cache_dir = getenv("CCACHE_DIR");
 	if (cache_dir) {
 		cache_dir = x_strdup(cache_dir);
@@ -2204,8 +2255,6 @@ ccache_main(int argc, char *argv[])
 	}
 
 	compile_preprocessed_source_code = !getenv("CCACHE_CPP2");
-
-	setup_uncached_err();
 
 	/* make sure the cache dir exists */
 	if (create_dir(cache_dir) != 0) {

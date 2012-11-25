@@ -1,6 +1,6 @@
-Format-Specification: http://svn.debian.org/wsvn/dep/web/deps/dep5.mdwn?rev=135&sc=1
-Name: ccache
-Maintainer: Joel Rosdahl <joel@rosdahl.net>
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: ccache
+Upstream-Contact: Joel Rosdahl <joel@rosdahl.net>
 Source: http://samba.org/ftp/ccache/
 
 Files: *

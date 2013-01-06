@@ -2,7 +2,7 @@
  * ccache -- a fast C/C++ compiler cache
  *
  * Copyright (C) 2002-2007 Andrew Tridgell
- * Copyright (C) 2009-2012 Joel Rosdahl
+ * Copyright (C) 2009-2013 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -266,7 +266,7 @@ get_path_in_cache(const char *name, const char *suffix)
 		char *p = format("%s/%c", path, name[i]);
 		free(path);
 		path = p;
-		if (create_dir(path) != 0) {
+		if (!getenv("CCACHE_READONLY") && create_dir(path) != 0) {
 			fatal("Failed to create %s: %s", path, strerror(errno));
 		}
 	}
@@ -551,7 +551,13 @@ to_cache(struct args *args)
 	args_pop(args, 3);
 
 	if (stat(tmp_stdout, &st) != 0) {
-		fatal("Could not create %s (permission denied?)", tmp_stdout);
+		/* The stdout file was removed - cleanup in progress? Better bail out. */
+		cc_log("%s not found: %s", tmp_stdout, strerror(errno));
+		stats_update(STATS_MISSING);
+		tmp_unlink(tmp_stdout);
+		tmp_unlink(tmp_stderr);
+		tmp_unlink(tmp_obj);
+		failed();
 	}
 	if (st.st_size != 0) {
 		cc_log("Compiler produced stdout");

@@ -497,7 +497,7 @@ base_suite() {
 
 link_suite() {
     if [ `dirname $COMPILER` = . ]; then
-        ln -s ../ccache $COMPILER
+        ln -s "$CCACHE" $COMPILER
         CCACHE_COMPILE="./$COMPILER"
         base_tests
     else
@@ -1387,16 +1387,25 @@ readonly_suite() {
     # Make the cache readonly
     # Check that readonly mode finds the result.
     testname="cache hit"
-    rm -f test.o
+    rm -f test.o test2.o
     chmod -R a-w $CCACHE_DIR
-    CCACHE_READONLY=1 CCACHE_TEMPDIR=/tmp CCACHE_PREFIX=false $CCACHE $COMPILER -c test.c -o test.o
-    status=$?
+    CCACHE_READONLY=1 CCACHE_TEMPDIR=/tmp CCACHE_PREFIX=false $CCACHE $COMPILER -c test.c -o test.o >/dev/null 2>&1
+    status1=$?
+    # Check that fallback to the real compiler works for a cache miss.
+    CCACHE_READONLY=1 CCACHE_TEMPDIR=/tmp $CCACHE $COMPILER -c test2.c -o test2.o >/dev/null 2>&1
+    status2=$?
     chmod -R a+w $CCACHE_DIR
-    if [ $status -ne 0 ]; then
+    if [ $status1 -ne 0 ]; then
         test_failed "failure when compiling test.c readonly"
+    fi
+    if [ $status2 -ne 0 ]; then
+        test_failed "failure when compiling test2.c readonly"
     fi
     if [ ! -f test.o ]; then
         test_failed "test.o missing"
+    fi
+    if [ ! -f test2.o ]; then
+        test_failed "test2.o missing"
     fi
 
     # Check that readonly mode doesn't try to store new results.
@@ -1542,6 +1551,11 @@ cleanup_suite() {
         fi
     done
 
+    # Warning: this test is known to fail on filesystems that have
+    # unusual block sizes, including ecryptfs.  The workaround is
+    # to place the test directory elsewhere:
+    #     cd /tmp
+    #     CCACHE=$DIR/ccache $DIR/test.sh
     testname="forced cleanup, size limit"
     $CCACHE -C >/dev/null
     prepare_cleanup_test $CCACHE_DIR/a

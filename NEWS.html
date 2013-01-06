@@ -736,13 +736,63 @@ asciidoc.install(2);
 <body class="article">
 <div id="header">
 <h1>ccache news</h1>
-<span id="revnumber">version 3.1.8</span>
+<span id="revnumber">version 3.1.9</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
 </div>
 </div>
 <div id="content">
+<div class="sect1">
+<h2 id="_ccache_3_1_9">ccache 3.1.9</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Release date: 2013-01-06</p></div>
+<div class="sect2">
+<h3 id="_bug_fixes">Bug fixes</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+The EAGAIN signal is now handled correctly when emitting cached stderr
+      output. This fixes a problem triggered by large error outputs from the
+      compiler.
+</p>
+</li>
+<li>
+<p>
+Subdirectories in the cache are no longer created in read-only mode.
+</p>
+</li>
+<li>
+<p>
+Fixed so that ccache&#8217;s log file descriptor is not made available to the
+      compiler.
+</p>
+</li>
+<li>
+<p>
+Improved error reporting when failing to create temporary stdout/stderr
+      files when executing the compiler.
+</p>
+</li>
+<li>
+<p>
+Disappearing temporary stdout/stderr files are now handled gracefully.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_other">Other</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Fixed test suite to work on ecryptfs.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
 <div class="sect1">
 <h2 id="_ccache_3_1_8">ccache 3.1.8</h2>
 <div class="sectionbody">
@@ -769,7 +819,7 @@ Clang plugins are now hashed to catch plugin upgrades.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes">Bug fixes</h3>
+<h3 id="_bug_fixes_2">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -796,7 +846,7 @@ Paths are now correctly canonicalized when computing paths relative to
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_other">Other</h3>
+<h3 id="_other_2">Other</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -818,7 +868,7 @@ Fixed <tt>static_assert</tt> macro definition clash with GCC 4.7.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2012-01-08</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_2">Bug fixes</h3>
+<h3 id="_bug_fixes_3">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -871,7 +921,7 @@ Reverted the GCC bug compatibility introduced in ccache 3.1.5 for
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_other_2">Other</h3>
+<h3 id="_other_3">Other</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -902,7 +952,7 @@ Rewrite argument to <tt>--sysroot</tt> if <tt>CCACHE_BASEDIR</tt> is used.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_3">Bug fixes</h3>
+<h3 id="_bug_fixes_4">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -955,7 +1005,7 @@ Improved order of statistics counters in <tt>ccache -s</tt> output.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_4">Bug fixes</h3>
+<h3 id="_bug_fixes_5">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -989,7 +1039,7 @@ Systems that lack (and don&#8217;t need to be linked with) libm are now
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2011-01-09</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_5">Bug fixes</h3>
+<h3 id="_bug_fixes_6">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1022,7 +1072,7 @@ The file handle in now correctly closed on write error when trying to
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-28</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_6">Bug fixes</h3>
+<h3 id="_bug_fixes_7">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1033,7 +1083,7 @@ The -MFarg, -MTarg and -MQarg compiler options (i.e, without space
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_other_3">Other</h3>
+<h3 id="_other_4">Other</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1049,7 +1099,7 @@ Portability fixes for HP-UX 11.00 and other esoteric systems.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-21</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_7">Bug fixes</h3>
+<h3 id="_bug_fixes_8">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1070,7 +1120,7 @@ Fixed issue when parsing precompiler output on AIX.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_other_4">Other</h3>
+<h3 id="_other_5">Other</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1097,7 +1147,7 @@ The test suite now also works on systems that lack a /dev/zero.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-07</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_8">Bug fixes</h3>
+<h3 id="_bug_fixes_9">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1136,7 +1186,7 @@ ccache development version (set by dev.mk) now works with gits whose
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_other_5">Other</h3>
+<h3 id="_other_6">Other</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1221,7 +1271,7 @@ Added <tt>-install_name</tt> as an option known to take an argument. (This
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_9">Bug fixes</h3>
+<h3 id="_bug_fixes_10">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1247,7 +1297,7 @@ EINTR is now handled correctly.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_other_6">Other</h3>
+<h3 id="_other_7">Other</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1309,7 +1359,7 @@ New <tt>HACKING.txt</tt> file with some notes about ccache code conventions.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-07-15</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_10">Bug fixes</h3>
+<h3 id="_bug_fixes_11">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1503,7 +1553,7 @@ The following options are no longer hashed in the preprocessor mode:
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_11">Bug fixes</h3>
+<h3 id="_bug_fixes_12">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1648,8 +1698,8 @@ Statistics counters are now correctly updated for -E option failures and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.1.8<br />
-Last updated 2012-08-11 10:57:17 CEST
+Version 3.1.9<br />
+Last updated 2013-01-06 17:55:15 CET
 </div>
 </div>
 </body>

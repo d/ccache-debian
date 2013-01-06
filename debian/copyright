@@ -123,9 +123,10 @@ License: BSD
 
 Files: murmurhashneutral2.[hc]
 Copyright: Released to the public domain by Austin Appleby
-License:  Released to the public domain by Austin Appleby
+License: PD
+ Released to the public domain by Austin Appleby.
 
-Files: snprintf.c, m4/snprintf.m4
+Files: snprintf.c m4/snprintf.m4
 Copyright: 1995 Patrick Powell
            2008 Holger Weiss
 License:

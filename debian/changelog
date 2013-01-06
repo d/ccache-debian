@@ -1,3 +1,9 @@
+ccache (3.1.9-1) UNRELEASED; urgency=low
+
+  * New upstream release 3.1.9
+
+ -- Joel Rosdahl <joel@debian.org>  Sun, 06 Jan 2013 18:19:19 +0100
+
 ccache (3.1.8-1) unstable; urgency=low
 
   * New upstream release 3.1.8 (closes: #656022, #672570, #688508)

@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: ccache
 .\"    Author: [see the "Author" section]
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/06/2013
+.\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
+.\"      Date: 10/19/2014
 .\"    Manual: ccache Manual
-.\"    Source: ccache 3.1.9
+.\"    Source: ccache 3.1.10
 .\"  Language: English
 .\"
-.TH "CCACHE" "1" "01/06/2013" "ccache 3\&.1\&.9" "ccache Manual"
+.TH "CCACHE" "1" "10/19/2014" "ccache 3\&.1\&.10" "ccache Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -253,7 +253,7 @@ Zero the cache statistics (but not the configured limits)\&.
 .RE
 .SH "EXTRA OPTIONS"
 .sp
-When run as a compiler, ccache usually just takes the same command line options as the compiler you are using\&. The only exception to this is the option \fB\-\-ccache\-skip\fR\&. That option can be used to tell ccache to avoid interpreting the next option in any way and to pass it along to the compiler as\-is\&.
+When run as a compiler, ccache usually just takes the same command line options as the compiler you are using\&. The only exception to this is the option \fB\-\-ccache\-skip\fR\&. That option can be used to tell ccache to avoid interpreting the next option in any way and to pass it along to the compiler as\-is\&. \fBNote\fR: \fB\-\-ccache\-skip\fR currently only tells ccache not to interpret the next option as a special compiler option \(em the option will still be included in the direct mode hash\&.
 .sp
 The reason this can be important is that ccache does need to parse the command line and determine what is an input filename and what is a compiler option, as it needs the input filename to determine the name of the resulting object file (among other things)\&. The heuristic ccache uses when parsing the command line is that any argument that exists as a file is treated as an input file name\&. By using \fB\-\-ccache\-skip\fR you can force an option to not be treated as an input file name and instead be passed along to the compiler as a command line option\&.
 .sp
@@ -314,7 +314,6 @@ Hash the standard output and standard error output of the specified command\&. T
 .sp -1
 .IP \(bu 2.3
 .\}
-
 %compiler% \-v
 .RE
 .sp
@@ -326,7 +325,6 @@ Hash the standard output and standard error output of the specified command\&. T
 .sp -1
 .IP \(bu 2.3
 .\}
-
 %compiler% \-dumpmachine; %compiler% \-dumpversion
 .RE
 .sp
@@ -491,6 +489,13 @@ being present in the source\&.
 \fBinclude_file_mtime\fR
 .RS 4
 Don\(cqt check the modification time of include files in the direct mode\&.
+.RE
+.PP
+\fBpch_defines\fR
+.RS 4
+Be sloppy about #defines when precompiling a header file\&. See
+PRECOMPILED HEADERS
+for more information\&.
 .RE
 .PP
 \fBtime_macros\fR
@@ -793,7 +798,6 @@ and
 .sp -1
 .IP \(bu 2.3
 .\}
-
 \fB\-Xpreprocessor\fR
 .RE
 .RE
@@ -937,11 +941,11 @@ ccache has support for GCC\(cqs precompiled headers\&. However, you have to do s
 You must set
 \fBCCACHE_SLOPPINESS\fR
 to
-\fBtime_macros\fR\&. The reason is that ccache can\(cqt tell whether
+\fBpch_defines,time_macros\fR\&. The reason is that ccache can\(cqt tell whether
 \fB__TIME__\fR
 or
 \fB__DATE__\fR
-is used when using a precompiled header\&.
+is used when using a precompiled header\&. Further, it can\(cqt detect changes in #defines in the source code because of how preprocessing works in combination with precompiled headers\&.
 .RE
 .sp
 .RS 4

@@ -151,7 +151,10 @@ Extra options
 When run as a compiler, ccache usually just takes the same command line options
 as the compiler you are using. The only exception to this is the option
 *--ccache-skip*. That option can be used to tell ccache to avoid interpreting
-the next option in any way and to pass it along to the compiler as-is.
+the next option in any way and to pass it along to the compiler as-is. *Note*:
+*--ccache-skip* currently only tells ccache not to interpret the next option as
+a special compiler option -- the option will still be included in the direct
+mode hash.
 
 The reason this can be important is that ccache does need to parse the command
 line and determine what is an input filename and what is a compiler option, as
@@ -372,6 +375,9 @@ WRAPPERS>>.
     Ignore *\_\_FILE__* being present in the source.
 *include_file_mtime*::
     Don't check the modification time of include files in the direct mode.
+*pch_defines*::
+    Be sloppy about #defines when precompiling a header file. See
+    <<_precompiled_headers,PRECOMPILED HEADERS>> for more information.
 *time_macros*::
     Ignore *\_\_DATE\__* and *\_\_TIME__* being present in the source code.
 --
@@ -567,9 +573,11 @@ Precompiled headers
 ccache has support for GCC's precompiled headers. However, you have to do some
 things to make it work properly:
 
-* You must set *CCACHE_SLOPPINESS* to *time_macros*. The reason is that ccache
-  can't tell whether *\_\_TIME\__* or *\_\_DATE__* is used when using a
-  precompiled header.
+* You must set *CCACHE_SLOPPINESS* to *pch_defines,time_macros*. The reason is
+  that ccache can't tell whether *\_\_TIME\__* or *\_\_DATE__* is used when
+  using a precompiled header. Further, it can't detect changes in #defines in
+  the source code because of how preprocessing works in combination with
+  precompiled headers.
 * You must either:
 +
 --

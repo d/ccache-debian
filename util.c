@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2002 Andrew Tridgell
- * Copyright (C) 2009-2013 Joel Rosdahl
+ * Copyright (C) 2009-2014 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -184,7 +184,7 @@ mkstemp(char *template)
 int
 copy_file(const char *src, const char *dest, int compress_dest)
 {
-	int fd_in = -1, fd_out = -1;
+	int fd_in, fd_out;
 	gzFile gz_in = NULL, gz_out = NULL;
 	char buf[10240];
 	int n, written;
@@ -692,7 +692,9 @@ dirname(char *s)
 #endif
 	if (p < p2)
 		p = p2;
-	if (p) {
+	if (p == s) {
+		return s;
+	} else if (p) {
 		*p = 0;
 		return s;
 	} else {
@@ -984,23 +986,13 @@ common_dir_prefix_length(const char *s1, const char *s2)
 		++p1;
 		++p2;
 	}
-	if (*p2 == '/') {
-		/* s2 starts with "s1/". */
-		return p1 - s1;
-	}
-	if (!*p2) {
-		/* s2 is equal to s1. */
-		if (p2 == s2 + 1) {
-			/* Special case for s1 and s2 both being "/". */
-			return 0;
-		} else {
-			return p1 - s1;
-		}
-	}
-	/* Compute the common directory prefix */
-	while (p1 > s1 && *p1 != '/') {
+	while ((*p1 && *p1 != '/') || (*p2 && *p2 != '/')) {
 		p1--;
 		p2--;
+	}
+	if (!*p1 && !*p2 && p2 == s2 + 1) {
+		/* Special case for s1 and s2 both being "/". */
+		return 0;
 	}
 	return p1 - s1;
 }
@@ -1149,13 +1141,6 @@ x_readlink(const char *path)
 	long maxlen = path_max(path);
 	ssize_t len;
 	char *buf;
-#ifdef PATH_MAX
-	maxlen = PATH_MAX;
-#elif defined(MAXPATHLEN)
-	maxlen = MAXPATHLEN;
-#elif defined(_PC_PATH_MAX)
-	maxlen = pathconf(path, _PC_PATH_MAX);
-#endif
 	if (maxlen < 4096) maxlen = 4096;
 
 	buf = x_malloc(maxlen);
@@ -1193,7 +1178,6 @@ read_file(const char *path, size_t size_hint, char **data, size_t *size)
 	}
 	allocated = size_hint;
 	*data = x_malloc(allocated);
-	ret = 0;
 	while (true) {
 		if (pos > allocated / 2) {
 			allocated *= 2;

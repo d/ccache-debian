@@ -7,8 +7,10 @@
 
 #ifdef __GNUC__
 #define ATTR_FORMAT(x, y, z) __attribute__((format (x, y, z)))
+#define ATTR_NORETURN __attribute__((noreturn));
 #else
 #define ATTR_FORMAT(x, y, z)
+#define ATTR_NORETURN
 #endif
 
 #ifndef MYNAME
@@ -55,6 +57,7 @@ enum stats {
 #define SLOPPY_INCLUDE_FILE_MTIME 1
 #define SLOPPY_FILE_MACRO 2
 #define SLOPPY_TIME_MACROS 4
+#define SLOPPY_PCH_DEFINES 8
 
 #define str_eq(s1, s2) (strcmp((s1), (s2)) == 0)
 #define str_startswith(s, p) (strncmp((s), (p), strlen((p))) == 0)
@@ -100,7 +103,7 @@ bool hash_file(struct mdfour *md, const char *fname);
 
 void cc_log(const char *format, ...) ATTR_FORMAT(printf, 1, 2);
 void cc_log_argv(const char *prefix, char **argv);
-void fatal(const char *format, ...) ATTR_FORMAT(printf, 1, 2);
+void fatal(const char *format, ...) ATTR_FORMAT(printf, 1, 2) ATTR_NORETURN;
 
 void copy_fd(int fd_in, int fd_out);
 int copy_file(const char *src, const char *dest, int compress_dest);

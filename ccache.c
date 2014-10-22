@@ -2,7 +2,7 @@
  * ccache -- a fast C/C++ compiler cache
  *
  * Copyright (C) 2002-2007 Andrew Tridgell
- * Copyright (C) 2009-2013 Joel Rosdahl
+ * Copyright (C) 2009-2014 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -197,6 +197,14 @@ enum fromcache_call_mode {
 	FROMCACHE_COMPILED_MODE
 };
 
+struct pending_tmp_file {
+	char *path;
+	struct pending_tmp_file *next;
+};
+
+/* Temporary files to remove at program exit. */
+static struct pending_tmp_file *pending_tmp_files = NULL;
+
 /*
  * This is a string that identifies the current "version" of the hash sum
  * computed by ccache. If, for any reason, we want to force the hash sum to be
@@ -231,23 +239,87 @@ failed(void)
 }
 
 static void
-clean_up_tmp_files()
+add_pending_tmp_file(const char *path)
 {
-	/* delete intermediate pre-processor file if needed */
-	if (i_tmpfile) {
-		if (!direct_i_file) {
-			tmp_unlink(i_tmpfile);
-		}
-		free(i_tmpfile);
-		i_tmpfile = NULL;
+	struct pending_tmp_file *e = x_malloc(sizeof(*e));
+	e->path = x_strdup(path);
+	e->next = pending_tmp_files;
+	pending_tmp_files = e;
+}
+
+static void
+clean_up_pending_tmp_files(void)
+{
+	struct pending_tmp_file *p = pending_tmp_files;
+	while (p) {
+		tmp_unlink(p->path);
+		p = p->next;
+		/* Leak p->path and p here because clean_up_pending_tmp_files needs to be signal
+		 * safe. */
+	}
+}
+
+static void
+signal_handler(int signo)
+{
+	(void)signo;
+	clean_up_pending_tmp_files();
+}
+
+static void
+clean_up_internal_tempdir(void)
+{
+	DIR *dir;
+	struct dirent *entry;
+	struct stat st;
+	time_t now = time(NULL);
+
+	stat(cache_dir, &st);
+	if (st.st_mtime + 3600 >= now) {
+		/* No cleanup needed. */
+		return;
 	}
 
-	/* delete the cpp stderr file if necessary */
-	if (cpp_stderr) {
-		tmp_unlink(cpp_stderr);
-		free(cpp_stderr);
-		cpp_stderr = NULL;
+	update_mtime(cache_dir);
+
+	dir = opendir(temp_dir);
+	if (!dir) {
+		return;
 	}
+
+	while ((entry = readdir(dir))) {
+		char *path;
+
+		if (str_eq(entry->d_name, ".") || str_eq(entry->d_name, "..")) {
+			continue;
+		}
+
+		path = format("%s/%s", temp_dir, entry->d_name);
+		if (lstat(path, &st) == 0 && st.st_mtime + 3600 < now) {
+			tmp_unlink(path);
+		}
+		free(path);
+	}
+
+	closedir(dir);
+}
+
+static char *
+get_current_working_dir(void)
+{
+	if (!current_working_dir) {
+		char *cwd = get_cwd();
+		if (cwd) {
+			current_working_dir = x_realpath(cwd);
+			free(cwd);
+		}
+		if (!current_working_dir) {
+			cc_log("Unable to determine current working directory: %s",
+			       strerror(errno));
+			failed();
+		}
+	}
+	return current_working_dir;
 }
 
 /*
@@ -380,42 +452,57 @@ ignore:
 }
 
 /*
- * Make a relative path from current working directory to path if CCACHE_PREFIX
- * is a prefix of path. Takes over ownership of path. Caller frees.
+ * Make a relative path from current working directory to path if
+ * CCACHE_BASEDIR is a prefix of path. Takes over ownership of path. Caller
+ * frees.
  */
 static char *
 make_relative_path(char *path)
 {
-	char *relpath, *canon_path;
+	char *relpath, *canon_path, *path_suffix = NULL;
+	struct stat st;
 
 	if (!base_dir || !str_startswith(path, base_dir)) {
 		return path;
 	}
 
-	if (!current_working_dir) {
-		char *cwd = get_cwd();
-		if (cwd) {
-			current_working_dir = x_realpath(cwd);
-			free(cwd);
+	/* x_realpath only works for existing paths, so if path doesn't exist, try
+	 * dirname(path) and assemble the path afterwards. We only bother to try
+	 * canonicalizing one of these two paths since a compiler path argument
+	 * typically only makes sense if path or dirname(path) exists. */
+	if (stat(path, &st) != 0) {
+		/* path doesn't exist. */
+		char *dir, *p;
+		dir = dirname(path);
+		if (stat(dir, &st) != 0) {
+			/* And neither does its parent directory, so no action to take. */
+			free(dir);
+			return path;
 		}
-		if (!current_working_dir) {
-			cc_log("Unable to determine current working directory: %s",
-			       strerror(errno));
-			failed();
-		}
+		path_suffix = basename(path);
+		p = path;
+		path = dirname(path);
+		free(p);
 	}
 
 	canon_path = x_realpath(path);
 	if (canon_path) {
 		free(path);
-		path = canon_path;
+		relpath = get_relative_path(get_current_working_dir(), canon_path);
+		free(canon_path);
+		if (path_suffix) {
+			path = format("%s/%s", relpath, path_suffix);
+			free(relpath);
+			free(path_suffix);
+			return path;
+		} else {
+			return relpath;
+		}
 	} else {
 		/* path doesn't exist, so leave it as it is. */
+		free(path_suffix);
+		return path;
 	}
-
-	relpath = get_relative_path(current_working_dir, path);
-	free(path);
-	return relpath;
 }
 
 /*
@@ -720,14 +807,16 @@ get_object_name_from_cpp(struct args *args, struct mdfour *hash)
 		input_base[10] = 0;
 	}
 
-	/* now the run */
-	path_stdout = format("%s/%s.tmp.%s.%s",
-	                     temp_dir, input_base, tmp_string(), i_extension);
 	path_stderr = format("%s/tmp.cpp_stderr.%s", temp_dir, tmp_string());
+	add_pending_tmp_file(path_stderr);
 
 	time_of_compilation = time(NULL);
 
 	if (!direct_i_file) {
+		path_stdout = format("%s/%s.tmp.%s.%s",
+		                     temp_dir, input_base, tmp_string(), i_extension);
+		add_pending_tmp_file(path_stdout);
+
 		/* run cpp on the input file to obtain the .i */
 		args_add(args, "-E");
 		args_add(args, input_file);
@@ -747,10 +836,6 @@ get_object_name_from_cpp(struct args *args, struct mdfour *hash)
 	}
 
 	if (status != 0) {
-		if (!direct_i_file) {
-			tmp_unlink(path_stdout);
-		}
-		tmp_unlink(path_stderr);
 		cc_log("Preprocessor gave exit status %d", status);
 		stats_update(STATS_PREPROCESSOR);
 		failed();
@@ -767,7 +852,6 @@ get_object_name_from_cpp(struct args *args, struct mdfour *hash)
 		hash_delimiter(hash, "unifycpp");
 		if (unify_hash(hash, path_stdout) != 0) {
 			stats_update(STATS_ERROR);
-			tmp_unlink(path_stderr);
 			cc_log("Failed to unify %s", path_stdout);
 			failed();
 		}
@@ -775,7 +859,6 @@ get_object_name_from_cpp(struct args *args, struct mdfour *hash)
 		hash_delimiter(hash, "cpp");
 		if (!process_preprocessed_file(hash, path_stdout)) {
 			stats_update(STATS_ERROR);
-			tmp_unlink(path_stderr);
 			failed();
 		}
 	}
@@ -795,7 +878,6 @@ get_object_name_from_cpp(struct args *args, struct mdfour *hash)
 		 */
 		cpp_stderr = path_stderr;
 	} else {
-		tmp_unlink(path_stderr);
 		free(path_stderr);
 	}
 
@@ -942,6 +1024,13 @@ calculate_object_hash(struct args *args, struct mdfour *hash, int direct_mode)
 			continue;
 		}
 
+		/* The -fdebug-prefix-map option may be used in combination with
+		   CCACHE_BASEDIR to reuse results across different directories. Skip it
+		   from hashing. */
+		if (str_startswith(args->argv[i], "-fdebug-prefix-map=")) {
+			continue;
+		}
+
 		/* When using the preprocessor, some arguments don't contribute
 		   to the hash. The theory is that these arguments will change
 		   the output of -E if they are going to have any effect at
@@ -1077,6 +1166,16 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 	}
 
 	/*
+	 * Occasionally, e.g. on hard reset, our cache ends up as just filesystem
+	 * meta-data with no content catch an easy case of this.
+	 */
+	if (st.st_size == 0) {
+		cc_log("Invalid (empty) object file %s in cache", cached_obj);
+		x_unlink(cached_obj);
+		return;
+	}
+
+	/*
 	 * (If mode != FROMCACHE_DIRECT_MODE, the dependency file is created by
 	 * gcc.)
 	 */
@@ -1207,12 +1306,12 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 	/* log the cache hit */
 	switch (mode) {
 	case FROMCACHE_DIRECT_MODE:
-		cc_log("Succeded getting cached result");
+		cc_log("Succeeded getting cached result");
 		stats_update(STATS_CACHEHIT_DIR);
 		break;
 
 	case FROMCACHE_CPP_MODE:
-		cc_log("Succeded getting cached result");
+		cc_log("Succeeded getting cached result");
 		stats_update(STATS_CACHEHIT_CPP);
 		break;
 
@@ -1660,8 +1759,8 @@ cc_process_args(struct args *orig_args, struct args **preprocessor_args,
 	if (found_pch || found_fpch_preprocess) {
 		using_precompiled_header = true;
 		if (!(sloppiness & SLOPPY_TIME_MACROS)) {
-			cc_log("You have to specify \"time_macros\" sloppiness when using"
-			       " precompiled headers to get direct hits");
+			cc_log("You have to specify \"pch_defines,time_macros\" sloppiness when"
+			       " using precompiled headers to get direct hits");
 			cc_log("Disabling direct mode");
 			stats_update(STATS_CANTUSEPCH);
 			result = false;
@@ -1687,6 +1786,14 @@ cc_process_args(struct args *orig_args, struct args **preprocessor_args,
 
 	output_is_precompiled_header =
 		actual_language && strstr(actual_language, "-header") != NULL;
+
+	if (output_is_precompiled_header && !(sloppiness & SLOPPY_PCH_DEFINES)) {
+		cc_log("You have to specify \"pch_defines,time_macros\" sloppiness when"
+		       " creating precompiled headers");
+		stats_update(STATS_CANTUSEPCH);
+		result = false;
+		goto out;
+	}
 
 	if (!found_c_opt) {
 		if (output_is_precompiled_header) {
@@ -1894,6 +2001,10 @@ parse_sloppiness(char *p)
 			cc_log("Being sloppy about __DATE__ and __TIME__");
 			result |= SLOPPY_TIME_MACROS;
 		}
+		if (str_eq(word, "pch_defines")) {
+			cc_log("Being sloppy about PCH #defines");
+			result |= SLOPPY_PCH_DEFINES;
+		}
 		q = NULL;
 	}
 	free(p);
@@ -1925,7 +2036,7 @@ setup_uncached_err(void)
 
 /* the main ccache driver function */
 static void
-ccache(int argc, char *argv[])
+ccache(char *argv[])
 {
 	bool put_object_in_manifest = false;
 	struct file_hash *object_hash;
@@ -1941,13 +2052,7 @@ ccache(int argc, char *argv[])
 	/* Arguments to send to the real compiler. */
 	struct args *compiler_args;
 
-	find_compiler(argc, argv);
 	setup_uncached_err();
-
-	if (getenv("CCACHE_DISABLE")) {
-		cc_log("ccache is disabled");
-		failed();
-	}
 
 	if (!getenv("CCACHE_READONLY")) {
 		if (create_cachedirtag(cache_dir) != 0) {
@@ -1961,7 +2066,7 @@ ccache(int argc, char *argv[])
 
 	cc_log_argv("Command line: ", argv);
 	cc_log("Hostname: %s", get_hostname());
-	cc_log("Working directory: %s", current_working_dir);
+	cc_log("Working directory: %s", get_current_working_dir());
 
 	if (base_dir) {
 		cc_log("Base directory: %s", base_dir);
@@ -2202,10 +2307,15 @@ ccache_main(int argc, char *argv[])
 {
 	char *p;
 	char *program_name;
+	bool external_tempdir;
+
+	signal(SIGHUP, signal_handler);
+	signal(SIGINT, signal_handler);
+	signal(SIGTERM, signal_handler);
 
 	exitfn_init();
 	exitfn_add_nullary(stats_flush);
-	exitfn_add_nullary(clean_up_tmp_files);
+	exitfn_add_nullary(clean_up_pending_tmp_files);
 
 	/* check for logging early so cc_log messages start working ASAP */
 	cache_logfile = getenv("CCACHE_LOGFILE");
@@ -2247,12 +2357,15 @@ ccache_main(int argc, char *argv[])
 	}
 	free(program_name);
 
-	check_cache_dir();
+	/* find_compiler sets up orig_args, needed by failed(), so do it early. */
+	find_compiler(argc, argv);
 
-	temp_dir = getenv("CCACHE_TEMPDIR");
-	if (!temp_dir) {
-		temp_dir = format("%s/tmp", cache_dir);
+	if (getenv("CCACHE_DISABLE")) {
+		cc_log("ccache is disabled");
+		failed();
 	}
+
+	check_cache_dir();
 
 	base_dir = getenv("CCACHE_BASEDIR");
 	if (base_dir && base_dir[0] != '/') {
@@ -2271,6 +2384,13 @@ ccache_main(int argc, char *argv[])
 	}
 
 	/* make sure the temp dir exists */
+	temp_dir = getenv("CCACHE_TEMPDIR");
+	if (temp_dir) {
+		external_tempdir = true;
+	} else {
+		temp_dir = format("%s/tmp", cache_dir);
+		external_tempdir = false;
+	}
 	if (create_dir(temp_dir) != 0) {
 		fprintf(stderr,
 		        "ccache: failed to create %s (%s)\n",
@@ -2278,6 +2398,10 @@ ccache_main(int argc, char *argv[])
 		exit(1);
 	}
 
-	ccache(argc, argv);
+	if (!external_tempdir) {
+		clean_up_internal_tempdir();
+	}
+
+	ccache(argv);
 	return 1;
 }

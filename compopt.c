@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Joel Rosdahl
+ * Copyright (C) 2010, 2013 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -49,6 +49,7 @@ static const struct compopt compopts[] = {
 	{"-U",              AFFECTS_CPP | TAKES_ARG | TAKES_CONCAT_ARG},
 	{"-V",              TAKES_ARG},
 	{"-Xassembler",     TAKES_ARG},
+	{"-Xclang",         TAKES_ARG},
 	{"-Xlinker",        TAKES_ARG},
 	{"-Xpreprocessor",  TOO_HARD_DIRECT | TAKES_ARG},
 	{"-aux-info",       TAKES_ARG},
@@ -59,6 +60,7 @@ static const struct compopt compopts[] = {
 	{"-fprofile-use",   TOO_HARD},
 	{"-frepo",          TOO_HARD},
 	{"-ftest-coverage", TOO_HARD},
+	{"-gsplit-dwarf",   TOO_HARD},
 	{"-idirafter",      AFFECTS_CPP | TAKES_ARG | TAKES_PATH},
 	{"-iframework",     AFFECTS_CPP | TAKES_ARG | TAKES_CONCAT_ARG | TAKES_PATH},
 	{"-imacros",        AFFECTS_CPP | TAKES_ARG | TAKES_PATH},

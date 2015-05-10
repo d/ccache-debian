@@ -3,6 +3,7 @@
 
 #include "system.h"
 #include "mdfour.h"
+#include "conf.h"
 #include "counters.h"
 
 #ifdef __GNUC__
@@ -34,8 +35,8 @@ enum stats {
 	STATS_LINK = 10,
 	STATS_NUMFILES = 11,
 	STATS_TOTALSIZE = 12,
-	STATS_MAXFILES = 13,
-	STATS_MAXSIZE = 14,
+	STATS_OBSOLETE_MAXFILES = 13,
+	STATS_OBSOLETE_MAXSIZE = 14,
 	STATS_SOURCELANG = 15,
 	STATS_DEVICE = 16,
 	STATS_NOINPUT = 17,
@@ -55,9 +56,15 @@ enum stats {
 };
 
 #define SLOPPY_INCLUDE_FILE_MTIME 1
-#define SLOPPY_FILE_MACRO 2
-#define SLOPPY_TIME_MACROS 4
-#define SLOPPY_PCH_DEFINES 8
+#define SLOPPY_INCLUDE_FILE_CTIME 2
+#define SLOPPY_FILE_MACRO 4
+#define SLOPPY_TIME_MACROS 8
+#define SLOPPY_PCH_DEFINES 16
+/*
+ * Allow us to match files based on their stats (size, mtime, ctime), without
+ * looking at their contents.
+ */
+#define SLOPPY_FILE_STAT_MATCHES 32
 
 #define str_eq(s1, s2) (strcmp((s1), (s2)) == 0)
 #define str_startswith(s, p) (strncmp((s), (p), strlen((p))) == 0)
@@ -72,11 +79,13 @@ struct args {
 
 struct args *args_init(int, char **);
 struct args *args_init_from_string(const char *);
+struct args *args_init_from_gcc_atfile(const char *filename);
 struct args *args_copy(struct args *args);
 void args_free(struct args *args);
 void args_add(struct args *args, const char *s);
 void args_add_prefix(struct args *args, const char *s);
 void args_extend(struct args *args, struct args *to_append);
+void args_insert(struct args *dest, int index, struct args *src, bool replace);
 void args_pop(struct args *args, int n);
 void args_set(struct args *args, int index, const char *value);
 void args_strip(struct args *args, const char *prefix);
@@ -92,8 +101,9 @@ void hash_buffer(struct mdfour *md, const void *s, size_t len);
 char *hash_result(struct mdfour *md);
 void hash_result_as_bytes(struct mdfour *md, unsigned char *out);
 bool hash_equal(struct mdfour *md1, struct mdfour *md2);
-void hash_delimiter(struct mdfour *md, const char* type);
+void hash_delimiter(struct mdfour *md, const char *type);
 void hash_string(struct mdfour *md, const char *s);
+void hash_string_length(struct mdfour *md, const char *s, int length);
 void hash_int(struct mdfour *md, int x);
 bool hash_fd(struct mdfour *md, int fd);
 bool hash_file(struct mdfour *md, const char *fname);
@@ -102,40 +112,52 @@ bool hash_file(struct mdfour *md, const char *fname);
 /* util.c */
 
 void cc_log(const char *format, ...) ATTR_FORMAT(printf, 1, 2);
+void cc_bulklog(const char *format, ...) ATTR_FORMAT(printf, 1, 2);
 void cc_log_argv(const char *prefix, char **argv);
 void fatal(const char *format, ...) ATTR_FORMAT(printf, 1, 2) ATTR_NORETURN;
 
 void copy_fd(int fd_in, int fd_out);
-int copy_file(const char *src, const char *dest, int compress_dest);
-int move_file(const char *src, const char *dest, int compress_dest);
+int copy_file(const char *src, const char *dest, int compress_level);
+int move_file(const char *src, const char *dest, int compress_level);
 int move_uncompressed_file(const char *src, const char *dest,
-                           int compress_dest);
+                           int compress_level);
 bool file_is_compressed(const char *filename);
-
 int create_dir(const char *dir);
+int create_parent_dirs(const char *path);
 const char *get_hostname(void);
 const char *tmp_string(void);
-char *format_hash_as_string(const unsigned char *hash, unsigned size);
-int create_hash_dir(char **dir, const char *hash, const char *cache_dir);
+char *format_hash_as_string(const unsigned char *hash, int size);
 int create_cachedirtag(const char *dir);
 char *format(const char *format, ...) ATTR_FORMAT(printf, 1, 2);
+void reformat(char **ptr, const char *format, ...) ATTR_FORMAT(printf, 2, 3);
 char *x_strdup(const char *s);
 char *x_strndup(const char *s, size_t n);
-void *x_realloc(void *ptr, size_t size);
 void *x_malloc(size_t size);
 void *x_calloc(size_t nmemb, size_t size);
+void *x_realloc(void *ptr, size_t size);
+void x_unsetenv(const char *name);
+int x_fstat(int fd, struct stat *buf);
+int x_lstat(const char *pathname, struct stat *buf);
+int x_stat(const char *pathname, struct stat *buf);
 void traverse(const char *dir, void (*fn)(const char *, struct stat *));
-char *basename(const char *s);
-char *dirname(char *s);
+char *basename(const char *path);
+char *dirname(const char *path);
 const char *get_extension(const char *path);
 char *remove_extension(const char *path);
 size_t file_size(struct stat *st);
-int safe_open(const char *fname);
+char *format_human_readable_size(uint64_t size);
+char *format_parsable_size_with_suffix(uint64_t size);
+bool parse_size_with_suffix(const char *str, uint64_t *size);
 char *x_realpath(const char *path);
 char *gnu_getcwd(void);
-int create_empty_file(const char *fname);
+#ifndef HAVE_STRTOK_R
+char *strtok_r(char *str, const char *delim, char **saveptr);
+#endif
+int create_tmp_fd(char **fname);
+FILE *create_tmp_file(char **fname, const char *mode);
+void create_empty_tmp_file(char **fname);
 const char *get_home_directory(void);
-char *get_cwd();
+char *get_cwd(void);
 bool same_executable_name(const char *s1, const char *s2);
 size_t common_dir_prefix_length(const char *s1, const char *s2);
 char *get_relative_path(const char *from, const char *to);
@@ -143,11 +165,14 @@ bool is_absolute_path(const char *path);
 bool is_full_path(const char *path);
 void update_mtime(const char *path);
 int x_rename(const char *oldpath, const char *newpath);
-int x_unlink(const char *path);
 int tmp_unlink(const char *path);
+int x_unlink(const char *path);
+#ifndef _WIN32
 char *x_readlink(const char *path);
-char *read_text_file(const char *path);
+#endif
 bool read_file(const char *path, size_t size_hint, char **data, size_t *size);
+char *read_text_file(const char *path, size_t size_hint);
+char *subst_env_in_string(const char *str, char **errmsg);
 
 /* ------------------------------------------------------------------------- */
 /* stats.c */
@@ -156,12 +181,10 @@ void stats_update(enum stats stat);
 void stats_flush(void);
 unsigned stats_get_pending(enum stats stat);
 void stats_zero(void);
-void stats_summary(void);
-void stats_update_size(enum stats stat, size_t size, unsigned files);
-void stats_get_limits(const char *dir, unsigned *maxfiles, unsigned *maxsize);
-int stats_set_limits(long maxfiles, long maxsize);
-size_t value_units(const char *s);
-char *format_size(size_t v);
+void stats_summary(struct conf *conf);
+void stats_update_size(uint64_t size, unsigned files);
+void stats_get_obsolete_limits(const char *dir, unsigned *maxfiles,
+                               uint64_t *maxsize);
 void stats_set_sizes(const char *dir, size_t num_files, size_t total_size);
 void stats_read(const char *path, struct counters *counters);
 void stats_write(const char *path, struct counters *counters);
@@ -182,16 +205,14 @@ void exitfn_call(void);
 /* ------------------------------------------------------------------------- */
 /* cleanup.c */
 
-void cleanup_dir(const char *dir, size_t maxfiles, size_t maxsize);
-void cleanup_all(const char *dir);
-void wipe_all(const char *dir);
+void cleanup_dir(struct conf *conf, const char *dir);
+void cleanup_all(struct conf *conf);
+void wipe_all(struct conf *conf);
 
 /* ------------------------------------------------------------------------- */
 /* execute.c */
 
-int execute(char **argv,
-            const char *path_stdout,
-            const char *path_stderr);
+int execute(char **argv, int fd_out, int fd_err);
 char *find_executable(const char *name, const char *exclude_name);
 void print_command(FILE *fp, char **argv);
 
@@ -204,7 +225,8 @@ void lockfile_release(const char *path);
 /* ------------------------------------------------------------------------- */
 /* ccache.c */
 
-bool cc_process_args(struct args *orig_args, struct args **preprocessor_args,
+extern time_t time_of_compilation;
+bool cc_process_args(struct args *args, struct args **preprocessor_args,
                     struct args **compiler_args);
 void cc_reset(void);
 bool is_precompiled_header(const char *path);
@@ -229,8 +251,12 @@ typedef int (*COMPAR_FN_T)(const void *, const void *);
 #endif
 
 #ifdef _WIN32
+char *win32argvtos(char *prefix, char **argv);
+char *win32getshell(char *path);
 int win32execute(char *path, char **argv, int doreturn,
-                 const char *path_stdout, const char *path_stderr);
+                 int fd_stdout, int fd_stderr);
+void add_exe_ext_if_no_to_fullpath(char *full_path_win_ext, size_t max_size,
+                                   const char *ext, const char *path);
 #    ifndef _WIN32_WINNT
 #    define _WIN32_WINNT 0x0501
 #    endif
@@ -238,7 +264,7 @@ int win32execute(char *path, char **argv, int doreturn,
 #    define mkdir(a,b) mkdir(a)
 #    define link(src,dst) (CreateHardLink(dst,src,NULL) ? 0 : -1)
 #    define lstat(a,b) stat(a,b)
-#    define execv(a,b) win32execute(a,b,0,NULL,NULL)
+#    define execv(a,b) win32execute(a,b,0,-1,-1)
 #    define execute(a,b,c) win32execute(*(a),a,1,b,c)
 #    define PATH_DELIM ";"
 #    define F_RDLCK 0
@@ -246,5 +272,7 @@ int win32execute(char *path, char **argv, int doreturn,
 #else
 #    define PATH_DELIM ":"
 #endif
+
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 #endif /* ifndef CCACHE_H */

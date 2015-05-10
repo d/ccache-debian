@@ -3,7 +3,7 @@
 # A simple test suite for ccache.
 #
 # Copyright (C) 2002-2007 Andrew Tridgell
-# Copyright (C) 2009-2014 Joel Rosdahl
+# Copyright (C) 2009-2015 Joel Rosdahl
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -37,11 +37,19 @@ unset CCACHE_NOSTATS
 unset CCACHE_PATH
 unset CCACHE_PREFIX
 unset CCACHE_READONLY
+unset CCACHE_READONLY_DIRECT
 unset CCACHE_RECACHE
 unset CCACHE_SLOPPINESS
 unset CCACHE_TEMPDIR
 unset CCACHE_UMASK
 unset CCACHE_UNIFY
+unset GCC_COLORS
+
+# Many tests backdate files, which updates their ctimes.  In those tests, we
+# must ignore ctimes.  Might as well do so everywhere.
+default_sloppiness=include_file_ctime
+CCACHE_SLOPPINESS="$default_sloppiness"
+export CCACHE_SLOPPINESS
 
 test_failed() {
     echo "SUITE: \"$testsuite\", TEST: \"$testname\" - $1"
@@ -64,10 +72,9 @@ randcode() {
     ) >> "$outfile"
 }
 
-
 getstat() {
     stat="$1"
-    value=`$CCACHE -s | grep "$stat" | cut -c34-40`
+    value=`$CCACHE -s | grep "$stat" | cut -c34-`
     echo $value
 }
 
@@ -77,6 +84,13 @@ checkstat() {
     value=`getstat "$stat"`
     if [ "$expected_value" != "$value" ]; then
         test_failed "Expected \"$stat\" to be $expected_value, got $value"
+    fi
+}
+
+compare_file() {
+    cmp -s "$1" "$2"
+    if [ $? -ne 0 ]; then
+        test_failed "Files differ: $1 != $2"
     fi
 }
 
@@ -140,17 +154,21 @@ base_tests() {
         j=`expr $j + 1`
     done
 
+    CCACHE_DISABLE=1 $COMPILER -c -o reference_test1.o test1.c
+
     testname="BASIC"
     $CCACHE_COMPILE -c test1.c
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     checkstat 'files in cache' 1
+    compare_file reference_test1.o test1.o
 
     testname="BASIC2"
     $CCACHE_COMPILE -c test1.c
     checkstat 'cache hit (preprocessed)' 1
     checkstat 'cache miss' 1
     checkstat 'files in cache' 1
+    compare_file reference_test1.o test1.o
 
     testname="debug"
     $CCACHE_COMPILE -c test1.c -g
@@ -167,6 +185,7 @@ base_tests() {
     $CCACHE_COMPILE -c test1.c -o foo.o
     checkstat 'cache hit (preprocessed)' 3
     checkstat 'cache miss' 2
+    compare_file reference_test1.o foo.o
 
     testname="link"
     $CCACHE_COMPILE test1.c -o test 2> /dev/null
@@ -208,7 +227,7 @@ base_tests() {
     testname="non-regular"
     mkdir testd
     $CCACHE_COMPILE -o testd -c test1.c > /dev/null 2>&1
-    rmdir testd
+    rmdir testd > /dev/null 2>&1
     checkstat 'output to a non-regular file' 1
 
     testname="no-input"
@@ -217,10 +236,13 @@ base_tests() {
 
     testname="CCACHE_DISABLE"
     mv $CCACHE_DIR $CCACHE_DIR.saved
+    saved_config_path=$CCACHE_CONFIGPATH
+    unset CCACHE_CONFIGPATH
     CCACHE_DISABLE=1 $CCACHE_COMPILE -c test1.c 2> /dev/null
     if [ -d $CCACHE_DIR ]; then
-        test_failed "$CCACHE_DIR created dispite CCACHE_DISABLE being set"
+        test_failed "$CCACHE_DIR created despite CCACHE_DISABLE being set"
     fi
+    CCACHE_CONFIGPATH=$saved_config_path
     mv $CCACHE_DIR.saved $CCACHE_DIR
     checkstat 'cache hit (preprocessed)' 3
     $CCACHE_COMPILE -c test1.c
@@ -230,10 +252,13 @@ base_tests() {
     CCACHE_CPP2=1 $CCACHE_COMPILE -c test1.c -O -O
     checkstat 'cache hit (preprocessed)' 4
     checkstat 'cache miss' 3
+    CCACHE_DISABLE=1 $COMPILER -c test1.c -o reference_test1.o -O -O
+    compare_file reference_test1.o test1.o
 
     CCACHE_CPP2=1 $CCACHE_COMPILE -c test1.c -O -O
     checkstat 'cache hit (preprocessed)' 5
     checkstat 'cache miss' 3
+    compare_file reference_test1.o test1.o
 
     testname="CCACHE_NOSTATS"
     CCACHE_NOSTATS=1 $CCACHE_COMPILE -c test1.c -O -O
@@ -244,21 +269,24 @@ base_tests() {
     CCACHE_RECACHE=1 $CCACHE_COMPILE -c test1.c -O -O
     checkstat 'cache hit (preprocessed)' 5
     checkstat 'cache miss' 4
+    compare_file reference_test1.o test1.o
 
-    # strictly speaking should be 3 - RECACHE causes a double counting!
+    # strictly speaking should be 4 - RECACHE causes a double counting!
     checkstat 'files in cache' 4
     $CCACHE -c > /dev/null
-    checkstat 'files in cache' 3
+    checkstat 'files in cache' 4
 
     testname="CCACHE_HASHDIR"
     CCACHE_HASHDIR=1 $CCACHE_COMPILE -c test1.c -O -O
     checkstat 'cache hit (preprocessed)' 5
     checkstat 'cache miss' 5
+    compare_file reference_test1.o test1.o
 
     CCACHE_HASHDIR=1 $CCACHE_COMPILE -c test1.c -O -O
     checkstat 'cache hit (preprocessed)' 6
     checkstat 'cache miss' 5
-    checkstat 'files in cache' 4
+    checkstat 'files in cache' 5
+    compare_file reference_test1.o test1.o
 
     testname="comments"
     echo '/* a silly comment */' > test1-comment.c
@@ -279,6 +307,8 @@ base_tests() {
     mv test1-saved.c test1.c
     checkstat 'cache hit (preprocessed)' 7
     checkstat 'cache miss' 7
+    CCACHE_DISABLE=1 $COMPILER -c test1.c -o reference_test1.o
+    compare_file reference_test1.o test1.o
 
     testname="cache-size"
     for f in *.c; do
@@ -286,7 +316,7 @@ base_tests() {
     done
     checkstat 'cache hit (preprocessed)' 8
     checkstat 'cache miss' 37
-    checkstat 'files in cache' 36
+    checkstat 'files in cache' 37
 
     $CCACHE -C >/dev/null
 
@@ -344,10 +374,31 @@ base_tests() {
             CCACHE_CPP2=1 $CCACHE_COMPILE -c -finput-charset=latin1 latin1.c
             checkstat 'cache hit (preprocessed)' 14
             checkstat 'cache miss' 40
-            $CCACHE_COMPILE -c -finput-charset=latin1 latin1.c
+            CCACHE_CPP2=1 $CCACHE_COMPILE -c -finput-charset=latin1 latin1.c
             checkstat 'cache hit (preprocessed)' 15
             checkstat 'cache miss' 40
+            $CCACHE_COMPILE -c -finput-charset=latin1 latin1.c
+            checkstat 'cache hit (preprocessed)' 15
+            checkstat 'cache miss' 41
+            $CCACHE_COMPILE -c -finput-charset=latin1 latin1.c
+            checkstat 'cache hit (preprocessed)' 16
+            checkstat 'cache miss' 41
         fi
+    fi
+
+    testname="override path"
+    $CCACHE -Cz >/dev/null
+    override_path=`pwd`/override_path
+    rm -rf $override_path
+    mkdir $override_path
+    cat >$override_path/cc <<EOF
+#!/bin/sh
+touch override_path_compiler_executed
+EOF
+    chmod +x $override_path/cc
+    CCACHE_PATH=$override_path $CCACHE cc -c test1.c
+    if [ ! -f override_path_compiler_executed ]; then
+        test_failed "CCACHE_PATH had no effect"
     fi
 
     testname="compilercheck=mtime"
@@ -404,6 +455,22 @@ EOF
     checkstat 'cache hit (preprocessed)' 2
     checkstat 'cache miss' 1
 
+    testname="compilercheck=string"
+    $CCACHE -z >/dev/null
+    backdate compiler.sh
+    CCACHE_COMPILERCHECK=string:foo $CCACHE ./compiler.sh -c test1.c
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    CCACHE_COMPILERCHECK=string:foo $CCACHE ./compiler.sh -c test1.c
+    checkstat 'cache hit (preprocessed)' 1
+    checkstat 'cache miss' 1
+    CCACHE_COMPILERCHECK=string:bar $CCACHE ./compiler.sh -c test1.c
+    checkstat 'cache hit (preprocessed)' 1
+    checkstat 'cache miss' 2
+    CCACHE_COMPILERCHECK=string:bar $CCACHE ./compiler.sh -c test1.c
+    checkstat 'cache hit (preprocessed)' 2
+    checkstat 'cache miss' 2
+
     testname="compilercheck=command"
     $CCACHE -z >/dev/null
     backdate compiler.sh
@@ -436,7 +503,26 @@ EOF
     fi
     checkstat 'compiler check failed' 1
 
+    testname="recache should remove previous .stderr"
+    $CCACHE -Cz >/dev/null
+    $CCACHE_COMPILE -c test1.c
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    num=`find $CCACHE_DIR -name '*.stderr' | wc -l`
+    if [ $num -ne 0 ]; then
+        test_failed "$num stderr files found, expected 0 (#1)"
+    fi
+    obj_file=`find $CCACHE_DIR -name '*.o'`
+    stderr_file=`echo $obj_file | sed 's/..$/.stderr/'`
+    echo "Warning: foo" >$stderr_file
+    CCACHE_RECACHE=1 $CCACHE_COMPILE -c test1.c
+    num=`find $CCACHE_DIR -name '*.stderr' | wc -l`
+    if [ $num -ne 0 ]; then
+        test_failed "$num stderr files found, expected 0 (#2)"
+    fi
+
     testname="no object file"
+    $CCACHE -Cz >/dev/null
     cat <<'EOF' >test_no_obj.c
 int test_no_obj;
 EOF
@@ -492,6 +578,119 @@ EOF
     $CCACHE -C > /dev/null
     checkstat 'files in cache' 0
 
+    # the profile options do not seem to work correctly with clang or gcc-llvm
+    # on darwin machines
+    darwin_llvm=0
+    if [ $HOST_OS_APPLE -eq 1 ] && [ $COMPILER_USES_LLVM -eq 1 ]; then
+        darwin_llvm=1
+    fi
+
+    $COMPILER -c -fprofile-generate test1.c 2>/dev/null
+    if [ $? -eq 0 ] && [ $darwin_llvm -eq 0 ]; then
+        testname="profile-generate"
+        $CCACHE -Cz > /dev/null
+        $CCACHE_COMPILE -c -fprofile-generate test1.c
+        checkstat 'cache hit (preprocessed)' 0
+        checkstat 'cache miss' 1
+        checkstat 'files in cache' 1
+        $CCACHE_COMPILE -c -fprofile-generate test1.c
+        checkstat 'cache hit (preprocessed)' 1
+        checkstat 'cache miss' 1
+        checkstat 'files in cache' 1
+
+        testname="profile-arcs"
+        $CCACHE_COMPILE -c -fprofile-arcs test1.c
+        checkstat 'cache hit (preprocessed)' 1
+        checkstat 'cache miss' 2
+        checkstat 'files in cache' 2
+        $CCACHE_COMPILE -c -fprofile-arcs test1.c
+        checkstat 'cache hit (preprocessed)' 2
+        checkstat 'cache miss' 2
+        checkstat 'files in cache' 2
+
+        testname="profile-use"
+        $CCACHE_COMPILE -c -fprofile-use test1.c 2>/dev/null
+        checkstat 'cache hit (preprocessed)' 2
+        checkstat 'cache miss' 3
+        $CCACHE_COMPILE -c -fprofile-use test1.c 2>/dev/null
+        checkstat 'cache hit (preprocessed)' 3
+        checkstat 'cache miss' 3
+    fi
+
+    ##################################################################
+    # Check that -Wp,-P disables ccache. (-P removes preprocessor information
+    # in such a way that the object file from compiling the preprocessed file
+    # will not be equal to the object file produced when compiling without
+    # ccache.)
+    testname="-Wp,-P"
+    $CCACHE -Cz >/dev/null
+    $CCACHE_COMPILE -c -Wp,-P test1.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 0
+    checkstat 'unsupported compiler option' 1
+    $CCACHE_COMPILE -c -Wp,-P test1.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 0
+    checkstat 'unsupported compiler option' 2
+    $CCACHE_COMPILE -c -Wp,-DFOO,-P,-DGOO test1.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 0
+    checkstat 'unsupported compiler option' 3
+    $CCACHE_COMPILE -c -Wp,-DFOO,-P,-DGOO test1.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 0
+    checkstat 'unsupported compiler option' 4
+
+    ##################################################################
+
+    if [ $COMPILER_TYPE_CLANG -eq 1 ]; then
+        testname="serialize-diagnostics"
+        $CCACHE -Cz > /dev/null
+        $COMPILER -c --serialize-diagnostics expected.dia test1.c 2> /dev/null
+        # Run with CCACHE_CPP2 to ensure the same diagnostics output as above
+        CCACHE_CPP2=1 $CCACHE_COMPILE -c --serialize-diagnostics test.dia test1.c 2> /dev/null
+        checkstat 'cache hit (preprocessed)' 0
+        checkstat 'cache miss' 1
+        checkstat 'files in cache' 2
+        compare_file expected.dia test.dia
+        rm -f test.dia
+        CCACHE_CPP2=1 $CCACHE_COMPILE -c --serialize-diagnostics test.dia test1.c 2> /dev/null
+        checkstat 'cache hit (preprocessed)' 1
+        checkstat 'cache miss' 1
+        checkstat 'files in cache' 2
+        compare_file expected.dia test.dia
+
+        rm -f test.dia
+        rm -f expected.dia
+
+        testname="serialize-diagnostics-compile-failed"
+        $CCACHE -Cz > /dev/null
+        echo "bad source" >error.c
+        $COMPILER -c --serialize-diagnostics expected.dia error.c 2> /dev/null
+        if [ $? -eq 0 ]; then
+            test_failed "expected an error compiling error.c"
+        fi
+        CCACHE_CPP2=1 $CCACHE_COMPILE -c --serialize-diagnostics test.dia error.c 2> /dev/null
+        checkstat 'compile failed' 1
+        checkstat 'cache hit (preprocessed)' 0
+        checkstat 'cache miss' 0
+        checkstat 'files in cache' 0
+        compare_file expected.dia test.dia
+        rm -f test.dia
+        CCACHE_CPP2=1 $CCACHE_COMPILE -c --serialize-diagnostics test.dia error.c 2> /dev/null
+        checkstat 'compile failed' 2
+        checkstat 'cache hit (preprocessed)' 0
+        checkstat 'cache miss' 0
+        checkstat 'files in cache' 0
+        compare_file expected.dia test.dia
+    fi
+
+    ##################################################################
+
     rm -f test1.c
 }
 
@@ -505,6 +704,7 @@ link_suite() {
         ln -s "$CCACHE" $COMPILER
         CCACHE_COMPILE="./$COMPILER"
         base_tests
+        rm -f $COMPILER
     else
         echo "Compiler ($COMPILER) not taken from PATH -- not running link test"
     fi
@@ -514,11 +714,8 @@ hardlink_suite() {
     CCACHE_COMPILE="$CCACHE $COMPILER"
     CCACHE_HARDLINK=1
     export CCACHE_HARDLINK
-    CCACHE_NOCOMPRESS=1
-    export CCACHE_NOCOMPRESS
     base_tests
     unset CCACHE_HARDLINK
-    unset CCACHE_NOCOMPRESS
 }
 
 cpp2_suite() {
@@ -564,6 +761,10 @@ int test2;
 EOF
     cat <<EOF >test3.h
 int test3;
+EOF
+    cat <<EOF >code.c
+/* code.c */
+int test() {}
 EOF
     backdate test1.h test2.h test3.h
 
@@ -689,6 +890,8 @@ EOF
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     checkfile other.d "$expected_d_content"
+    CCACHE_DISABLE=1 $COMPILER -c -Wp,-MD,other.d test.c -o reference_test.o
+    compare_file reference_test.o test.o
 
     rm -f other.d
 
@@ -697,8 +900,18 @@ EOF
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     checkfile other.d "$expected_d_content"
+    compare_file reference_test.o test.o
 
     rm -f other.d
+
+    $CCACHE $COMPILER -c -Wp,-MD,different_name.d test.c
+    checkstat 'cache hit (direct)' 2
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    checkfile different_name.d "$expected_d_content"
+    compare_file reference_test.o test.o
+
+    rm -f different_name.d
 
     ##################################################################
     # Check that -Wp,-MMD,file.d works.
@@ -710,6 +923,8 @@ EOF
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     checkfile other.d "$expected_mmd_d_content"
+    CCACHE_DISABLE=1 $COMPILER -c -Wp,-MMD,other.d test.c -o reference_test.o
+    compare_file reference_test.o test.o
 
     rm -f other.d
 
@@ -718,36 +933,18 @@ EOF
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     checkfile other.d "$expected_mmd_d_content"
+    compare_file reference_test.o test.o
 
     rm -f other.d
 
-    ##################################################################
-    # Check that -Wp,-MD,file.d,-P disables direct mode.
-    testname="-Wp,-MD,file.d,-P"
-    $CCACHE -z >/dev/null
-    $CCACHE $COMPILER -c -Wp,-MD,$DEVNULL,-P test.c
-    checkstat 'cache hit (direct)' 0
+    $CCACHE $COMPILER -c -Wp,-MMD,different_name.d test.c
+    checkstat 'cache hit (direct)' 2
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
+    checkfile different_name.d "$expected_mmd_d_content"
+    compare_file reference_test.o test.o
 
-    $CCACHE $COMPILER -c -Wp,-MD,$DEVNULL,-P test.c
-    checkstat 'cache hit (direct)' 0
-    checkstat 'cache hit (preprocessed)' 1
-    checkstat 'cache miss' 1
-
-    ##################################################################
-    # Check that -Wp,-MMD,file.d,-P disables direct mode.
-    testname="-Wp,-MDD,file.d,-P"
-    $CCACHE -z >/dev/null
-    $CCACHE $COMPILER -c -Wp,-MMD,$DEVNULL,-P test.c
-    checkstat 'cache hit (direct)' 0
-    checkstat 'cache hit (preprocessed)' 0
-    checkstat 'cache miss' 1
-
-    $CCACHE $COMPILER -c -Wp,-MMD,$DEVNULL,-P test.c
-    checkstat 'cache hit (direct)' 0
-    checkstat 'cache hit (preprocessed)' 1
-    checkstat 'cache miss' 1
+    rm -f different_name.d
 
     ##################################################################
     # Test some header modifications to get multiple objects in the manifest.
@@ -772,6 +969,8 @@ EOF
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     checkfile test.d "$expected_d_content"
+    CCACHE_DISABLE=1 $COMPILER -c -MD test.c -o reference_test.o
+    compare_file reference_test.o test.o
 
     rm -f test.d
 
@@ -780,6 +979,36 @@ EOF
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     checkfile test.d "$expected_d_content"
+    compare_file reference_test.o test.o
+
+    ##################################################################
+    # Check that coverage works.
+    testname="coverage (empty)"
+    $CCACHE -z >/dev/null
+    $CCACHE $COMPILER -c -fprofile-arcs -ftest-coverage test.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    $CCACHE $COMPILER -c -fprofile-arcs -ftest-coverage test.c
+    checkstat 'cache hit (direct)' 1
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+
+    testname="coverage (code)"
+    $CCACHE -z >/dev/null
+    $CCACHE $COMPILER -c -fprofile-arcs -ftest-coverage code.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    test -r code.gcno || test_failed "gcov"
+
+    rm -f code.gcno
+
+    $CCACHE $COMPILER -c -fprofile-arcs -ftest-coverage code.c
+    checkstat 'cache hit (direct)' 1
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    test -r code.gcno || test_failed "gcov"
 
     ##################################################################
     # Check the scenario of running a ccache with direct mode on a cache
@@ -792,6 +1021,8 @@ EOF
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     checkfile test.d "$expected_d_content"
+    CCACHE_DISABLE=1 $COMPILER -c -MD test.c -o reference_test.o
+    compare_file reference_test.o test.o
 
     rm -f test.d
 
@@ -800,6 +1031,7 @@ EOF
     checkstat 'cache hit (preprocessed)' 1
     checkstat 'cache miss' 1
     checkfile test.d "$expected_d_content"
+    compare_file reference_test.o test.o
 
     rm -f test.d
 
@@ -808,6 +1040,7 @@ EOF
     checkstat 'cache hit (preprocessed)' 2
     checkstat 'cache miss' 1
     checkfile test.d "$expected_d_content"
+    compare_file reference_test.o test.o
 
     rm -f test.d
 
@@ -816,6 +1049,7 @@ EOF
     checkstat 'cache hit (preprocessed)' 2
     checkstat 'cache miss' 1
     checkfile test.d "$expected_d_content"
+    compare_file reference_test.o test.o
 
     ##################################################################
     # Check that -MF works.
@@ -827,6 +1061,8 @@ EOF
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     checkfile other.d "$expected_d_content"
+    CCACHE_DISABLE=1 $COMPILER -c -MD -MF other.d test.c -o reference_test.o
+    compare_file reference_test.o test.o
 
     rm -f other.d
 
@@ -835,6 +1071,25 @@ EOF
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     checkfile other.d "$expected_d_content"
+    compare_file reference_test.o test.o
+
+    $CCACHE $COMPILER -c -MD -MF different_name.d test.c
+    checkstat 'cache hit (direct)' 2
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    checkfile different_name.d "$expected_d_content"
+    compare_file reference_test.o test.o
+
+    rm -f different_name.d
+
+    $CCACHE $COMPILER -c -MD -MFthird_name.d test.c
+    checkstat 'cache hit (direct)' 3
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    checkfile third_name.d "$expected_d_content"
+    compare_file reference_test.o test.o
+
+    rm -f third_name.d
 
     ##################################################################
     # Check that a missing .d file in the cache is handled correctly.
@@ -847,12 +1102,15 @@ EOF
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     checkfile other.d "$expected_d_content"
+    CCACHE_DISABLE=1 $COMPILER -c -MD test.c -o reference_test.o
+    compare_file reference_test.o test.o
 
     $CCACHE $COMPILER -c -MD test.c
     checkstat 'cache hit (direct)' 1
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     checkfile other.d "$expected_d_content"
+    compare_file reference_test.o test.o
 
     find $CCACHE_DIR -name '*.d' -exec rm -f '{}' \;
 
@@ -861,6 +1119,7 @@ EOF
     checkstat 'cache hit (preprocessed)' 1
     checkstat 'cache miss' 1
     checkfile other.d "$expected_d_content"
+    compare_file reference_test.o test.o
 
     ##################################################################
     # Check that stderr from both the preprocessor and the compiler is emitted
@@ -898,46 +1157,7 @@ EOF
     checkfile stderr-mf.txt "`cat stderr-orig.txt`"
 
     ##################################################################
-    # Check that changes in comments are ignored when hashing.
-    testname="changes in comments"
-    $CCACHE -C >/dev/null
-    $CCACHE -z >/dev/null
-    cat <<EOF >comments.h
-/*
- * /* foo comment
- */
-EOF
-    backdate comments.h
-    cat <<'EOF' >comments.c
-#include "comments.h"
-char test[] = "\
-/* apple */ // banana"; // foo comment
-EOF
-
-    $CCACHE $COMPILER -c comments.c
-    checkstat 'cache hit (direct)' 0
-    checkstat 'cache hit (preprocessed)' 0
-    checkstat 'cache miss' 1
-
-    sed_in_place 's/foo/ignored/' comments.h comments.c
-    backdate comments.h
-
-    $CCACHE $COMPILER -c comments.c
-    checkstat 'cache hit (direct)' 1
-    checkstat 'cache hit (preprocessed)' 0
-    checkstat 'cache miss' 1
-
-    # Check that comment-like string contents are hashed.
-    sed_in_place 's/apple/orange/' comments.c
-    backdate comments.h
-
-    $CCACHE $COMPILER -c comments.c
-    checkstat 'cache hit (direct)' 1
-    checkstat 'cache hit (preprocessed)' 0
-    checkstat 'cache miss' 2
-
-    ##################################################################
-    # Check that it's possible to compile and cache an empty source code file.
+    # Check that it is possible to compile and cache an empty source code file.
     testname="empty source file"
     $CCACHE -Cz >/dev/null
     cp /dev/null empty.c
@@ -1021,15 +1241,15 @@ EOF
 #define file __FILE__
 int test;
 EOF
-    CCACHE_SLOPPINESS=file_macro $CCACHE $COMPILER -c file.c
+    CCACHE_SLOPPINESS="$default_sloppiness file_macro" $CCACHE $COMPILER -c file.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
-    CCACHE_SLOPPINESS=file_macro $CCACHE $COMPILER -c file.c
+    CCACHE_SLOPPINESS="$default_sloppiness file_macro" $CCACHE $COMPILER -c file.c
     checkstat 'cache hit (direct)' 1
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
-    CCACHE_SLOPPINESS=file_macro $CCACHE $COMPILER -c `pwd`/file.c
+    CCACHE_SLOPPINESS="$default_sloppiness file_macro" $CCACHE $COMPILER -c `pwd`/file.c
     checkstat 'cache hit (direct)' 2
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
@@ -1044,16 +1264,16 @@ EOF
     cat <<EOF >file_h.c
 #include "file.h"
 EOF
-    CCACHE_SLOPPINESS=file_macro $CCACHE $COMPILER -c file_h.c
+    CCACHE_SLOPPINESS="$default_sloppiness file_macro" $CCACHE $COMPILER -c file_h.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
-    CCACHE_SLOPPINESS=file_macro $CCACHE $COMPILER -c file_h.c
+    CCACHE_SLOPPINESS="$default_sloppiness file_macro" $CCACHE $COMPILER -c file_h.c
     checkstat 'cache hit (direct)' 1
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     mv file_h.c file2_h.c
-    CCACHE_SLOPPINESS=file_macro $CCACHE $COMPILER -c `pwd`/file2_h.c
+    CCACHE_SLOPPINESS="$default_sloppiness file_macro" $CCACHE $COMPILER -c `pwd`/file2_h.c
     checkstat 'cache hit (direct)' 2
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
@@ -1102,11 +1322,11 @@ EOF
 #define time __TIME__
 int test;
 EOF
-    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c time.c
+    CCACHE_SLOPPINESS="$default_sloppiness pch_defines time_macros" $CCACHE $COMPILER -c time.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
-    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c time.c
+    CCACHE_SLOPPINESS="$default_sloppiness pch_defines time_macros" $CCACHE $COMPILER -c time.c
     checkstat 'cache hit (direct)' 1
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
@@ -1121,11 +1341,11 @@ EOF
     cat <<EOF >time_h.c
 #include "time.h"
 EOF
-    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c time_h.c
+    CCACHE_SLOPPINESS="$default_sloppiness pch_defines time_macros" $CCACHE $COMPILER -c time_h.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
-    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c time_h.c
+    CCACHE_SLOPPINESS="$default_sloppiness pch_defines time_macros" $CCACHE $COMPILER -c time_h.c
     checkstat 'cache hit (direct)' 1
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
@@ -1161,11 +1381,11 @@ EOF
 int test;
 EOF
     touch -t 203801010000 new.h
-    CCACHE_SLOPPINESS=include_file_mtime $CCACHE $COMPILER -c new.c
+    CCACHE_SLOPPINESS="$default_sloppiness include_file_mtime" $CCACHE $COMPILER -c new.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
-    CCACHE_SLOPPINESS=include_file_mtime $CCACHE $COMPILER -c new.c
+    CCACHE_SLOPPINESS="$default_sloppiness include_file_mtime" $CCACHE $COMPILER -c new.c
     checkstat 'cache hit (direct)' 1
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
@@ -1203,6 +1423,60 @@ EOF
     checkstat 'cache hit (direct)' 2
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 2
+
+    testname="comment in strings"
+    $CCACHE -Cz >/dev/null
+    echo 'char *comment = " /* \\\\u" "foo" " */";' >comment.c
+    $CCACHE $COMPILER -c comment.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    $CCACHE $COMPILER -c comment.c
+    checkstat 'cache hit (direct)' 1
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    echo 'char *comment = " /* \\\\u" "goo" " */";' >comment.c
+    $CCACHE $COMPILER -c comment.c
+    checkstat 'cache hit (direct)' 1
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 2
+
+    #################################################################
+    # Check that strange "#line" directives are handled.
+    testname="#line directives with troublesome files"
+    $CCACHE -Cz >/dev/null
+    cat <<EOF >strange.c
+int foo;
+EOF
+    for x in stdout tty sda hda; do
+        if [ -b /dev/$x ] || [ -c /dev/$x ]; then
+            echo "#line 1 \"/dev/$x\"" >> strange.c
+        fi
+    done
+    CCACHE_SLOPPINESS="$default_sloppiness include_file_mtime" $CCACHE $COMPILER -c strange.c
+    manifest=`find $CCACHE_DIR -name '*.manifest'`
+    if [ -n "$manifest" ]; then
+        data="`$CCACHE --dump-manifest $manifest | egrep '/dev/(stdout|tty|sda|hda'`"
+        if [ -n "$data" ]; then
+            test_failed "$manifest contained troublesome file(s): $data"
+        fi
+    fi
+
+    ##################################################################
+    # Test --dump-manifest output.
+    testname="--dump-manifest"
+    $CCACHE -Cz >/dev/null
+    $CCACHE $COMPILER test.c -c -o test.o
+    manifest=`find $CCACHE_DIR -name '*.manifest'`
+    $CCACHE --dump-manifest $manifest >manifest.dump
+
+    if grep 'Hash: e6b009695d072974f2c4d1dd7e7ed4fc' manifest.dump >/dev/null 2>&1 && \
+       grep 'Hash: e94ceb9f1b196c387d098a5f1f4fe862' manifest.dump >/dev/null 2>&1 && \
+       grep 'Hash: c2f5392dbc7e8ff6138d01608445240a' manifest.dump >/dev/null 2>&1; then
+        : OK
+    else
+        test_failed "unexpected output of --dump-manifest"
+    fi
 }
 
 basedir_suite() {
@@ -1256,7 +1530,8 @@ EOF
     $CCACHE -z >/dev/null
     $CCACHE -C >/dev/null
 
-    cd dir1
+    ln -s dir1 symlink_to_dir1
+    cd symlink_to_dir1
     CCACHE_BASEDIR="`pwd`" $CCACHE $COMPILER -I`pwd`/include -c src/test.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
@@ -1356,6 +1631,29 @@ EOF
         checkstat 'cache miss' 1
         cd ..
     done
+
+    ##################################################################
+    # Check that clang's --serialize-diagnostics arguments with absolute paths
+    # are rewritten to relative.
+    if [ $COMPILER_TYPE_CLANG -eq 1 ]; then
+        testname="serialize-diagnostics"
+        $CCACHE -Cz >/dev/null
+        cd dir1
+        CCACHE_BASEDIR=`pwd` $CCACHE $COMPILER -w -MD -MF `pwd`/test.d -I`pwd`/include --serialize-diagnostics `pwd`/test.dia -c src/test.c -o `pwd`/test.o
+        checkstat 'cache hit (direct)' 0
+        checkstat 'cache hit (preprocessed)' 0
+        checkstat 'cache miss' 1
+        checkstat 'files in cache' 4
+        cd ..
+
+        cd dir2
+        CCACHE_BASEDIR=`pwd` $CCACHE $COMPILER -w -MD -MF `pwd`/test.d -I`pwd`/include --serialize-diagnostics `pwd`/test.dia -c src/test.c -o `pwd`/test.o
+        checkstat 'cache hit (direct)' 1
+        checkstat 'cache hit (preprocessed)' 0
+        checkstat 'cache miss' 1
+        checkstat 'files in cache' 4
+        cd ..
+    fi
 }
 
 compression_suite() {
@@ -1449,6 +1747,35 @@ readonly_suite() {
     fi
 
     ##################################################################
+}
+
+readonly_direct_suite() {
+    unset CCACHE_NODIRECT
+
+    ##################################################################
+    # Create some code to compile.
+    echo "int test;" >test.c
+
+    # Cache a compilation.
+    testname="fill cache"
+    $CCACHE $COMPILER -c test.c -o test.o
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+
+    # Check that "readonly direct" mode gets a direct hit.
+    testname="direct hit"
+    CCACHE_READONLY_DIRECT=1 $CCACHE $COMPILER -c test.c -o test.o
+    checkstat 'cache hit (direct)' 1
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+
+    # Check that "readonly direct" mode doesn't get a preprocessed hit.
+    testname="preprocessed miss"
+    CCACHE_READONLY_DIRECT=1 $CCACHE $COMPILER -DFOO -c test.c -o test.o
+    checkstat 'cache hit (direct)' 1
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
 }
 
 extrafiles_suite() {
@@ -1639,7 +1966,7 @@ cleanup_suite() {
     $CCACHE -C >/dev/null
     prepare_cleanup_test $CCACHE_DIR/a
     touch $CCACHE_DIR/a/abcd.unknown
-    $CCACHE -c >/dev/null # update counters
+    $CCACHE -F 0 -M 0 -c >/dev/null # update counters
     checkstat 'files in cache' 31
     # (9/10) * 30 * 16 = 432
     $CCACHE -F 432 -M 0 >/dev/null
@@ -1704,13 +2031,29 @@ int main()
 }
 EOF
 
-    if $COMPILER -fpch-preprocess pch.h 2>/dev/null && [ -f pch.h.gch ] && $COMPILER pch.c -o pch; then
-        :
+    if $COMPILER $SYSROOT -fpch-preprocess pch.h 2>/dev/null && [ -f pch.h.gch ] && $COMPILER $SYSROOT pch.c -o pch; then
+        rm pch.h.gch
     else
         echo "Compiler (`$COMPILER --version | head -1`) doesn't support precompiled headers -- not running pch test"
         return
     fi
 
+    # clang and gcc handle precompiled headers similarly, but gcc is much more
+    # forgiving with precompiled headers. Both gcc and clang keep an absolute
+    # path reference to the original file except that clang uses that reference
+    # to validate the pch and gcc ignores the reference. Also, clang has an
+    # additional feature: pre-tokenized headers. For these reasons clang should
+    # be tested separately than gcc. clang can only use pch or pth headers on
+    # the command line and not as an #include statement inside a source file.
+
+    if [ $COMPILER_TYPE_CLANG -eq 1 ]; then
+        clang_pch_suite
+    else
+        gcc_pch_suite
+    fi
+}
+
+gcc_pch_suite() {
     ##################################################################
     # Tests for creating a .gch without opt-in.
 
@@ -1718,7 +2061,7 @@ EOF
 
     testname="create .gch, -c, no -o, without opt-in"
     $CCACHE -zC >/dev/null
-    $CCACHE $COMPILER -c pch.h
+    $CCACHE $COMPILER $SYSROOT -c pch.h
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 0
@@ -1739,12 +2082,12 @@ EOF
 
     testname="create .gch, -c, no -o, with opt-in"
     $CCACHE -zC >/dev/null
-    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c pch.h
+    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER $SYSROOT -c pch.h
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     rm -f pch.h.gch
-    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c pch.h
+    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER $SYSROOT -c pch.h
     checkstat 'cache hit (direct)' 1
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
@@ -1754,17 +2097,18 @@ EOF
 
     testname="create .gch, no -c, -o, with opt-in"
     $CCACHE -Cz >/dev/null
-    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER pch.h -o pch.gch
+    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER $SYSROOT pch.h -o pch.gch
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
-    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER pch.h -o pch.gch
+    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER $SYSROOT pch.h -o pch.gch
     checkstat 'cache hit (direct)' 1
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
     if [ ! -f pch.gch ]; then
         test_failed "pch.gch missing"
     fi
+    rm pch.gch
 
     ##################################################################
     # Tests for using a .gch.
@@ -1774,7 +2118,7 @@ EOF
 
     testname="no -fpch-preprocess, #include"
     $CCACHE -Cz >/dev/null
-    $CCACHE $COMPILER -c pch.c 2>/dev/null
+    $CCACHE $COMPILER $SYSROOT -c pch.c 2>/dev/null
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 0
@@ -1784,7 +2128,7 @@ EOF
 
     testname="no -fpch-preprocess, -include, no sloppiness"
     $CCACHE -Cz >/dev/null
-    $CCACHE $COMPILER -c -include pch.h pch2.c 2>/dev/null
+    $CCACHE $COMPILER $SYSROOT -c -include pch.h pch2.c 2>/dev/null
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 0
@@ -1793,18 +2137,18 @@ EOF
 
     testname="no -fpch-preprocess, -include"
     $CCACHE -Cz >/dev/null
-    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c -include pch.h pch2.c 2>/dev/null
+    CCACHE_SLOPPINESS="$default_sloppiness pch_defines time_macros" $CCACHE $COMPILER $SYSROOT -c -include pch.h pch2.c 2>/dev/null
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
-    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c -include pch.h pch2.c 2>/dev/null
+    CCACHE_SLOPPINESS="$default_sloppiness pch_defines time_macros" $CCACHE $COMPILER $SYSROOT -c -include pch.h pch2.c 2>/dev/null
     checkstat 'cache hit (direct)' 1
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
 
     testname="-fpch-preprocess, #include, no sloppiness"
     $CCACHE -Cz >/dev/null
-    $CCACHE $COMPILER -c -fpch-preprocess pch.c
+    $CCACHE $COMPILER $SYSROOT -c -fpch-preprocess pch.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     # Must enable sloppy time macros:
@@ -1812,11 +2156,11 @@ EOF
 
     testname="-fpch-preprocess, #include, sloppiness"
     $CCACHE -Cz >/dev/null
-    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c -fpch-preprocess pch.c
+    CCACHE_SLOPPINESS="$default_sloppiness pch_defines time_macros" $CCACHE $COMPILER $SYSROOT -c -fpch-preprocess pch.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
-    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c -fpch-preprocess pch.c
+    CCACHE_SLOPPINESS="$default_sloppiness pch_defines time_macros" $CCACHE $COMPILER $SYSROOT -c -fpch-preprocess pch.c
     checkstat 'cache hit (direct)' 1
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
@@ -1824,18 +2168,18 @@ EOF
     testname="-fpch-preprocess, #include, file changed"
     echo "updated" >>pch.h.gch # GCC seems to cope with this...
     backdate pch.h.gch
-    CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c -fpch-preprocess pch.c
+    CCACHE_SLOPPINESS="$default_sloppiness pch_defines time_macros" $CCACHE $COMPILER $SYSROOT -c -fpch-preprocess pch.c
     checkstat 'cache hit (direct)' 1
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 2
 
     testname="preprocessor mode"
     $CCACHE -Cz >/dev/null
-    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c -fpch-preprocess pch.c
+    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS="$default_sloppiness pch_defines time_macros" $CCACHE $COMPILER $SYSROOT -c -fpch-preprocess pch.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 1
-    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c -fpch-preprocess pch.c
+    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS="$default_sloppiness pch_defines time_macros" $CCACHE $COMPILER $SYSROOT -c -fpch-preprocess pch.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 1
     checkstat 'cache miss' 1
@@ -1843,18 +2187,240 @@ EOF
     testname="preprocessor mode, file changed"
     echo "updated" >>pch.h.gch # GCC seems to cope with this...
     backdate pch.h.gch
-    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c -fpch-preprocess pch.c
+    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS="$default_sloppiness pch_defines time_macros" $CCACHE $COMPILER $SYSROOT -c -fpch-preprocess pch.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 1
     checkstat 'cache miss' 2
-    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS=pch_defines,time_macros $CCACHE $COMPILER -c -fpch-preprocess pch.c
+    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS="$default_sloppiness pch_defines time_macros" $CCACHE $COMPILER $SYSROOT -c -fpch-preprocess pch.c
     checkstat 'cache hit (direct)' 0
     checkstat 'cache hit (preprocessed)' 2
     checkstat 'cache miss' 2
 }
 
+clang_pch_suite() {
+    ##################################################################
+    # Tests for creating a .gch.
+
+    backdate pch.h
+
+    testname="create .gch, -c, no -o"
+    $CCACHE -zC >/dev/null
+    $CCACHE $COMPILER $SYSROOT -c pch.h
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    rm -f pch.h.gch
+    $CCACHE $COMPILER $SYSROOT -c pch.h
+    checkstat 'cache hit (direct)' 1
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    if [ ! -f pch.h.gch ]; then
+        test_failed "pch.h.gch missing"
+    fi
+
+    testname="create .gch, no -c, -o"
+    $CCACHE -Cz >/dev/null
+    $CCACHE $COMPILER $SYSROOT pch.h -o pch.gch
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    $CCACHE $COMPILER $SYSROOT pch.h -o pch.gch
+    checkstat 'cache hit (direct)' 1
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    if [ ! -f pch.gch ]; then
+        test_failed "pch.gch missing"
+    fi
+    rm pch.gch
+
+    ##################################################################
+    # Tests for using a .gch.
+
+    backdate pch.h.gch
+
+    testname="gch, no -fpch-preprocess, -include, no sloppy time macros"
+    $CCACHE -Cz >/dev/null
+    $CCACHE $COMPILER $SYSROOT -c -include pch.h pch2.c 2>/dev/null
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 0
+    # Must enable sloppy time macros:
+    checkstat "can't use precompiled header" 1
+
+    testname="gch, no -fpch-preprocess, -include, sloppy time macros"
+    $CCACHE -Cz >/dev/null
+    CCACHE_SLOPPINESS=time_macros $CCACHE $COMPILER $SYSROOT -c -include pch.h pch2.c 2>/dev/null
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    CCACHE_SLOPPINESS=time_macros $CCACHE $COMPILER $SYSROOT -c -include pch.h pch2.c 2>/dev/null
+    checkstat 'cache hit (direct)' 1
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+
+    testname="gch, -fpch-preprocess, -include, file changed"
+    echo "updated" >>pch.h.gch # clang seems to cope with this...
+    backdate pch.h.gch
+    CCACHE_SLOPPINESS=time_macros $CCACHE $COMPILER $SYSROOT -c -include pch.h -fpch-preprocess pch.c
+    checkstat 'cache hit (direct)' 1
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 2
+
+    testname="gch, preprocessor mode"
+    $CCACHE -Cz >/dev/null
+    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS=time_macros $CCACHE $COMPILER $SYSROOT -c -include pch.h -fpch-preprocess pch.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS=time_macros $CCACHE $COMPILER $SYSROOT -c -include pch.h -fpch-preprocess pch.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 1
+    checkstat 'cache miss' 1
+
+    testname="gch, preprocessor mode, file changed"
+    echo "updated" >>pch.h.gch # clang seems to cope with this...
+    backdate pch.h.gch
+    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS=time_macros $CCACHE $COMPILER $SYSROOT -c -include pch.h -fpch-preprocess pch.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 1
+    checkstat 'cache miss' 2
+    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS=time_macros $CCACHE $COMPILER $SYSROOT -c -include pch.h -fpch-preprocess pch.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 2
+    checkstat 'cache miss' 2
+
+    rm pch.h.gch
+
+    ##################################################################
+    # Tests for creating a .pth.
+
+    backdate pch.h
+
+    testname="create .pth, -c, -o"
+    $CCACHE -zC >/dev/null
+    $CCACHE $COMPILER $SYSROOT -c pch.h -o pch.h.pth
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    rm -f pch.h.pth
+    $CCACHE $COMPILER $SYSROOT -c pch.h -o pch.h.pth
+    checkstat 'cache hit (direct)' 1
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    if [ ! -f pch.h.pth ]; then
+        test_failed "pch.h.pth missing"
+    fi
+
+    ##################################################################
+    # Tests for using a .pth.
+
+    backdate pch.h.pth
+
+    testname="pth, no -fpch-preprocess, -include, no sloppy time macros"
+    $CCACHE -Cz >/dev/null
+    $CCACHE $COMPILER $SYSROOT -c -include pch.h pch2.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 0
+    # Must enable sloppy time macros:
+    checkstat "can't use precompiled header" 1
+
+    testname="pth, no -fpch-preprocess, -include, sloppy time macros"
+    $CCACHE -Cz >/dev/null
+    CCACHE_SLOPPINESS=time_macros $CCACHE $COMPILER $SYSROOT -c -include pch.h pch2.c 2>/dev/null
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    CCACHE_SLOPPINESS=time_macros $CCACHE $COMPILER $SYSROOT -c -include pch.h pch2.c 2>/dev/null
+    checkstat 'cache hit (direct)' 1
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+
+    testname="pth, -fpch-preprocess, -include, file changed"
+    echo "updated" >>pch.h.pth # clang seems to cope with this...
+    backdate pch.h.pth
+    CCACHE_SLOPPINESS=time_macros $CCACHE $COMPILER $SYSROOT -c -include pch.h -fpch-preprocess pch.c
+    checkstat 'cache hit (direct)' 1
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 2
+
+    testname="pth, preprocessor mode"
+    $CCACHE -Cz >/dev/null
+    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS=time_macros $CCACHE $COMPILER $SYSROOT -c -include pch.h -fpch-preprocess pch.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS=time_macros $CCACHE $COMPILER $SYSROOT -c -include pch.h -fpch-preprocess pch.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 1
+    checkstat 'cache miss' 1
+
+    testname="pth, preprocessor mode, file changed"
+    echo "updated" >>pch.h.pth # clang seems to cope with this...
+    backdate pch.h.pth
+    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS=time_macros $CCACHE $COMPILER $SYSROOT -c -include pch.h -fpch-preprocess pch.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 1
+    checkstat 'cache miss' 2
+    CCACHE_NODIRECT=1 CCACHE_SLOPPINESS=time_macros $CCACHE $COMPILER $SYSROOT -c -include pch.h -fpch-preprocess pch.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 2
+    checkstat 'cache miss' 2
+
+    rm pch.h.pth
+}
+
+upgrade_suite() {
+    testname="keep maxfiles and maxsize settings"
+    rm -rf $CCACHE_DIR $CCACHE_CONFIGPATH
+    mkdir -p $CCACHE_DIR/0
+    echo "0 0 0 0 0 0 0 0 0 0 0 0 0 2000 131072" >$CCACHE_DIR/0/stats
+    checkstat 'max files' 32000
+    checkstat 'max cache size' '2.1 GB'
+}
+
+prefix_suite() {
+    testname="prefix"
+    $CCACHE -Cz >/dev/null
+    rm -f prefix.result
+    cat <<'EOF' >prefix-a
+#!/bin/sh
+echo a >>prefix.result
+exec "$@"
+EOF
+    cat <<'EOF' >prefix-b
+#!/bin/sh
+echo b >>prefix.result
+exec "$@"
+EOF
+    chmod +x prefix-a prefix-b
+    cat <<'EOF' >file.c
+int foo;
+EOF
+    PATH=.:$PATH CCACHE_PREFIX="prefix-a prefix-b" $CCACHE $COMPILER -c file.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    checkfile prefix.result "a
+b"
+    PATH=.:$PATH CCACHE_PREFIX="prefix-a prefix-b" $CCACHE $COMPILER -c file.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 1
+    checkstat 'cache miss' 1
+    checkfile prefix.result "a
+b"
+}
+
 ######################################################################
 # main program
+
+if pwd | grep '[^A-Za-z0-9/.,=_%+-]' >/dev/null 2>&1; then
+    cat <<EOF
+Error: The test suite doesn't work in directories with whitespace or other
+funny characters in the name. Sorry.
+EOF
+    exit 1
+fi
 
 suites="$*"
 if [ -n "$CC" ]; then
@@ -1866,13 +2432,37 @@ if [ -z "$CCACHE" ]; then
     CCACHE=`pwd`/ccache
 fi
 
+# save the type of compiler because some test may not work on all compilers
+COMPILER_TYPE_CLANG=0
+COMPILER_TYPE_GCC=0
+
+COMPILER_USES_LLVM=0
+HOST_OS_APPLE=0
+
 compiler_version="`$COMPILER --version 2>&1 | head -1`"
 case $compiler_version in
-    *gcc*|2.95*)
+    *gcc*|*g++*|2.95*)
+        COMPILER_TYPE_GCC=1
+        ;;
+    *clang*)
+        COMPILER_TYPE_CLANG=1
         ;;
     *)
         echo "WARNING: Compiler $COMPILER not supported (version: $compiler_version) -- not running tests" >&2
         exit 0
+        ;;
+esac
+
+case $compiler_version in
+    *llvm*|*LLVM*)
+        COMPILER_USES_LLVM=1
+        ;;
+esac
+
+host_os="`uname -s`"
+case $host_os in
+    *Darwin*)
+        HOST_OS_APPLE=1
         ;;
 esac
 
@@ -1885,6 +2475,35 @@ CCACHE_DIR=`pwd`/.ccache
 export CCACHE_DIR
 CCACHE_LOGFILE=`pwd`/ccache.log
 export CCACHE_LOGFILE
+CCACHE_CONFIGPATH=`pwd`/ccache.conf
+export CCACHE_CONFIGPATH
+touch $CCACHE_CONFIGPATH
+
+
+if [ $HOST_OS_APPLE -eq 1 ]; then
+    # Grab the developer directory from the environment or try xcode-select
+    if [ "$XCODE_DEVELOPER_DIR" = "" ]; then
+      XCODE_DEVELOPER_DIR=`xcode-select --print-path`
+      if [ "$XCODE_DEVELOPER_DIR" = "" ]; then
+        echo "Error: XCODE_DEVELOPER_DIR environment variable not set and xcode-select path not set"
+        exit 1
+      fi
+    fi
+
+    # Choose the latest SDK if an SDK root is not set
+    MAC_PLATFORM_DIR=$XCODE_DEVELOPER_DIR/Platforms/MacOSX.platform
+    if [ "$SDKROOT" = "" ]; then
+        SDKROOT="`eval ls -f -1 -d \"$MAC_PLATFORM_DIR/Developer/SDKs/\"*.sdk | tail -1`"
+        if [ "$SDKROOT" = "" ]; then
+            echo "Error: Cannot find a valid SDK root directory"
+            exit 1
+        fi
+    fi
+
+    SYSROOT="-isysroot `echo \"$SDKROOT\" | sed 's/ /\\ /g'`"
+else
+    SYSROOT=
+fi
 
 # ---------------------------------------
 
@@ -1892,33 +2511,36 @@ all_suites="
 base
 link          !win32
 hardlink
-cpp2
 nlevels4
 nlevels1
 basedir       !win32
 direct
 compression
 readonly
+readonly_direct
 extrafiles
 cleanup
 pch
+upgrade
+prefix
 "
 
-host_os="`uname -s`"
 case $host_os in
     *MINGW*|*mingw*)
         export CCACHE_DETECT_SHEBANG
         CCACHE_DETECT_SHEBANG=1
-        DEVNULL=NUL
         PATH_DELIM=";"
         all_suites="`echo "$all_suites" | grep -v '!win32'`"
         ;;
     *)
-        DEVNULL=/dev/null
         PATH_DELIM=":"
         all_suites="`echo "$all_suites" | cut -d' ' -f1`"
         ;;
 esac
+
+echo compiler: `which $COMPILER`
+echo version: `$COMPILER --version`
+echo test dir: $TESTDIR
 
 if [ -z "$suites" ]; then
     suites="$all_suites"

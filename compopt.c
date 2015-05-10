@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2013 Joel Rosdahl
+ * Copyright (C) 2010-2015 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -32,8 +32,8 @@ struct compopt {
 };
 
 static const struct compopt compopts[] = {
-	{"--coverage",      TOO_HARD},
 	{"--param",         TAKES_ARG},
+	{"--serialize-diagnostics", TAKES_ARG | TAKES_PATH},
 	{"-A",              TAKES_ARG},
 	{"-D",              AFFECTS_CPP | TAKES_ARG | TAKES_CONCAT_ARG},
 	{"-E",              TOO_HARD},
@@ -51,21 +51,22 @@ static const struct compopt compopts[] = {
 	{"-Xassembler",     TAKES_ARG},
 	{"-Xclang",         TAKES_ARG},
 	{"-Xlinker",        TAKES_ARG},
-	{"-Xpreprocessor",  TOO_HARD_DIRECT | TAKES_ARG},
+	{"-Xpreprocessor",  AFFECTS_CPP | TOO_HARD_DIRECT | TAKES_ARG},
+	{"-arch",           TAKES_ARG},
 	{"-aux-info",       TAKES_ARG},
 	{"-b",              TAKES_ARG},
-	{"-fbranch-probabilities", TOO_HARD},
-	{"-fprofile-arcs",  TOO_HARD},
-	{"-fprofile-generate", TOO_HARD},
-	{"-fprofile-use",   TOO_HARD},
+	{"-fmodules",       TOO_HARD},
+	{"-fno-working-directory", AFFECTS_CPP},
+	{"-fplugin=libcc1plugin", TOO_HARD}, /* interaction with GDB */
 	{"-frepo",          TOO_HARD},
-	{"-ftest-coverage", TOO_HARD},
-	{"-gsplit-dwarf",   TOO_HARD},
+	{"-fworking-directory", AFFECTS_CPP},
+	{"-gsplit-dwarf",   TOO_HARD}, /* generates a .dwo file at the same time */
 	{"-idirafter",      AFFECTS_CPP | TAKES_ARG | TAKES_PATH},
 	{"-iframework",     AFFECTS_CPP | TAKES_ARG | TAKES_CONCAT_ARG | TAKES_PATH},
 	{"-imacros",        AFFECTS_CPP | TAKES_ARG | TAKES_PATH},
 	{"-imultilib",      AFFECTS_CPP | TAKES_ARG | TAKES_PATH},
 	{"-include",        AFFECTS_CPP | TAKES_ARG | TAKES_PATH},
+	{"-include-pch",    AFFECTS_CPP | TAKES_ARG | TAKES_PATH},
 	{"-install_name",   TAKES_ARG}, /* Darwin linker option */
 	{"-iprefix",        AFFECTS_CPP | TAKES_ARG | TAKES_PATH},
 	{"-iquote",         AFFECTS_CPP | TAKES_ARG | TAKES_PATH},
@@ -75,9 +76,12 @@ static const struct compopt compopts[] = {
 	{"-iwithprefixbefore", AFFECTS_CPP | TAKES_ARG | TAKES_PATH},
 	{"-nostdinc",       AFFECTS_CPP},
 	{"-nostdinc++",     AFFECTS_CPP},
+	{"-remap",          AFFECTS_CPP},
 	{"-save-temps",     TOO_HARD},
+	{"-trigraphs",      AFFECTS_CPP},
 	{"-u",              TAKES_ARG},
 };
+
 
 static int
 compare_compopts(const void *key1, const void *key2)
@@ -85,6 +89,14 @@ compare_compopts(const void *key1, const void *key2)
 	const struct compopt *opt1 = (const struct compopt *)key1;
 	const struct compopt *opt2 = (const struct compopt *)key2;
 	return strcmp(opt1->name, opt2->name);
+}
+
+static int
+compare_prefix_compopts(const void *key1, const void *key2)
+{
+	const struct compopt *opt1 = (const struct compopt *)key1;
+	const struct compopt *opt2 = (const struct compopt *)key2;
+	return strncmp(opt1->name, opt2->name, strlen(opt2->name));
 }
 
 static const struct compopt *
@@ -95,6 +107,16 @@ find(const char *option)
 	return bsearch(
 		&key, compopts, sizeof(compopts) / sizeof(compopts[0]),
 		sizeof(compopts[0]), compare_compopts);
+}
+
+static const struct compopt *
+find_prefix(const char *option)
+{
+	struct compopt key;
+	key.name = option;
+	return bsearch(
+		&key, compopts, sizeof(compopts) / sizeof(compopts[0]),
+		sizeof(compopts[0]), compare_prefix_compopts);
 }
 
 /* Runs fn on the first two characters of option. */
@@ -157,4 +179,24 @@ compopt_takes_arg(const char *option)
 {
 	const struct compopt *co = find(option);
 	return co && (co->type & TAKES_ARG);
+}
+
+/* Determines if argument takes a concatentated argument by comparing prefixes.
+ */
+bool
+compopt_takes_concat_arg(const char *option)
+{
+	const struct compopt *co = find_prefix(option);
+	return co && (co->type & TAKES_CONCAT_ARG);
+}
+
+/* Determines if the prefix of the option matches any option and affects the
+ * preprocessor.
+ */
+bool
+compopt_prefix_affects_cpp(const char *option)
+{
+	/* prefix options have to take concatentated args */
+	const struct compopt *co = find_prefix(option);
+	return co && (co->type & TAKES_CONCAT_ARG) && (co->type & AFFECTS_CPP);
 }

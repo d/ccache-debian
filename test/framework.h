@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Joel Rosdahl
+ * Copyright (C) 2010-2012 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -48,74 +48,69 @@
 
 /*****************************************************************************/
 
-#define CHECK(assertion) \
+#define CHECKM(assertion, message) \
 	do { \
 		if ((assertion)) { \
 			cct_check_passed(__FILE__, __LINE__, #assertion); \
 		} else { \
-			cct_check_failed(__FILE__, __LINE__, #assertion, NULL, NULL); \
+			cct_check_failed(__FILE__, __LINE__, #assertion, (message), NULL); \
 			cct_test_end(); \
 			cct_suite_end(); \
 			return _test_counter; \
 		} \
-	} while (0)
+	} while (false)
 
-#define CHECK_POINTER_EQ_BASE(t, e, a, f1, f2)        \
+#define CHECK(assertion) \
+	CHECKM(assertion, NULL)
+
+#define CHECK_POINTER_EQ_BASE(t, e, a, f1, f2) \
 	do { \
 		if (!cct_check_##t##_eq(__FILE__, __LINE__, #a, (e), (a), (f1), (f2))) { \
 			cct_test_end(); \
 			cct_suite_end(); \
 			return _test_counter; \
 		} \
-	} while (0)
+	} while (false)
 
 /*****************************************************************************/
 
 #define CHECK_INT_EQ(expected, actual) \
 	do { \
-		if (!cct_check_int_eq(__FILE__, __LINE__, #actual, (expected), (actual))) { \
+		if (!cct_check_int_eq(__FILE__, __LINE__, #actual, (expected), \
+		                      (actual))) { \
 			cct_test_end(); \
 			cct_suite_end(); \
 			return _test_counter; \
 		} \
-	} while (0)
-
-#define CHECK_UNS_EQ(expected, actual) \
-	do { \
-		if (!cct_check_int_eq(__FILE__, __LINE__, #actual, (expected), (actual))) { \
-			cct_test_end(); \
-			cct_suite_end(); \
-			return _test_counter; \
-		} \
-	} while (0)
+	} while (false)
 
 /*****************************************************************************/
 
 #define CHECK_STR_EQ(expected, actual) \
-	CHECK_POINTER_EQ_BASE(str, expected, actual, 0, 0)
+	CHECK_POINTER_EQ_BASE(str, expected, actual, false, false)
 
 #define CHECK_STR_EQ_FREE1(expected, actual) \
-	CHECK_POINTER_EQ_BASE(str, expected, actual, 1, 0)
+	CHECK_POINTER_EQ_BASE(str, expected, actual, true, false)
 
 #define CHECK_STR_EQ_FREE2(expected, actual) \
-	CHECK_POINTER_EQ_BASE(str, expected, actual, 0, 1)
+	CHECK_POINTER_EQ_BASE(str, expected, actual, false, true)
 
 #define CHECK_STR_EQ_FREE12(expected, actual) \
-	CHECK_POINTER_EQ_BASE(str, expected, actual, 1, 1)
+	CHECK_POINTER_EQ_BASE(str, expected, actual, true, true)
 
 /*****************************************************************************/
 
 #define CHECK_ARGS_EQ(expected, actual) \
-	CHECK_POINTER_EQ_BASE(args, expected, actual, 0, 0)
+	CHECK_POINTER_EQ_BASE(args, expected, actual, false, false)
 
 #define CHECK_ARGS_EQ_FREE1(expected, actual) \
-	CHECK_POINTER_EQ_BASE(args, expected, actual, 1, 0)
+	CHECK_POINTER_EQ_BASE(args, expected, actual, true, false)
 
 #define CHECK_ARGS_EQ_FREE2(expected, actual) \
-	CHECK_POINTER_EQ_BASE(args, expected, actual, 0, 1)
+	CHECK_POINTER_EQ_BASE(args, expected, actual, false, true)
 
 #define CHECK_ARGS_EQ_FREE12(expected, actual) \
-	CHECK_POINTER_EQ_BASE(args, expected, actual, 1, 1)
+	CHECK_POINTER_EQ_BASE(args, expected, actual, true, true)
 
 /*****************************************************************************/
 
@@ -123,22 +118,20 @@ typedef unsigned (*suite_fn)(unsigned);
 int cct_run(suite_fn *suites, int verbose);
 
 void cct_suite_begin(const char *name);
-void cct_suite_end();
+void cct_suite_end(void);
 void cct_test_begin(const char *name);
-void cct_test_end();
+void cct_test_end(void);
 void cct_check_passed(const char *file, int line, const char *assertion);
 void cct_check_failed(const char *file, int line, const char *assertion,
                       const char *expected, const char *actual);
-int cct_check_int_eq(const char *file, int line, const char *expression,
-                     int expected, int actual);
-int cct_check_uns_eq(const char *file, int line, const char *expression,
-                     unsigned expected, unsigned actual);
-int cct_check_str_eq(const char *file, int line, const char *expression,
-                     const char *expected, const char *actual, int free1,
-                     int free2);
-int cct_check_args_eq(const char *file, int line, const char *expression,
-                      struct args *expected, struct args *actual,
-                      int free1, int free2);
+bool cct_check_int_eq(const char *file, int line, const char *expression,
+                      int64_t expected, int64_t actual);
+bool cct_check_str_eq(const char *file, int line, const char *expression,
+                      const char *expected, const char *actual, bool free1,
+                      bool free2);
+bool cct_check_args_eq(const char *file, int line, const char *expression,
+                       struct args *expected, struct args *actual,
+                       bool free1, bool free2);
 void cct_chdir(const char *path);
 void cct_wipe(const char *path);
 void cct_create_fresh_dir(const char *path);

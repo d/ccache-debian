@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2002 Andrew Tridgell
- * Copyright (C) 2009-2014 Joel Rosdahl
+ * Copyright (C) 2009-2015 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -38,21 +38,24 @@ static FILE *logfile;
 static bool
 init_log(void)
 {
-	extern char *cache_logfile;
+	extern struct conf *conf;
 
 	if (logfile) {
 		return true;
 	}
-	if (!cache_logfile) {
+	assert(conf);
+	if (str_eq(conf->log_file, "")) {
 		return false;
 	}
-	logfile = fopen(cache_logfile, "a");
+	logfile = fopen(conf->log_file, "a");
 	if (logfile) {
+#ifndef _WIN32
 		int fd = fileno(logfile);
 		int flags = fcntl(fd, F_GETFD, 0);
 		if (flags >= 0) {
 			fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
 		}
+#endif
 		return true;
 	} else {
 		return false;
@@ -60,45 +63,106 @@ init_log(void)
 }
 
 static void
-log_prefix(void)
+log_prefix(bool log_updated_time)
 {
 #ifdef HAVE_GETTIMEOFDAY
 	char timestamp[100];
 	struct timeval tv;
 	struct tm *tm;
+	static char prefix[200];
 
-	gettimeofday(&tv, NULL);
+	if (log_updated_time) {
+		gettimeofday(&tv, NULL);
 #ifdef __MINGW64_VERSION_MAJOR
-	tm = _localtime32(&tv.tv_sec);
+		tm = localtime((time_t*)&tv.tv_sec);
 #else
-	tm = localtime(&tv.tv_sec);
+		tm = localtime(&tv.tv_sec);
 #endif
-	strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%S", tm);
-	fprintf(logfile, "[%s.%06d %-5d] ", timestamp, (int)tv.tv_usec,
-	        (int)getpid());
+		strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%S", tm);
+		snprintf(prefix, sizeof(prefix),
+		         "[%s.%06d %-5d] ", timestamp, (int)tv.tv_usec, (int)getpid());
+	}
+	fputs(prefix, logfile);
 #else
 	fprintf(logfile, "[%-5d] ", (int)getpid());
 #endif
 }
 
+static long
+path_max(const char *path)
+{
+#ifdef PATH_MAX
+	(void)path;
+	return PATH_MAX;
+#elif defined(MAXPATHLEN)
+	(void)path;
+	return MAXPATHLEN;
+#elif defined(_PC_PATH_MAX)
+	long maxlen = pathconf(path, _PC_PATH_MAX);
+	if (maxlen >= 4096) {
+		return maxlen;
+	} else {
+		return 4096;
+	}
+#endif
+}
+
 /*
- * Write a message to the CCACHE_LOGFILE location (adding a newline).
+ * Warn about failure writing to the log file and then exit.
+ */
+static void
+warn_log_fail(void)
+{
+	extern struct conf *conf;
+
+	/* Note: Can't call fatal() since that would lead to recursion. */
+	fprintf(stderr, "ccache: error: Failed to write to %s: %s\n",
+	        conf->log_file, strerror(errno));
+	exit(EXIT_FAILURE);
+}
+
+static void
+vlog(const char *format, va_list ap, bool log_updated_time)
+{
+	int rc1, rc2;
+	if (!init_log()) {
+		return;
+	}
+
+	log_prefix(log_updated_time);
+	rc1 = vfprintf(logfile, format, ap);
+	rc2 = fprintf(logfile, "\n");
+	if (rc1 < 0 || rc2 < 0) {
+		warn_log_fail();
+	}
+}
+
+/*
+ * Write a message to the log file (adding a newline) and flush.
  */
 void
 cc_log(const char *format, ...)
 {
 	va_list ap;
-
-	if (!init_log()) {
-		return;
-	}
-
-	log_prefix();
 	va_start(ap, format);
-	vfprintf(logfile, format, ap);
+	vlog(format, ap, true);
 	va_end(ap);
-	fprintf(logfile, "\n");
-	fflush(logfile);
+	if (logfile) {
+		fflush(logfile);
+	}
+}
+
+/*
+ * Write a message to the log file (adding a newline) without flushing and with
+ * a reused timestamp.
+ */
+void
+cc_bulklog(const char *format, ...)
+{
+	va_list ap;
+	va_start(ap, format);
+	vlog(format, ap, false);
+	va_end(ap);
 }
 
 /*
@@ -107,14 +171,17 @@ cc_log(const char *format, ...)
 void
 cc_log_argv(const char *prefix, char **argv)
 {
+	int rc;
 	if (!init_log()) {
 		return;
 	}
 
-	log_prefix();
+	log_prefix(true);
 	fputs(prefix, logfile);
 	print_command(logfile, argv);
-	fflush(logfile);
+	rc = fflush(logfile);
+	if (rc)
+		warn_log_fail();
 }
 
 /* something went badly wrong! */
@@ -129,7 +196,7 @@ fatal(const char *format, ...)
 	va_end(ap);
 
 	cc_log("FATAL: %s", msg);
-	fprintf(stderr, "ccache: FATAL: %s\n", msg);
+	fprintf(stderr, "ccache: error: %s\n", msg);
 
 	exit(1);
 }
@@ -177,74 +244,86 @@ mkstemp(char *template)
 }
 #endif
 
+#ifndef _WIN32
+static mode_t
+get_umask(void)
+{
+	static bool mask_retrieved = false;
+	static mode_t mask;
+	if (!mask_retrieved) {
+		mask = umask(0);
+		umask(mask);
+		mask_retrieved = true;
+	}
+	return mask;
+}
+#endif
+
 /*
- * Copy src to dest, decompressing src if needed. compress_dest decides whether
- * dest will be compressed.
+ * Copy src to dest, decompressing src if needed. compress_level > 0 decides
+ * whether dest will be compressed, and with which compression level. Returns 0
+ * on success and -1 on failure. On failure, errno represents the error.
  */
 int
-copy_file(const char *src, const char *dest, int compress_dest)
+copy_file(const char *src, const char *dest, int compress_level)
 {
 	int fd_in, fd_out;
 	gzFile gz_in = NULL, gz_out = NULL;
 	char buf[10240];
 	int n, written;
 	char *tmp_name;
-#ifndef _WIN32
-	mode_t mask;
-#endif
 	struct stat st;
 	int errnum;
+	int saved_errno = 0;
 
-	tmp_name = format("%s.%s.XXXXXX", dest, tmp_string());
-	cc_log("Copying %s to %s via %s (%s)",
-	       src, dest, tmp_name, compress_dest ? "compressed": "uncompressed");
+	/* open destination file */
+	tmp_name = x_strdup(dest);
+	fd_out = create_tmp_fd(&tmp_name);
+	cc_log("Copying %s to %s via %s (%scompressed)",
+	       src, dest, tmp_name, compress_level > 0 ? "" : "un");
 
 	/* open source file */
 	fd_in = open(src, O_RDONLY | O_BINARY);
 	if (fd_in == -1) {
-		cc_log("open error: %s", strerror(errno));
-		return -1;
+		saved_errno = errno;
+		cc_log("open error: %s", strerror(saved_errno));
+		goto error;
 	}
 
 	gz_in = gzdopen(fd_in, "rb");
 	if (!gz_in) {
-		cc_log("gzdopen(src) error: %s", strerror(errno));
+		saved_errno = errno;
+		cc_log("gzdopen(src) error: %s", strerror(saved_errno));
 		close(fd_in);
-		return -1;
-	}
-
-	/* open destination file */
-	fd_out = mkstemp(tmp_name);
-	if (fd_out == -1) {
-		cc_log("mkstemp error: %s", strerror(errno));
 		goto error;
 	}
 
-	if (compress_dest) {
+	if (compress_level > 0) {
 		/*
 		 * A gzip file occupies at least 20 bytes, so it will always
 		 * occupy an entire filesystem block, even for empty files.
 		 * Turn off compression for empty files to save some space.
 		 */
-		if (fstat(fd_in, &st) != 0) {
-			cc_log("fstat error: %s", strerror(errno));
+		if (x_fstat(fd_in, &st) != 0) {
 			goto error;
 		}
 		if (file_size(&st) == 0) {
-			compress_dest = 0;
+			compress_level = 0;
 		}
 	}
 
-	if (compress_dest) {
+	if (compress_level > 0) {
 		gz_out = gzdopen(dup(fd_out), "wb");
 		if (!gz_out) {
-			cc_log("gzdopen(dest) error: %s", strerror(errno));
+			saved_errno = errno;
+			cc_log("gzdopen(dest) error: %s", strerror(saved_errno));
 			goto error;
 		}
+		gzsetparams(gz_out, compress_level, Z_DEFAULT_STRATEGY);
 	}
 
 	while ((n = gzread(gz_in, buf, sizeof(buf))) > 0) {
-		if (compress_dest) {
+		if (compress_level > 0) {
 			written = gzwrite(gz_out, buf, n);
 		} else {
 			ssize_t count;
@@ -252,18 +331,19 @@ copy_file(const char *src, const char *dest, int compress_dest)
 			do {
 				count = write(fd_out, buf + written, n - written);
 				if (count == -1 && errno != EINTR) {
+					saved_errno = errno;
 					break;
 				}
 				written += count;
 			} while (written < n);
 		}
 		if (written != n) {
-			if (compress_dest) {
+			if (compress_level > 0) {
 				cc_log("gzwrite error: %s (errno: %s)",
 				       gzerror(gz_in, &errnum),
-				       strerror(errno));
+				       strerror(saved_errno));
 			} else {
-				cc_log("write error: %s", strerror(errno));
+				cc_log("write error: %s", strerror(saved_errno));
 			}
 			goto error;
 		}
@@ -275,8 +355,9 @@ copy_file(const char *src, const char *dest, int compress_dest)
 	 */
 	gzerror(gz_in, &errnum);
 	if (!gzeof(gz_in) || (errnum != Z_OK && errnum != Z_STREAM_END)) {
+		saved_errno = errno;
 		cc_log("gzread error: %s (errno: %s)",
-		       gzerror(gz_in, &errnum), strerror(errno));
+		       gzerror(gz_in, &errnum), strerror(saved_errno));
 		gzclose(gz_in);
 		if (gz_out) {
 			gzclose(gz_out);
@@ -295,20 +376,19 @@ copy_file(const char *src, const char *dest, int compress_dest)
 	}
 
 #ifndef _WIN32
-	/* get perms right on the tmp file */
-	mask = umask(0);
-	fchmod(fd_out, 0666 & ~mask);
-	umask(mask);
+	fchmod(fd_out, 0666 & ~get_umask());
 #endif
 
 	/* the close can fail on NFS if out of space */
 	if (close(fd_out) == -1) {
-		cc_log("close error: %s", strerror(errno));
+		saved_errno = errno;
+		cc_log("close error: %s", strerror(saved_errno));
 		goto error;
 	}
 
 	if (x_rename(tmp_name, dest) == -1) {
-		cc_log("rename error: %s", strerror(errno));
+		saved_errno = errno;
+		cc_log("rename error: %s", strerror(saved_errno));
 		goto error;
 	}
 
@@ -328,16 +408,17 @@ error:
 	}
 	tmp_unlink(tmp_name);
 	free(tmp_name);
+	errno = saved_errno;
 	return -1;
 }
 
 /* Run copy_file() and, if successful, delete the source file. */
 int
-move_file(const char *src, const char *dest, int compress_dest)
+move_file(const char *src, const char *dest, int compress_level)
 {
 	int ret;
 
-	ret = copy_file(src, dest, compress_dest);
+	ret = copy_file(src, dest, compress_level);
 	if (ret != -1) {
 		x_unlink(src);
 	}
@@ -349,10 +430,10 @@ move_file(const char *src, const char *dest, int compress_dest)
  * are on the same file system.
  */
 int
-move_uncompressed_file(const char *src, const char *dest, int compress_dest)
+move_uncompressed_file(const char *src, const char *dest, int compress_level)
 {
-	if (compress_dest) {
-		return move_file(src, dest, compress_dest);
+	if (compress_level > 0) {
+		return move_file(src, dest, compress_level);
 	} else {
 		return x_rename(src, dest);
 	}
@@ -398,28 +479,125 @@ create_dir(const char *dir)
 	return 0;
 }
 
+/* Create directories leading to path. Returns 0 on success, otherwise -1. */
+int
+create_parent_dirs(const char *path)
+{
+	struct stat st;
+	int res;
+	char *parent = dirname(path);
+
+	if (stat(parent, &st) == 0) {
+		if (S_ISDIR(st.st_mode)) {
+			res = 0;
+		} else {
+			res = -1;
+			errno = ENOTDIR;
+		}
+	} else {
+		res = create_parent_dirs(parent);
+		if (res == 0) {
+			res = mkdir(parent, 0777);
+			/* Have to handle the condition of the directory already existing because
+			 * the file system could have changed in between calling stat and
+			 * actually creating the directory. This can happen when there are
+			 * multiple instances of ccache running and trying to create the same
+			 * directory chain, which usually is the case when the cache root does
+			 * not initially exist. As long as one of the processes creates the
+			 * directories then our condition is satisfied and we avoid a race
+			 * condition.
+			 */
+			if (res != 0 && errno == EEXIST) {
+				res = 0;
+			}
+		} else {
+			res = -1;
+		}
+	}
+	free(parent);
+	return res;
+}
+
 /*
  * Return a static string with the current hostname.
  */
 const char *
 get_hostname(void)
 {
-	static char hostname[200] = "";
+	static char hostname[260] = "";
 
-	if (!hostname[0]) {
-		strcpy(hostname, "unknown");
-#if HAVE_GETHOSTNAME
-		gethostname(hostname, sizeof(hostname)-1);
-#endif
-		hostname[sizeof(hostname)-1] = 0;
+	if (hostname[0]) {
+		return hostname;
 	}
 
+	strcpy(hostname, "unknown");
+#if HAVE_GETHOSTNAME
+	gethostname(hostname, sizeof(hostname) - 1);
+#elif defined(_WIN32)
+	const char *computer_name = getenv("COMPUTERNAME");
+	if (computer_name) {
+		snprintf(hostname, sizeof(hostname), "%s", computer_name);
+		return hostname;
+	}
+
+	WORD wVersionRequested;
+	WSADATA wsaData;
+	int err;
+
+	wVersionRequested = MAKEWORD(2, 2);
+
+	err = WSAStartup(wVersionRequested, &wsaData);
+	if (err != 0) {
+		/* Tell the user that we could not find a usable Winsock DLL. */
+		cc_log("WSAStartup failed with error: %d", err);
+		return hostname;
+	}
+
+	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2) {
+		/* Tell the user that we could not find a usable WinSock DLL. */
+		cc_log("Could not find a usable version of Winsock.dll");
+		WSACleanup();
+		return hostname;
+	}
+
+	int result = gethostname(hostname, sizeof(hostname) - 1);
+	if (result != 0) {
+		int last_error = WSAGetLastError();
+		LPVOID lpMsgBuf;
+		LPVOID lpDisplayBuf;
+		DWORD dw = last_error;
+
+		FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER |
+			FORMAT_MESSAGE_FROM_SYSTEM |
+			FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL, dw, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPTSTR) &lpMsgBuf, 0, NULL);
+
+		lpDisplayBuf = (LPVOID) LocalAlloc(
+			LMEM_ZEROINIT,
+			(lstrlen((LPCTSTR) lpMsgBuf) + lstrlen((LPCTSTR) __FILE__) + 200)
+			* sizeof(TCHAR));
+		_snprintf((LPTSTR) lpDisplayBuf,
+		          LocalSize(lpDisplayBuf) / sizeof(TCHAR),
+		          TEXT("%s failed with error %d: %s"), __FILE__, dw,
+		          lpMsgBuf);
+
+		cc_log("can't get hostname OS returned error: %s", (char*)lpDisplayBuf);
+
+		LocalFree(lpMsgBuf);
+		LocalFree(lpDisplayBuf);
+	}
+	WSACleanup();
+#endif
+
+	hostname[sizeof(hostname) - 1] = 0;
 	return hostname;
 }
 
 /*
- * Return a string to be used to distinguish temporary files. Also tries to
- * cope with NFS by adding the local hostname.
+ * Return a string to be passed to mkstemp to create a temporary file. Also
+ * tries to cope with NFS by adding the local hostname.
  */
 const char *
 tmp_string(void)
@@ -427,15 +605,18 @@ tmp_string(void)
 	static char *ret;
 
 	if (!ret) {
-		ret = format("%s.%u", get_hostname(), (unsigned)getpid());
+		ret = format("%s.%u.XXXXXX", get_hostname(), (unsigned)getpid());
 	}
 
 	return ret;
 }
 
-/* Return the hash result as a hex string. Caller frees. */
+/*
+ * Return the hash result as a hex string. Size -1 means don't include size
+ * suffix. Caller frees.
+ */
 char *
-format_hash_as_string(const unsigned char *hash, unsigned size)
+format_hash_as_string(const unsigned char *hash, int size)
 {
 	char *ret;
 	int i;
@@ -444,7 +625,9 @@ format_hash_as_string(const unsigned char *hash, unsigned size)
 	for (i = 0; i < 16; i++) {
 		sprintf(&ret[i*2], "%02x", (unsigned) hash[i]);
 	}
-	sprintf(&ret[i*2], "-%u", size);
+	if (size >= 0) {
+		sprintf(&ret[i*2], "-%u", size);
+	}
 
 	return ret;
 }
@@ -469,12 +652,16 @@ create_cachedirtag(const char *dir)
 		goto error;
 	}
 	f = fopen(filename, "w");
-	if (!f) goto error;
+	if (!f) {
+		goto error;
+	}
 	if (fwrite(CACHEDIR_TAG, sizeof(CACHEDIR_TAG)-1, 1, f) != 1) {
 		fclose(f);
 		goto error;
 	}
-	if (fclose(f)) goto error;
+	if (fclose(f)) {
+		goto error;
+	}
 success:
 	free(filename);
 	return 0;
@@ -496,7 +683,9 @@ format(const char *format, ...)
 	}
 	va_end(ap);
 
-	if (!*ptr) fatal("Internal error in format");
+	if (!*ptr) {
+		fatal("Internal error in format");
+	}
 	return ptr;
 }
 
@@ -591,7 +780,9 @@ void *
 x_realloc(void *ptr, size_t size)
 {
 	void *p2;
-	if (!ptr) return x_malloc(size);
+	if (!ptr) {
+		return x_malloc(size);
+	}
 	p2 = realloc(ptr, size);
 	if (!p2) {
 		fatal("x_realloc: Could not allocate %lu bytes", (unsigned long)size);
@@ -599,12 +790,55 @@ x_realloc(void *ptr, size_t size)
 	return p2;
 }
 
+/* This is like unsetenv. */
+void x_unsetenv(const char *name)
+{
+#ifdef HAVE_UNSETENV
+	unsetenv(name);
+#else
+	putenv(x_strdup(name)); /* Leak to environment. */
+#endif
+}
+
+/* Like fstat() but also call cc_log on failure. */
+int
+x_fstat(int fd, struct stat *buf)
+{
+	int result = fstat(fd, buf);
+	if (result != 0) {
+		cc_log("Failed to fstat fd %d: %s", fd, strerror(errno));
+	}
+	return result;
+}
+
+/* Like lstat() but also call cc_log on failure. */
+int
+x_lstat(const char *pathname, struct stat *buf)
+{
+	int result = lstat(pathname, buf);
+	if (result != 0) {
+		cc_log("Failed to lstat %s: %s", pathname, strerror(errno));
+	}
+	return result;
+}
+
+/* Like stat() but also call cc_log on failure. */
+int
+x_stat(const char *pathname, struct stat *buf)
+{
+	int result = stat(pathname, buf);
+	if (result != 0) {
+		cc_log("Failed to stat %s: %s", pathname, strerror(errno));
+	}
+	return result;
+}
 
 /*
- * This is like x_asprintf() but frees *ptr if *ptr != NULL.
+ * Construct a string according to the format and store it in *ptr. The
+ * original *ptr is then freed.
  */
 void
-x_asprintf2(char **ptr, const char *format, ...)
+reformat(char **ptr, const char *format, ...)
 {
 	char *saved = *ptr;
 	va_list ap;
@@ -612,11 +846,13 @@ x_asprintf2(char **ptr, const char *format, ...)
 	*ptr = NULL;
 	va_start(ap, format);
 	if (vasprintf(ptr, format, ap) == -1) {
-		fatal("Out of memory in x_asprintf2");
+		fatal("Out of memory in reformat");
 	}
 	va_end(ap);
 
-	if (!ptr) fatal("Out of memory in x_asprintf2");
+	if (!ptr) {
+		fatal("Out of memory in reformat");
+	}
 	if (saved) {
 		free(saved);
 	}
@@ -632,21 +868,29 @@ traverse(const char *dir, void (*fn)(const char *, struct stat *))
 	struct dirent *de;
 
 	d = opendir(dir);
-	if (!d) return;
+	if (!d) {
+		return;
+	}
 
 	while ((de = readdir(d))) {
 		char *fname;
 		struct stat st;
 
-		if (str_eq(de->d_name, ".")) continue;
-		if (str_eq(de->d_name, "..")) continue;
+		if (str_eq(de->d_name, ".")) {
+			continue;
+		}
+		if (str_eq(de->d_name, "..")) {
+			continue;
+		}
 
-		if (strlen(de->d_name) == 0) continue;
+		if (strlen(de->d_name) == 0) {
+			continue;
+		}
 
 		fname = format("%s/%s", dir, de->d_name);
 		if (lstat(fname, &st)) {
 			if (errno != ENOENT) {
-				perror(fname);
+				fatal("lstat %s failed: %s", fname, strerror(errno));
 			}
 			free(fname);
 			continue;
@@ -666,41 +910,49 @@ traverse(const char *dir, void (*fn)(const char *, struct stat *))
 
 /* return the base name of a file - caller frees */
 char *
-basename(const char *s)
+basename(const char *path)
 {
 	char *p;
-	p = strrchr(s, '/');
-	if (p) s = p + 1;
+	p = strrchr(path, '/');
+	if (p) {
+		path = p + 1;
+	}
 #ifdef _WIN32
-	p = strrchr(s, '\\');
-	if (p) s = p + 1;
+	p = strrchr(path, '\\');
+	if (p) {
+		path = p + 1;
+	}
 #endif
 
-	return x_strdup(s);
+	return x_strdup(path);
 }
 
 /* return the dir name of a file - caller frees */
 char *
-dirname(char *s)
+dirname(const char *path)
 {
 	char *p;
-	char *p2 = NULL;
-	s = x_strdup(s);
+#ifdef _WIN32
+	char *p2;
+#endif
+	char *s;
+	s = x_strdup(path);
 	p = strrchr(s, '/');
 #ifdef _WIN32
 	p2 = strrchr(s, '\\');
-#endif
-	if (p < p2)
+	if (!p || (p2 && p < p2)) {
 		p = p2;
-	if (p == s) {
-		return s;
-	} else if (p) {
-		*p = 0;
-		return s;
-	} else {
-		free(s);
-		return x_strdup(".");
 	}
+#endif
+	if (!p) {
+		free(s);
+		s = x_strdup(".");
+	} else if (p == s) {
+		*(p + 1) = 0;
+	} else {
+		*p = 0;
+	}
+	return s;
 }
 
 /*
@@ -751,81 +1003,88 @@ file_size(struct stat *st)
 #endif
 }
 
-/* a safe open/create for read-write */
-int
-safe_open(const char *fname)
-{
-	int fd = open(fname, O_RDWR|O_BINARY);
-	if (fd == -1 && errno == ENOENT) {
-		fd = open(fname, O_RDWR|O_CREAT|O_EXCL|O_BINARY, 0666);
-		if (fd == -1 && errno == EEXIST) {
-			fd = open(fname, O_RDWR|O_BINARY);
-		}
-	}
-	return fd;
-}
-
-/* Format a size (in KiB) as a human-readable string. Caller frees. */
+/* Format a size as a human-readable string. Caller frees. */
 char *
-format_size(size_t v)
+format_human_readable_size(uint64_t v)
 {
 	char *s;
-	if (v >= 1024*1024) {
-		s = format("%.1f Gbytes", v/((double)(1024*1024)));
-	} else if (v >= 1024) {
-		s = format("%.1f Mbytes", v/((double)(1024)));
+	if (v >= 1000*1000*1000) {
+		s = format("%.1f GB", v/((double)(1000*1000*1000)));
+	} else if (v >= 1000*1000) {
+		s = format("%.1f MB", v/((double)(1000*1000)));
 	} else {
-		s = format("%.0f Kbytes", (double)v);
+		s = format("%.1f kB", v/((double)(1000)));
 	}
 	return s;
 }
 
-/* return a value in multiples of 1024 give a string that can end
-   in K, M or G
-*/
-size_t
-value_units(const char *s)
+/* Format a size as a parsable string. Caller frees. */
+char *
+format_parsable_size_with_suffix(uint64_t size)
 {
-	char m;
-	double v = atof(s);
-	m = s[strlen(s)-1];
-	switch (m) {
-	case 'G':
-	case 'g':
-	default:
-		v *= 1024*1024;
-		break;
-	case 'M':
-	case 'm':
-		v *= 1024;
-		break;
-	case 'K':
-	case 'k':
-		v *= 1;
-		break;
+	char *s;
+	if (size >= 1000*1000*1000) {
+		s = format("%.1fG", size / ((double)(1000*1000*1000)));
+	} else if (size >= 1000*1000) {
+		s = format("%.1fM", size / ((double)(1000*1000)));
+	} else if (size >= 1000) {
+		s = format("%.1fk", size / ((double)(1000)));
+	} else {
+		s = format("%u", (unsigned)size);
 	}
-	return (size_t)v;
+	return s;
 }
 
-#ifndef _WIN32
-static long
-path_max(const char *path)
+/*
+ * Parse a "size value", i.e. a string that can end in k, M, G, T (10-based
+ * suffixes) or Ki, Mi, Gi, Ti (2-based suffixes). For backward compatibility,
+ * K is also recognized as a synonym of k.
+ */
+bool
+parse_size_with_suffix(const char *str, uint64_t *size)
 {
-#ifdef PATH_MAX
-	(void)path;
-	return PATH_MAX;
-#elif defined(MAXPATHLEN)
-	(void)path;
-	return MAXPATHLEN;
-#elif defined(_PC_PATH_MAX)
-	long maxlen = pathconf(path, _PC_PATH_MAX);
-	if (maxlen >= 4096) {
-		return maxlen;
-	} else {
-		return 4096;
+	char *p;
+	double x;
+
+	errno = 0;
+	x = strtod(str, &p);
+	if (errno != 0 || x < 0 || p == str || *str == '\0') {
+		return false;
 	}
-#endif
+
+	while (isspace(*p)) {
+		++p;
+	}
+
+	if (*p != '\0') {
+		unsigned multiplier;
+		if (*(p+1) == 'i') {
+			multiplier = 1024;
+		} else {
+			multiplier = 1000;
+		}
+		switch (*p) {
+		case 'T':
+			x *= multiplier;
+		case 'G':
+			x *= multiplier;
+		case 'M':
+			x *= multiplier;
+		case 'K':
+		case 'k':
+			x *= multiplier;
+			break;
+		default:
+			return false;
+		}
+	} else {
+		/* Default suffix: G. */
+		x *= 1000 * 1000 * 1000;
+	}
+	*size = x;
+	return true;
 }
+
 
 /*
   a sane realpath() function, trying to cope with stupid path limits and
@@ -836,11 +1095,26 @@ x_realpath(const char *path)
 {
 	long maxlen = path_max(path);
 	char *ret, *p;
+#ifdef _WIN32
+	HANDLE path_handle;
+#endif
 
 	ret = x_malloc(maxlen);
 
 #if HAVE_REALPATH
 	p = realpath(path, ret);
+#elif defined(_WIN32)
+	path_handle = CreateFile(
+		path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL, NULL);
+	if (INVALID_HANDLE_VALUE != path_handle) {
+		GetFinalPathNameByHandle(path_handle, ret, maxlen, FILE_NAME_NORMALIZED);
+		CloseHandle(path_handle);
+		p = ret + 4; /* strip \\?\ from the file name */
+	} else {
+		snprintf(ret, maxlen, "%s", path);
+		p = ret;
+	}
 #else
 	/* yes, there are such systems. This replacement relies on
 	   the fact that when we call x_realpath we only care about symlinks */
@@ -862,7 +1136,6 @@ x_realpath(const char *path)
 	free(ret);
 	return NULL;
 }
-#endif /* !_WIN32 */
 
 /* a getcwd that will returns an allocated buffer */
 char *
@@ -870,7 +1143,7 @@ gnu_getcwd(void)
 {
 	unsigned size = 128;
 
-	while (1) {
+	while (true) {
 		char *buffer = (char *)x_malloc(size);
 		if (getcwd(buffer, size) == buffer) {
 			return buffer;
@@ -884,18 +1157,80 @@ gnu_getcwd(void)
 	}
 }
 
-/* create an empty file */
-int
-create_empty_file(const char *fname)
+#ifndef HAVE_STRTOK_R
+/* strtok_r replacement */
+char *
+strtok_r(char *str, const char *delim, char **saveptr)
 {
-	int fd;
-
-	fd = open(fname, O_WRONLY|O_CREAT|O_TRUNC|O_EXCL|O_BINARY, 0666);
-	if (fd == -1) {
-		return -1;
+	int len;
+	char *ret;
+	if (!str)
+		str = *saveptr;
+	len = strlen(str);
+	ret = strtok(str, delim);
+	if (ret) {
+		char *save = ret;
+		while (*save++);
+		if ((len + 1) == (intptr_t) (save - str))
+			save--;
+		*saveptr = save;
 	}
-	close(fd);
-	return 0;
+	return ret;
+}
+#endif
+
+/*
+ * Create an empty temporary file. *fname will be reallocated and set to the
+ * resulting filename. Returns an open file descriptor to the file.
+ */
+int
+create_tmp_fd(char **fname)
+{
+	char *template = format("%s.%s", *fname, tmp_string());
+	int fd = mkstemp(template);
+	if (fd == -1 && errno == ENOENT) {
+		if (create_parent_dirs(template) != 0) {
+			fatal("Failed to create directory %s: %s",
+			      dirname(template), strerror(errno));
+		}
+		reformat(&template, "%s.%s", *fname, tmp_string());
+		fd = mkstemp(template);
+	}
+	if (fd == -1) {
+		fatal("Failed to create file %s: %s", template, strerror(errno));
+	}
+
+#ifndef _WIN32
+	fchmod(fd, 0666 & ~get_umask());
+#endif
+
+	free(*fname);
+	*fname = template;
+	return fd;
+}
+
+/*
+ * Create an empty temporary file. *fname will be reallocated and set to the
+ * resulting filename. Returns an open FILE*.
+ */
+FILE *
+create_tmp_file(char **fname, const char *mode)
+{
+	FILE *file = fdopen(create_tmp_fd(fname), mode);
+	if (!file) {
+		fatal("Failed to create file %s: %s", *fname, strerror(errno));
+	}
+	return file;
+}
+
+/*
+ * Create an empty temporary file. *fname will be reallocated and set to the
+ * resulting filename.
+ */
+void
+create_empty_tmp_file(char **fname)
+{
+	close(create_tmp_fd(fname));
 }
 
 /*
@@ -908,6 +1243,12 @@ get_home_directory(void)
 	if (p) {
 		return p;
 	}
+#ifdef _WIN32
+	p = getenv("APPDATA");
+	if (p) {
+		return p;
+	}
+#endif
 #ifdef HAVE_GETPWUID
 	{
 		struct passwd *pwd = getpwuid(getuid());
@@ -1022,12 +1363,12 @@ get_relative_path(const char *from, const char *to)
 	if (common_prefix_len > 0 || !str_eq(from, "/")) {
 		for (p = from + common_prefix_len; *p; p++) {
 			if (*p == '/') {
-				x_asprintf2(&result, "../%s", result);
+				reformat(&result, "../%s", result);
 			}
 		}
 	}
 	if (strlen(to) > common_prefix_len) {
-		x_asprintf2(&result, "%s%s", result, to + common_prefix_len + 1);
+		reformat(&result, "%s%s", result, to + common_prefix_len + 1);
 	}
 	i = strlen(result) - 1;
 	while (i >= 0 && result[i] == '/') {
@@ -1061,12 +1402,12 @@ bool
 is_full_path(const char *path)
 {
 	if (strchr(path, '/'))
-		return 1;
+		return true;
 #ifdef _WIN32
 	if (strchr(path, '\\'))
-		return 1;
+		return true;
 #endif
-	return 0;
+	return false;
 }
 
 /*
@@ -1086,14 +1427,46 @@ update_mtime(const char *path)
 /*
  * Rename oldpath to newpath (deleting newpath).
  */
+
 int
 x_rename(const char *oldpath, const char *newpath)
 {
-#ifdef _WIN32
+#ifndef _WIN32
+	return rename(oldpath, newpath);
+#else
 	/* Windows' rename() refuses to overwrite an existing file. */
 	unlink(newpath);  /* not x_unlink, as x_unlink calls x_rename */
+	/* If the function succeeds, the return value is nonzero. */
+	if (MoveFileA(oldpath, newpath) == 0) {
+		LPVOID lpMsgBuf;
+		LPVOID lpDisplayBuf;
+		DWORD dw = GetLastError();
+
+		FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER |
+			FORMAT_MESSAGE_FROM_SYSTEM |
+			FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL, dw, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR) &lpMsgBuf,
+			0, NULL);
+
+		lpDisplayBuf = (LPVOID) LocalAlloc(
+			LMEM_ZEROINIT,
+			(lstrlen((LPCTSTR) lpMsgBuf) + lstrlen((LPCTSTR) __FILE__) + 40)
+			* sizeof(TCHAR));
+		_snprintf((LPTSTR) lpDisplayBuf,
+		          LocalSize(lpDisplayBuf) / sizeof(TCHAR),
+		          TEXT("%s failed with error %d: %s"), __FILE__, dw, lpMsgBuf);
+
+		cc_log("can't rename file %s to %s OS returned error: %s",
+		       oldpath, newpath, (char*) lpDisplayBuf);
+
+		LocalFree(lpMsgBuf);
+		LocalFree(lpDisplayBuf);
+		return -1;
+	} else {
+		return 0;
+	}
 #endif
-	return rename(oldpath, newpath);
 }
 
 /*
@@ -1103,8 +1476,13 @@ x_rename(const char *oldpath, const char *newpath)
 int
 tmp_unlink(const char *path)
 {
-	cc_log("Unlink %s (as-tmp)", path);
-	return unlink(path);
+	int rc;
+	cc_log("Unlink %s", path);
+	rc = unlink(path);
+	if (rc) {
+		cc_log("Unlink failed: %s", strerror(errno));
+	}
+	return rc;
 }
 
 /*
@@ -1118,18 +1496,28 @@ x_unlink(const char *path)
 	 * file. We don't care if the temp file is trashed, so it's always safe to
 	 * unlink it first.
 	 */
-	char *tmp_name = format("%s.tmp.rm.%s", path, tmp_string());
+	char *tmp_name = format("%s.rm.%s", path, tmp_string());
 	int result = 0;
+	int saved_errno = 0;
 	cc_log("Unlink %s via %s", path, tmp_name);
 	if (x_rename(path, tmp_name) == -1) {
 		result = -1;
+		saved_errno = errno;
 		goto out;
 	}
 	if (unlink(tmp_name) == -1) {
-		result = -1;
+		/* If it was released in a race, that's OK. */
+		if (errno != ENOENT) {
+			result = -1;
+			saved_errno = errno;
+		}
 	}
 out:
 	free(tmp_name);
+	if (result) {
+		cc_log("x_unlink failed: %s", strerror(saved_errno));
+	}
+	errno = saved_errno;
 	return result;
 }
 
@@ -1141,7 +1529,6 @@ x_readlink(const char *path)
 	long maxlen = path_max(path);
 	ssize_t len;
 	char *buf;
-	if (maxlen < 4096) maxlen = 4096;
 
 	buf = x_malloc(maxlen);
 	len = readlink(path, buf, maxlen-1);
@@ -1166,13 +1553,13 @@ read_file(const char *path, size_t size_hint, char **data, size_t *size)
 
 	if (size_hint == 0) {
 		struct stat st;
-		if (stat(path, &st) == 0) {
+		if (x_stat(path, &st) == 0) {
 			size_hint = st.st_size;
 		}
 	}
 	size_hint = (size_hint < 1024) ? 1024 : size_hint;
 
-	fd = open(path, O_RDONLY);
+	fd = open(path, O_RDONLY | O_BINARY);
 	if (fd == -1) {
 		return false;
 	}
@@ -1205,19 +1592,101 @@ read_file(const char *path, size_t size_hint, char **data, size_t *size)
 
 /*
  * Return the content (with NUL termination) of a text file, or NULL on error.
- * Caller frees.
+ * Caller frees. Size hint 0 means no hint.
  */
 char *
-read_text_file(const char *path)
+read_text_file(const char *path, size_t size_hint)
 {
 	size_t size;
 	char *data;
 
-	if (read_file(path, 0, &data, &size)) {
+	if (read_file(path, size_hint, &data, &size)) {
 		data = x_realloc(data, size + 1);
 		data[size] = '\0';
 		return data;
 	} else {
 		return NULL;
 	}
+}
+
+static bool
+expand_variable(const char **str, char **result, char **errmsg)
+{
+	bool curly;
+	const char *p, *q;
+	char *name;
+	const char *value;
+
+	assert(**str == '$');
+	p = *str + 1;
+	if (*p == '{') {
+		curly = true;
+		++p;
+	} else {
+		curly = false;
+	}
+	q = p;
+	while (isalnum(*q) || *q == '_') {
+		++q;
+	}
+	if (curly) {
+		if (*q != '}') {
+			*errmsg = format("syntax error: missing '}' after \"%s\"", p);
+			return NULL;
+		}
+	}
+
+	if (q == p) {
+		/* Special case: don't consider a single $ the start of a variable. */
+		reformat(result, "%s$", *result);
+		return true;
+	}
+
+	name = x_strndup(p, q - p);
+	value = getenv(name);
+	if (!value) {
+		*errmsg = format("environment variable \"%s\" not set", name);
+		free(name);
+		return false;
+	}
+	reformat(result, "%s%s", *result, value);
+	if (!curly) {
+		--q;
+	}
+	*str = q;
+	free(name);
+	return true;
+}
+
+/*
+ * Substitute all instances of $VAR or ${VAR}, where VAR is an environment
+ * variable, in a string. Caller frees. If one of the environment variables
+ * doesn't exist, NULL will be returned and *errmsg will be an appropriate
+ * error message (caller frees).
+ */
+char *
+subst_env_in_string(const char *str, char **errmsg)
+{
+	const char *p; /* Interval start. */
+	const char *q; /* Interval end. */
+	char *result;
+
+	assert(errmsg);
+	*errmsg = NULL;
+
+	result = x_strdup("");
+	p = str;
+	q = str;
+	for (q = str; *q; ++q) {
+		if (*q == '$') {
+			reformat(&result, "%s%.*s", result, (int)(q - p), p);
+			if (!expand_variable(&q, &result, errmsg)) {
+				free(result);
+				return NULL;
+			}
+			p = q + 1;
+		}
+	}
+	reformat(&result, "%s%.*s", result, (int)(q - p), p);
+	return result;
 }

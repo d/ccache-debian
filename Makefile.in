@@ -6,31 +6,37 @@ exec_prefix = @exec_prefix@
 bindir = @bindir@
 mandir = @mandir@
 datarootdir = @datarootdir@
+sysconfdir = @sysconfdir@
 installcmd = @INSTALL@
 
 AR = @AR@
 CC = @CC@
 CFLAGS = @CFLAGS@
-CPPFLAGS = @DEFS@ @CPPFLAGS@ -I. -I$(srcdir)
-LDFLAGS = @LDFLAGS@
+CPPFLAGS = @CPPFLAGS@
 EXEEXT = @EXEEXT@
+LDFLAGS = @LDFLAGS@
+LIBS = @LIBS@
 RANLIB = @RANLIB@
 
-libs = @LIBS@ -lz
+all_cflags = $(CFLAGS)
+all_cppflags = @DEFS@ @extra_cppflags@ -DSYSCONFDIR=$(sysconfdir) -I. -I$(srcdir) $(CPPFLAGS)
+all_ldflags = @extra_ldflags@ $(LDFLAGS)
+extra_libs = @extra_libs@
 
 base_sources = \
     ccache.c mdfour.c hash.c execute.c util.c args.c stats.c version.c \
     cleanup.c snprintf.c unify.c manifest.c hashtable.c hashtable_itr.c \
     murmurhashneutral2.c hashutil.c getopt_long.c exitfn.c lockfile.c \
-    counters.c language.c compopt.c
+    counters.c language.c compopt.c conf.c
 base_objs = $(base_sources:.c=.o)
 
 ccache_sources = main.c $(base_sources)
 ccache_objs = $(ccache_sources:.c=.o)
 
 zlib_sources = \
-    zlib/adler32.c zlib/compress.c zlib/crc32.c zlib/deflate.c zlib/gzio.c \
-    zlib/inffast.c zlib/inflate.c zlib/inftrees.c zlib/trees.c zlib/zutil.c
+    zlib/adler32.c zlib/crc32.c zlib/deflate.c zlib/gzclose.c zlib/gzlib.c \
+    zlib/gzread.c zlib/gzwrite.c zlib/inffast.c zlib/inflate.c \
+    zlib/inftrees.c zlib/trees.c zlib/zutil.c
 zlib_objs = $(zlib_sources:.c=.o)
 
 test_suites = @test_suites@
@@ -46,8 +52,8 @@ files_to_distclean = Makefile config.h config.log config.status
 .PHONY: all
 all: ccache$(EXEEXT)
 
-ccache$(EXEEXT): $(ccache_objs) @extra_deps@
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(ccache_objs) $(libs)
+ccache$(EXEEXT): $(ccache_objs) $(extra_libs)
+	$(CC) $(all_cflags) -o $@ $(ccache_objs) $(all_ldflags) $(extra_libs) $(LIBS)
 
 .PHONY: install
 install: all
@@ -60,13 +66,17 @@ install: all
 clean:
 	rm -f $(files_to_clean)
 
+conf.c: confitems_lookup.c envtoconfitems_lookup.c
+
+$(zlib_objs): CPPFLAGS += -include config.h
+
 zlib/libz.a: $(zlib_objs)
 	$(AR) cr $@ $(zlib_objs)
 	$(RANLIB) $@
 
 .PHONY: perf
 perf: ccache$(EXEEXT)
-	$(srcdir)/perf.py --ccache ccache$(EXEEXT) $(CC) $(CFLAGS) $(CPPFLAGS) $(srcdir)/ccache.c
+	$(srcdir)/perf.py --ccache ccache$(EXEEXT) $(CC) $(all_cppflags) $(all_cflags) $(srcdir)/ccache.c
 
 .PHONY: test
 test: ccache$(EXEEXT) test/main$(EXEEXT)
@@ -77,8 +87,8 @@ test: ccache$(EXEEXT) test/main$(EXEEXT)
 quicktest: test/main$(EXEEXT)
 	test/main$(EXEEXT)
 
-test/main$(EXEEXT): $(base_objs) $(test_objs) @extra_deps@
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(base_objs) $(test_objs) $(libs)
+test/main$(EXEEXT): $(base_objs) $(test_objs) $(extra_libs)
+	$(CC) $(all_cflags) -o $@ $(base_objs) $(test_objs) $(all_ldflags) $(extra_libs) $(LIBS)
 
 test/main.o: test/suites.h
 
@@ -98,6 +108,6 @@ installcheck: ccache$(EXEEXT) test/main$(EXEEXT)
 	CCACHE=$(bindir)/ccache CC='$(CC)' $(srcdir)/test.sh
 
 .c.o:
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+	$(CC) $(all_cppflags) $(all_cflags) -c -o $@ $<
 
 @include_dev_mk@

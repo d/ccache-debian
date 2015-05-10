@@ -83,20 +83,28 @@ mdfour64(uint32_t *M)
 static void
 copy64(uint32_t *M, const unsigned char *in)
 {
+#ifdef WORDS_BIGENDIAN
 	int i;
 
 	for (i = 0; i < 16; i++)
 		M[i] = (in[i*4+3]<<24) | (in[i*4+2]<<16) |
 			(in[i*4+1]<<8) | (in[i*4+0]<<0);
+#else
+	memcpy(M, in, 16*4);
+#endif
 }
 
 static void
 copy4(unsigned char *out, uint32_t x)
 {
+#ifdef WORDS_BIGENDIAN
 	out[0] = x&0xFF;
 	out[1] = (x>>8)&0xFF;
 	out[2] = (x>>16)&0xFF;
 	out[3] = (x>>24)&0xFF;
+#else
+	memcpy(out, &x, 4);
+#endif
 }
 
 void
@@ -122,7 +130,9 @@ void mdfour_tail(const unsigned char *in, size_t n)
 
 	b = m->totalN * 8;
 
-	if (n) memcpy(buf, in, n);
+	if (n) {
+		memcpy(buf, in, n);
+	}
 	buf[n] = 0x80;
 
 	if (n <= 55) {
@@ -153,7 +163,7 @@ mdfour_update(struct mdfour *md, const unsigned char *in, size_t n)
 
 	m = md;
 
-	if (in == NULL) {
+	if (!in) {
 		if (!md->finalized) {
 			mdfour_tail(md->tail, md->tail_len);
 			md->finalized = 1;
@@ -163,7 +173,9 @@ mdfour_update(struct mdfour *md, const unsigned char *in, size_t n)
 
 	if (md->tail_len) {
 		size_t len = 64 - md->tail_len;
-		if (len > n) len = n;
+		if (len > n) {
+			len = n;
+		}
 		memcpy(md->tail+md->tail_len, in, len);
 		md->tail_len += len;
 		n -= len;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Joel Rosdahl
+ * Copyright (C) 2010-2014 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -18,6 +18,7 @@
 
 #include "ccache.h"
 #include "test/framework.h"
+#include "util.h"
 
 #if defined(HAVE_TERMIOS_H)
 #define USE_COLOR
@@ -64,11 +65,12 @@ cct_run(suite_fn *suites, int verbose_output)
 	suite_fn *suite;
 	int tty = is_tty(1);
 
+	x_unsetenv("GCC_COLORS"); /* Avoid confusing argument processing tests. */
 	verbose = verbose_output;
 
 	for (suite = suites; *suite; suite++) {
 		unsigned test_index = 0;
-		while (1) {
+		while (true) {
 			test_index = (*suite)(test_index + 1);
 			if (test_index == 0) {
 				/* We have reached the end of the suite. */
@@ -115,8 +117,6 @@ cct_suite_end()
 void
 cct_test_begin(const char *name)
 {
-	extern char *cache_logfile;
-
 	++total_tests;
 	if (verbose) {
 		printf("--- TEST: %s ---\n", name);
@@ -126,8 +126,8 @@ cct_test_begin(const char *name)
 	cct_chdir(name);
 	current_test = name;
 
+	putenv("CCACHE_CONFIG_PATH=/dev/null");
 	cc_reset();
-	cache_logfile = getenv("CCACHE_LOGFILE");
 }
 
 void
@@ -158,67 +158,59 @@ cct_check_failed(const char *file, int line, const char *what,
 	fprintf(stderr, "%s:%d: Failed assertion:\n", file, line);
 	fprintf(stderr, "  Suite:      %s\n", current_suite);
 	fprintf(stderr, "  Test:       %s\n", current_test);
-	if (expected && actual) {
+	if (expected) {
 		fprintf(stderr, "  Expression: %s\n", what);
-		fprintf(stderr, "  Expected:   %s\n", expected);
-		fprintf(stderr, "  Actual:     %s\n", actual);
+		if (actual) {
+			fprintf(stderr, "  Expected:   %s\n", expected);
+			fprintf(stderr, "  Actual:     %s\n", actual);
+		} else {
+			fprintf(stderr, "  Message:    %s\n", expected);
+		}
 	} else {
 		fprintf(stderr, "  Assertion:  %s\n", what);
 	}
 	fprintf(stderr, "\n");
 }
 
-int
+bool
 cct_check_int_eq(const char *file, int line, const char *expression,
-                 int expected, int actual)
+                 int64_t expected, int64_t actual)
 {
 	if (expected == actual) {
 		cct_check_passed(file, line, expression);
-		return 1;
+		return true;
 	} else {
-		char *exp_str = format("%i", expected);
-		char *act_str = format("%i", actual);
+#ifdef HAVE_LONG_LONG
+		char *exp_str = format("%lld", (long long)expected);
+		char *act_str = format("%lld", (long long)actual);
+#else
+		char *exp_str = format("%ld", (long)expected);
+		char *act_str = format("%ld", (long)actual);
+#endif
 		cct_check_failed(file, line, expression, exp_str, act_str);
 		free(exp_str);
 		free(act_str);
-		return 0;
+		return false;
 	}
 }
 
-int
-cct_check_uns_eq(const char *file, int line, const char *expression,
-                 unsigned expected, unsigned actual)
-{
-	if (expected == actual) {
-		cct_check_passed(file, line, expression);
-		return 1;
-	} else {
-		char *exp_str = format("%i", expected);
-		char *act_str = format("%i", actual);
-		cct_check_failed(file, line, expression, exp_str, act_str);
-		free(exp_str);
-		free(act_str);
-		return 0;
-	}
-}
-
-int
+bool
 cct_check_str_eq(const char *file, int line, const char *expression,
-                 const char *expected, const char *actual, int free1,
-                 int free2)
+                 const char *expected, const char *actual, bool free1,
+                 bool free2)
 {
-	int result;
+	bool result;
 
 	if (expected && actual && str_eq(actual, expected)) {
 		cct_check_passed(file, line, expression);
-		result = 1;
+		result = true;
 	} else {
 		char *exp_str = expected ? format("\"%s\"", expected) : x_strdup("(null)");
 		char *act_str = actual ? format("\"%s\"", actual) : x_strdup("(null)");
 		cct_check_failed(file, line, expression, exp_str, act_str);
 		free(exp_str);
 		free(act_str);
-		result = 0;
+		result = false;
 	}
 
 	if (free1) {
@@ -230,23 +222,23 @@ cct_check_str_eq(const char *file, int line, const char *expression,
 	return result;
 }
 
-int
+bool
 cct_check_args_eq(const char *file, int line, const char *expression,
                   struct args *expected, struct args *actual,
-                  int free1, int free2)
+                  bool free1, bool free2)
 {
-	int result;
+	bool result;
 
 	if (expected && actual && args_equal(actual, expected)) {
 		cct_check_passed(file, line, expression);
-		result = 1;
+		result = true;
 	} else {
 		char *exp_str = expected ? args_to_string(expected) : x_strdup("(null)");
 		char *act_str = actual ? args_to_string(actual) : x_strdup("(null)");
 		cct_check_failed(file, line, expression, exp_str, act_str);
 		free(exp_str);
 		free(act_str);
-		result = 0;
+		result = false;
 	}
 
 	if (free1) {

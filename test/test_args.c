@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Joel Rosdahl
+ * Copyright (C) 2010, 2012 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -22,6 +22,7 @@
 
 #include "ccache.h"
 #include "test/framework.h"
+#include "test/util.h"
 
 TEST_SUITE(args)
 
@@ -56,6 +57,29 @@ TEST(args_init_from_string)
 	CHECK_STR_EQ("third", args->argv[2]);
 	CHECK_STR_EQ("fourth", args->argv[3]);
 	CHECK(!args->argv[4]);
+	args_free(args);
+}
+
+TEST(args_init_from_gcc_atfile)
+{
+	struct args *args;
+	const char *argtext =
+		"first\rsec\\\tond\tthi\\\\rd\nfourth  \tfif\\ th \"si'x\\\" th\""
+		" 'seve\nth'\\";
+
+	create_file("gcc_atfile", argtext);
+
+	args = args_init_from_gcc_atfile("gcc_atfile");
+	CHECK(args);
+	CHECK_INT_EQ(7, args->argc);
+	CHECK_STR_EQ("first", args->argv[0]);
+	CHECK_STR_EQ("sec\tond", args->argv[1]);
+	CHECK_STR_EQ("thi\\rd", args->argv[2]);
+	CHECK_STR_EQ("fourth", args->argv[3]);
+	CHECK_STR_EQ("fif th", args->argv[4]);
+	CHECK_STR_EQ("si'x\" th", args->argv[5]);
+	CHECK_STR_EQ("seve\nth", args->argv[6]);
+	CHECK(!args->argv[7]);
 	args_free(args);
 }
 
@@ -141,6 +165,48 @@ TEST(args_to_string)
 {
 	struct args *args = args_init_from_string("first second");
 	CHECK_STR_EQ_FREE2("first second", args_to_string(args));
+	args_free(args);
+}
+
+TEST(args_insert)
+{
+	struct args *args = args_init_from_string("first second third fourth fifth");
+
+	struct args *src1 = args_init_from_string("alpha beta gamma");
+	struct args *src2 = args_init_from_string("one");
+	struct args *src3 = args_init_from_string("");
+	struct args *src4 = args_init_from_string("alpha beta gamma");
+	struct args *src5 = args_init_from_string("one");
+	struct args *src6 = args_init_from_string("");
+
+	args_insert(args, 2, src1, true);
+	CHECK_STR_EQ_FREE2("first second alpha beta gamma fourth fifth",
+	                   args_to_string(args));
+	CHECK_INT_EQ(7, args->argc);
+	args_insert(args, 2, src2, true);
+	CHECK_STR_EQ_FREE2("first second one beta gamma fourth fifth",
+	                   args_to_string(args));
+	CHECK_INT_EQ(7, args->argc);
+	args_insert(args, 2, src3, true);
+	CHECK_STR_EQ_FREE2("first second beta gamma fourth fifth",
+	                   args_to_string(args));
+	CHECK_INT_EQ(6, args->argc);
+
+	args_insert(args, 1, src4, false);
+	CHECK_STR_EQ_FREE2("first alpha beta gamma second beta gamma fourth fifth",
+	                   args_to_string(args));
+	CHECK_INT_EQ(9, args->argc);
+	args_insert(args, 1, src5, false);
+	CHECK_STR_EQ_FREE2(
+		"first one alpha beta gamma second beta gamma fourth fifth",
+		args_to_string(args));
+	CHECK_INT_EQ(10, args->argc);
+	args_insert(args, 1, src6, false);
+	CHECK_STR_EQ_FREE2(
+		"first one alpha beta gamma second beta gamma fourth fifth",
+		args_to_string(args));
+	CHECK_INT_EQ(10, args->argc);
+
 	args_free(args);
 }
 

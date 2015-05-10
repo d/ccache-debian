@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2014 Joel Rosdahl
+ * Copyright (C) 2009-2015 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -41,10 +41,14 @@
  * <index[0]>      index of include file path          (4 bytes unsigned int)
  * <hash[0]>       hash of include file                (<hash_size> bytes)
  * <size[0]>       size of include file                (4 bytes unsigned int)
+ * <mtime[0]>      mtime of include file               (8 bytes signed int)
+ * <ctime[0]>      ctime of include file               (8 bytes signed int)
  * ...
+ * <index[n-1]>
  * <hash[n-1]>
  * <size[n-1]>
- * <index[n-1]>
+ * <mtime[n-1]>
+ * <ctime[n-1]>
  * ----------------------------------------------------------------------------
  * <n>             number of object name entries       (4 bytes unsigned int)
  * <m[0]>          number of include file hash indexes (4 bytes unsigned int)
@@ -63,12 +67,11 @@
  */
 
 static const uint32_t MAGIC = 0x63436d46U;
-static const uint8_t  VERSION = 0;
 static const uint32_t MAX_MANIFEST_ENTRIES = 100;
 static const uint32_t MAX_MANIFEST_FILE_INFO_ENTRIES = 10000;
 
 #define ccache_static_assert(e) \
-	do { enum { ccache_static_assert__ = 1/(e) }; } while (0)
+	do { enum { ccache_static_assert__ = 1/(e) }; } while (false)
 
 struct file_info {
 	/* Index to n_files. */
@@ -77,6 +80,10 @@ struct file_info {
 	uint8_t hash[16];
 	/* Size of referenced file. */
 	uint32_t size;
+	/* mtime of referenced file. */
+	int64_t mtime;
+	/* ctime of referenced file. */
+	int64_t ctime;
 };
 
 struct object {
@@ -89,6 +96,12 @@ struct object {
 };
 
 struct manifest {
+	/* Version of decoded file. */
+	uint8_t version;
+
+	/* Reserved for future use. */
+	uint16_t reserved;
+
 	/* Size of hash fields (in bytes). */
 	uint8_t hash_size;
 
@@ -105,10 +118,16 @@ struct manifest {
 	struct object *objects;
 };
 
+struct file_stats {
+	uint32_t size;
+	int64_t mtime;
+	int64_t ctime;
+};
+
 static unsigned int
 hash_from_file_info(void *key)
 {
-	ccache_static_assert(sizeof(struct file_info) == 24); /* No padding. */
+	ccache_static_assert(sizeof(struct file_info) == 40); /* No padding. */
 	return murmurhashneutral2(key, sizeof(struct file_info), 0);
 }
 
@@ -119,7 +138,9 @@ file_infos_equal(void *key1, void *key2)
 	struct file_info *fi2 = (struct file_info *)key2;
 	return fi1->index == fi2->index
 	       && memcmp(fi1->hash, fi2->hash, 16) == 0
-	       && fi1->size == fi2->size;
+	       && fi1->size == fi2->size
+	       && fi1->mtime == fi2->mtime
+	       && fi1->ctime == fi2->ctime;
 }
 
 static void
@@ -146,7 +167,7 @@ free_manifest(struct manifest *mf)
 			goto error; \
 		} \
 		(var) = ch_ & 0xFF; \
-	} while (0)
+	} while (false)
 
 #define READ_INT(size, var) \
 	do { \
@@ -161,7 +182,7 @@ free_manifest(struct manifest *mf)
 			(var) <<= 8; \
 			(var) |= ch_ & 0xFF; \
 		} \
-	} while (0)
+	} while (false)
 
 #define READ_STR(var) \
 	do { \
@@ -182,7 +203,7 @@ free_manifest(struct manifest *mf)
 			goto error; \
 		} \
 		(var) = x_strdup(buf_); \
-	} while (0)
+	} while (false)
 
 #define READ_BYTES(n, var) \
 	do { \
@@ -195,7 +216,7 @@ free_manifest(struct manifest *mf)
 			} \
 			(var)[i_] = ch_; \
 		} \
-	} while (0)
+	} while (false)
 
 static struct manifest *
 create_empty_manifest(void)
@@ -220,8 +241,6 @@ read_manifest(gzFile f)
 	struct manifest *mf;
 	uint32_t i, j;
 	uint32_t magic;
-	uint8_t version;
-	uint16_t dummy;
 
 	mf = create_empty_manifest();
 
@@ -231,9 +250,9 @@ read_manifest(gzFile f)
 		free_manifest(mf);
 		return NULL;
 	}
-	READ_BYTE(version);
-	if (version != VERSION) {
-		cc_log("Manifest file has unknown version %u", version);
+	READ_BYTE(mf->version);
+	if (mf->version != MANIFEST_VERSION) {
+		cc_log("Manifest file has unknown version %u", mf->version);
 		free_manifest(mf);
 		return NULL;
 	}
@@ -246,7 +265,7 @@ read_manifest(gzFile f)
 		return NULL;
 	}
 
-	READ_INT(2, dummy);
+	READ_INT(2, mf->reserved);
 
 	READ_INT(4, mf->n_files);
 	mf->files = x_calloc(mf->n_files, sizeof(*mf->files));
@@ -260,6 +279,8 @@ read_manifest(gzFile f)
 		READ_INT(4, mf->file_infos[i].index);
 		READ_BYTES(mf->hash_size, mf->file_infos[i].hash);
 		READ_INT(4, mf->file_infos[i].size);
+		READ_INT(8, mf->file_infos[i].mtime);
+		READ_INT(8, mf->file_infos[i].ctime);
 	}
 
 	READ_INT(4, mf->n_objects);
@@ -294,14 +315,14 @@ error:
 				goto error; \
 			} \
 		} \
-	} while (0)
+	} while (false)
 
 #define WRITE_STR(var) \
 	do { \
 		if (gzputs(f, var) == EOF || gzputc(f, '\0') == EOF) { \
 			goto error; \
 		} \
-	} while (0)
+	} while (false)
 
 #define WRITE_BYTES(n, var) \
 	do { \
@@ -311,7 +332,7 @@ error:
 				goto error; \
 			} \
 		} \
-	} while (0)
+	} while (false)
 
 static int
 write_manifest(gzFile f, const struct manifest *mf)
@@ -319,7 +340,7 @@ write_manifest(gzFile f, const struct manifest *mf)
 	uint32_t i, j;
 
 	WRITE_INT(4, MAGIC);
-	WRITE_INT(1, VERSION);
+	WRITE_INT(1, MANIFEST_VERSION);
 	WRITE_INT(1, 16);
 	WRITE_INT(2, 0);
 
@@ -333,6 +354,8 @@ write_manifest(gzFile f, const struct manifest *mf)
 		WRITE_INT(4, mf->file_infos[i].index);
 		WRITE_BYTES(mf->hash_size, mf->file_infos[i].hash);
 		WRITE_INT(4, mf->file_infos[i].size);
+		WRITE_INT(8, mf->file_infos[i].mtime);
+		WRITE_INT(8, mf->file_infos[i].ctime);
 	}
 
 	WRITE_INT(4, mf->n_objects);
@@ -353,24 +376,58 @@ error:
 }
 
 static int
-verify_object(struct manifest *mf, struct object *obj,
-              struct hashtable *hashed_files)
+verify_object(struct conf *conf, struct manifest *mf, struct object *obj,
+              struct hashtable *stated_files, struct hashtable *hashed_files)
 {
 	uint32_t i;
 	struct file_info *fi;
 	struct file_hash *actual;
+	struct file_stats *st;
 	struct mdfour hash;
 	int result;
+	char *path;
 
 	for (i = 0; i < obj->n_file_info_indexes; i++) {
 		fi = &mf->file_infos[obj->file_info_indexes[i]];
-		actual = hashtable_search(hashed_files, mf->files[fi->index]);
+		path = mf->files[fi->index];
+		st = hashtable_search(hashed_files, path);
+		if (!st) {
+			struct stat file_stat;
+			if (x_stat(path, &file_stat) != 0) {
+				return 0;
+			}
+			st = x_malloc(sizeof(*st));
+			st->size = file_stat.st_size;
+			st->mtime = file_stat.st_mtime;
+			st->ctime = file_stat.st_ctime;
+			hashtable_insert(stated_files, x_strdup(path), st);
+		}
+
+		if (conf->sloppiness & SLOPPY_FILE_STAT_MATCHES) {
+			/*
+			 * st->ctime is sometimes 0, so we can't check that both st->ctime and
+			 * st->mtime are greater than time_of_compilation. But it's sufficient to
+			 * check that either is.
+			 */
+			if (fi->size == st->size
+			    && fi->mtime == st->mtime
+			    && fi->ctime == st->ctime
+			    && MAX(st->mtime, st->ctime) >= time_of_compilation) {
+				cc_log("size/mtime/ctime hit for %s", path);
+				continue;
+			}
+			else {
+				cc_log("size/mtime/ctime miss for %s", path);
+			}
+		}
+
+		actual = hashtable_search(hashed_files, path);
 		if (!actual) {
 			actual = x_malloc(sizeof(*actual));
 			hash_start(&hash);
-			result = hash_source_code_file(&hash, mf->files[fi->index]);
+			result = hash_source_code_file(conf, &hash, path);
 			if (result & HASH_SOURCE_CODE_ERROR) {
-				cc_log("Failed hashing %s", mf->files[fi->index]);
+				cc_log("Failed hashing %s", path);
 				free(actual);
 				return 0;
 			}
@@ -380,7 +437,7 @@ verify_object(struct manifest *mf, struct object *obj,
 			}
 			hash_result_as_bytes(&hash, actual->hash);
 			actual->size = hash.totalN;
-			hashtable_insert(hashed_files, x_strdup(mf->files[fi->index]), actual);
+			hashtable_insert(hashed_files, x_strdup(path), actual);
 		}
 		if (memcmp(fi->hash, actual->hash, mf->hash_size) != 0
 		    || fi->size != actual->size) {
@@ -456,10 +513,30 @@ get_file_hash_index(struct manifest *mf,
 	struct file_info fi;
 	uint32_t *fi_index;
 	uint32_t n;
+	struct stat file_stat;
 
 	fi.index = get_include_file_index(mf, path, mf_files);
 	memcpy(fi.hash, file_hash->hash, sizeof(fi.hash));
 	fi.size = file_hash->size;
+
+	/*
+	 * file_stat.st_{m,c}time has a resolution of 1 second, so we can cache the
+	 * file's mtime and ctime only if they're at least one second older than
+	 * time_of_compilation.
+	 *
+	 * st->ctime may be 0, so we have to check time_of_compilation against
+	 * MAX(mtime, ctime).
+	 */
+
+	if (stat(path, &file_stat) != -1
+	    && time_of_compilation > MAX(file_stat.st_mtime, file_stat.st_ctime)) {
+		fi.mtime = file_stat.st_mtime;
+		fi.ctime = file_stat.st_ctime;
+	}
+	else {
+		fi.mtime = -1;
+		fi.ctime = -1;
+	}
 
 	fi_index = hashtable_search(mf_file_infos, &fi);
 	if (fi_index) {
@@ -532,12 +609,13 @@ add_object_entry(struct manifest *mf,
  * on failure.
  */
 struct file_hash *
-manifest_get(const char *manifest_path)
+manifest_get(struct conf *conf, const char *manifest_path)
 {
 	int fd;
 	gzFile f = NULL;
 	struct manifest *mf = NULL;
 	struct hashtable *hashed_files = NULL; /* path --> struct file_hash */
+	struct hashtable *stated_files = NULL; /* path --> struct file_stats */
 	uint32_t i;
 	struct file_hash *fh = NULL;
 
@@ -560,10 +638,12 @@ manifest_get(const char *manifest_path)
 	}
 
 	hashed_files = create_hashtable(1000, hash_from_string, strings_equal);
+	stated_files = create_hashtable(1000, hash_from_string, strings_equal);
 
 	/* Check newest object first since it's a bit more likely to match. */
 	for (i = mf->n_objects; i > 0; i--) {
-		if (verify_object(mf, &mf->objects[i - 1], hashed_files)) {
+		if (verify_object(conf, mf, &mf->objects[i - 1],
+		                  stated_files, hashed_files)) {
 			fh = x_malloc(sizeof(*fh));
 			*fh = mf->objects[i - 1].hash;
 			goto out;
@@ -573,6 +653,9 @@ manifest_get(const char *manifest_path)
 out:
 	if (hashed_files) {
 		hashtable_destroy(hashed_files, 1);
+	}
+	if (stated_files) {
+		hashtable_destroy(stated_files, 1);
 	}
 	if (f) {
 		gzclose(f);
@@ -652,12 +735,8 @@ manifest_put(const char *manifest_path, struct file_hash *object_hash,
 		mf = create_empty_manifest();
 	}
 
-	tmp_file = format("%s.tmp.%s", manifest_path, tmp_string());
-	fd2 = safe_open(tmp_file);
-	if (fd2 == -1) {
-		cc_log("Failed to open %s", tmp_file);
-		goto out;
-	}
+	tmp_file = format("%s.tmp", manifest_path);
+	fd2 = create_tmp_fd(&tmp_file);
 	f2 = gzdopen(fd2, "wb");
 	if (!f2) {
 		cc_log("Failed to gzdopen %s", tmp_file);
@@ -688,6 +767,83 @@ out:
 	}
 	if (f2) {
 		gzclose(f2);
+	}
+	return ret;
+}
+
+bool
+manifest_dump(const char *manifest_path, FILE *stream)
+{
+	struct manifest *mf = NULL;
+	int fd;
+	gzFile f = NULL;
+	bool ret = false;
+	unsigned i, j;
+
+	fd = open(manifest_path, O_RDONLY | O_BINARY);
+	if (fd == -1) {
+		fprintf(stderr, "No such manifest file: %s\n", manifest_path);
+		goto out;
+	}
+	f = gzdopen(fd, "rb");
+	if (!f) {
+		fprintf(stderr, "Failed to dzopen manifest file\n");
+		close(fd);
+		goto out;
+	}
+	mf = read_manifest(f);
+	if (!mf) {
+		fprintf(stderr, "Error reading manifest file\n");
+		goto out;
+	}
+
+	fprintf(stream, "Magic: %c%c%c%c\n",
+	        (MAGIC >> 24) & 0xFF,
+	        (MAGIC >> 16) & 0xFF,
+	        (MAGIC >> 8) & 0xFF,
+	        MAGIC & 0xFF);
+	fprintf(stream, "Version: %u\n", mf->version);
+	fprintf(stream, "Hash size: %u\n", (unsigned)mf->hash_size);
+	fprintf(stream, "Reserved field: %u\n", (unsigned)mf->reserved);
+	fprintf(stream, "File paths (%u):\n", (unsigned)mf->n_files);
+	for (i = 0; i < mf->n_files; ++i) {
+		fprintf(stream, "  %u: %s\n", i, mf->files[i]);
+	}
+	fprintf(stream, "File infos (%u):\n", (unsigned)mf->n_file_infos);
+	for (i = 0; i < mf->n_file_infos; ++i) {
+		char *hash;
+		fprintf(stream, "  %u:\n", i);
+		fprintf(stream, "    Path index: %u\n", mf->file_infos[i].index);
+		hash = format_hash_as_string(mf->file_infos[i].hash, -1);
+		fprintf(stream, "    Hash: %s\n", hash);
+		free(hash);
+		fprintf(stream, "    Size: %u\n", mf->file_infos[i].size);
+		fprintf(stream, "    Mtime: %lld\n", (long long)mf->file_infos[i].mtime);
+		fprintf(stream, "    Ctime: %lld\n", (long long)mf->file_infos[i].ctime);
+	}
+	fprintf(stream, "Results (%u):\n", (unsigned)mf->n_objects);
+	for (i = 0; i < mf->n_objects; ++i) {
+		char *hash;
+		fprintf(stream, "  %u:\n", i);
+		fprintf(stream, "    File hash indexes:");
+		for (j = 0; j < mf->objects[i].n_file_info_indexes; ++j) {
+			fprintf(stream, " %u", mf->objects[i].file_info_indexes[j]);
+		}
+		fprintf(stream, "\n");
+		hash = format_hash_as_string(mf->objects[i].hash.hash, -1);
+		fprintf(stream, "    Hash: %s\n", hash);
+		free(hash);
+		fprintf(stream, "    Size: %u\n", (unsigned)mf->objects[i].hash.size);
+	}
+
+	ret = true;
+
+out:
+	if (mf) {
+		free_manifest(mf);
+	}
+	if (f) {
+		gzclose(f);
 	}
 	return ret;
 }

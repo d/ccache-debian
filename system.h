@@ -37,6 +37,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -46,6 +47,8 @@
 #include <time.h>
 #include <unistd.h>
 #include <utime.h>
+
+extern char **environ;
 
 #if !HAVE_VSNPRINTF
   int rpl_vsnprintf(char *, size_t, const char *, va_list);

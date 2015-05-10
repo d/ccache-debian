@@ -5,7 +5,7 @@ Source: http://samba.org/ftp/ccache/
 
 Files: *
 Copyright: 2002-2007 Andrew Tridgell <tridge@samba.org>
-           2009-2012 Joel Rosdahl <joel@rosdahl.net>
+           2009-2015 Joel Rosdahl <joel@rosdahl.net>
 License: GPL-3+
  This program is free software; you can redistribute it and/or modify it under
  the terms of the GNU General Public License as published by the Free Software
@@ -22,31 +22,12 @@ License: GPL-3+
  .
  On Debian systems, the full text of the GNU General Public License version 3
  can be found in the file `/usr/share/common-licenses/GPL-3'.
-
-Files: mdfour.c
-Copyright: 1997-1998 Andrew Tridgell <tridge@samba.org>
-License: GPL-3+
- This program is free software; you can redistribute it and/or modify it under
- the terms of the GNU General Public License as published by the Free Software
- Foundation; either version 2 of the License, or (at your option) any later
- version.
- .
- This program is distributed in the hope that it will be useful, but WITHOUT ANY
- WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- PARTICULAR PURPOSE. See the GNU General Public License for more details.
- .
- You should have received a copy of the GNU General Public License along with
- this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
- Street, Fifth Floor, Boston, MA 02110-1301 USA
- .
- On Debian systems, the full text of the GNU General Public License version 2
- can be found in the file `/usr/share/common-licenses/GPL-2'.
 
 Files: debian/*
 Copyright: 2002-2003 Paul Russell <prussell@debian.org>
            2004-2009 Francois Marier <francois@debian.org>
            2009-2010 Y Giridhar Appaji Nag <appaji@debian.org>
-           2010-2012 Joel Rosdahl <joel@debian.org>
+           2010-2015 Joel Rosdahl <joel@debian.org>
 License: GPL-3+
  This program is free software; you can redistribute it and/or modify it under
  the terms of the GNU General Public License as published by the Free Software
@@ -64,10 +45,10 @@ License: GPL-3+
  On Debian systems, the full text of the GNU General Public License version 3
  can be found in the file `/usr/share/common-licenses/GPL-3'.
 
-Files: getopt_long.[hc]
+Files: getopt_long.*
 Copyright: 1987, 1993, 1994 The Regents of the University of California
            2003 PostgreSQL Global Development Group
-License: BSD
+License: BSD-3-clause
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions
  are met:
@@ -92,9 +73,9 @@ License: BSD
  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
-Files: hashtable*.[hc]
+Files: hashtable*
 Copyright:  2002, 2004 Christopher Clark
-License: BSD
+License: BSD-3-clause
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
  .
@@ -121,15 +102,15 @@ License: BSD
  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  POSSIBILITY OF SUCH DAMAGE.
 
-Files: murmurhashneutral2.[hc]
+Files: murmurhashneutral2.*
 Copyright: Released to the public domain by Austin Appleby
-License: PD
+License: public-domain
  Released to the public domain by Austin Appleby.
 
-Files: snprintf.c m4/snprintf.m4
+Files: snprintf.c
 Copyright: 1995 Patrick Powell
            2008 Holger Weiss
-License:
+License: custom
  This code is based on code written by Patrick Powell <papowell@astart.com>.
  It may be used for any purpose as long as this notice remains intact on all
  source code distributions.
@@ -142,8 +123,8 @@ License:
  However, this is not a requirement for using or redistributing (possibly
  modified) versions of this file, nor is leaving this notice intact mandatory.
 
-Files: zlib/*.[hc]
-Copyright: 1995-2005 Jean-loup Gailly and Mark Adler
+Files: zlib/*
+Copyright: 1995-2013 Jean-loup Gailly and Mark Adler
 License: ZLIB
  This software is provided 'as-is', without any express or implied
  warranty.  In no event will the authors be held liable for any damages

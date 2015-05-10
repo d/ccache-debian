@@ -44,6 +44,11 @@ foreach my $dir (<$old_gcc_dir/*>, <$new_gcc_dir/*>) {
     }
 }
 
+# Find existing clang variants.
+consider "clang";
+consider "clang++";
+consider "llvm-clang";
+
 # Find existing symlinks.
 foreach (<$ccache_dir/*>) {
     if (-l) {

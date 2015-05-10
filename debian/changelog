@@ -1,3 +1,12 @@
+ccache (3.2.2-1) unstable; urgency=medium
+
+  * New upstream release 3.2.2 (closes: #248892, #778388)
+  * Update debian/copyright to match ccache 3.2.2
+  * Create symlinks for clang variants in /usr/lib/ccache (closes: #624589)
+  * Switch package maintainer to Joel Rosdahl
+
+ -- Joel Rosdahl <joel@debian.org>  Sun, 10 May 2015 15:00:50 +0200
+
 ccache (3.1.10-1) unstable; urgency=medium
 
   * Update Vcs-git and Vcs-Browser to use anonscm.debian.org
@@ -390,4 +399,3 @@ ccache (1.2-1) unstable; urgency=low
   * Initial Release.
 
  -- Paul Russell <prussell@debian.org>  Sun, 31 Mar 2002 14:08:57 +0200
-

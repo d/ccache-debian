@@ -1,3 +1,10 @@
+ccache (3.2.3-1) unstable; urgency=medium
+
+  * New upstream release 3.2.3
+  * Use stand-alone license paragraphs in debian/copyright
+
+ -- Joel Rosdahl <joel@debian.org>  Sun, 16 Aug 2015 15:45:28 +0200
+
 ccache (3.2.2-2) unstable; urgency=medium
 
   * Correct placement of system configuration file (closes: #785409)

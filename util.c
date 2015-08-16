@@ -74,7 +74,7 @@ log_prefix(bool log_updated_time)
 	if (log_updated_time) {
 		gettimeofday(&tv, NULL);
 #ifdef __MINGW64_VERSION_MAJOR
-		tm = localtime((time_t*)&tv.tv_sec);
+		tm = localtime((time_t *)&tv.tv_sec);
 #else
 		tm = localtime(&tv.tv_sec);
 #endif
@@ -118,7 +118,7 @@ warn_log_fail(void)
 	/* Note: Can't call fatal() since that would lead to recursion. */
 	fprintf(stderr, "ccache: error: Failed to write to %s: %s\n",
 	        conf->log_file, strerror(errno));
-	exit(EXIT_FAILURE);
+	x_exit(EXIT_FAILURE);
 }
 
 static void
@@ -180,8 +180,9 @@ cc_log_argv(const char *prefix, char **argv)
 	fputs(prefix, logfile);
 	print_command(logfile, argv);
 	rc = fflush(logfile);
-	if (rc)
+	if (rc) {
 		warn_log_fail();
+	}
 }
 
 /* something went badly wrong! */
@@ -198,7 +199,7 @@ fatal(const char *format, ...)
 	cc_log("FATAL: %s", msg);
 	fprintf(stderr, "ccache: error: %s\n", msg);
 
-	exit(1);
+	x_exit(1);
 }
 
 /*
@@ -568,22 +569,22 @@ get_hostname(void)
 		DWORD dw = last_error;
 
 		FormatMessage(
-			FORMAT_MESSAGE_ALLOCATE_BUFFER |
-			FORMAT_MESSAGE_FROM_SYSTEM |
-			FORMAT_MESSAGE_IGNORE_INSERTS,
-			NULL, dw, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			(LPTSTR) &lpMsgBuf, 0, NULL);
+		  FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		  FORMAT_MESSAGE_FROM_SYSTEM |
+		  FORMAT_MESSAGE_IGNORE_INSERTS,
+		  NULL, dw, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		  (LPTSTR) &lpMsgBuf, 0, NULL);
 
 		lpDisplayBuf = (LPVOID) LocalAlloc(
-			LMEM_ZEROINIT,
-			(lstrlen((LPCTSTR) lpMsgBuf) + lstrlen((LPCTSTR) __FILE__) + 200)
-			* sizeof(TCHAR));
+		  LMEM_ZEROINIT,
+		  (lstrlen((LPCTSTR) lpMsgBuf) + lstrlen((LPCTSTR) __FILE__) + 200)
+		  * sizeof(TCHAR));
 		_snprintf((LPTSTR) lpDisplayBuf,
 		          LocalSize(lpDisplayBuf) / sizeof(TCHAR),
 		          TEXT("%s failed with error %d: %s"), __FILE__, dw,
 		          lpMsgBuf);
 
-		cc_log("can't get hostname OS returned error: %s", (char*)lpDisplayBuf);
+		cc_log("can't get hostname OS returned error: %s", (char *)lpDisplayBuf);
 
 		LocalFree(lpMsgBuf);
 		LocalFree(lpDisplayBuf);
@@ -633,10 +634,10 @@ format_hash_as_string(const unsigned char *hash, int size)
 }
 
 char const CACHEDIR_TAG[] =
-	"Signature: 8a477f597d28d172789f06886806bc55\n"
-	"# This file is a cache directory tag created by ccache.\n"
-	"# For information about cache directory tags, see:\n"
-	"#	http://www.brynosaurus.com/cachedir/\n";
+  "Signature: 8a477f597d28d172789f06886806bc55\n"
+  "# This file is a cache directory tag created by ccache.\n"
+  "# For information about cache directory tags, see:\n"
+  "#	http://www.brynosaurus.com/cachedir/\n";
 
 int
 create_cachedirtag(const char *dir)
@@ -689,9 +690,7 @@ format(const char *format, ...)
 	return ptr;
 }
 
-/*
-  this is like strdup() but dies if the malloc fails
-*/
+/* This is like strdup() but dies if the malloc fails. */
 char *
 x_strdup(const char *s)
 {
@@ -703,9 +702,7 @@ x_strdup(const char *s)
 	return ret;
 }
 
-/*
-  this is like strndup() but dies if the malloc fails
-*/
+/* This is like strndup() but dies if the malloc fails. */
 char *
 x_strndup(const char *s, size_t n)
 {
@@ -733,9 +730,7 @@ x_strndup(const char *s, size_t n)
 	return ret;
 }
 
-/*
-  this is like malloc() but dies if the malloc fails
-*/
+/* This is like malloc() but dies if the malloc fails. */
 void *
 x_malloc(size_t size)
 {
@@ -773,9 +768,7 @@ x_calloc(size_t nmemb, size_t size)
 	return ret;
 }
 
-/*
-  this is like realloc() but dies if the malloc fails
-*/
+/* This is like realloc() but dies if the malloc fails. */
 void *
 x_realloc(void *ptr, size_t size)
 {
@@ -1086,10 +1079,8 @@ parse_size_with_suffix(const char *str, uint64_t *size)
 }
 
 
-/*
-  a sane realpath() function, trying to cope with stupid path limits and
-  a broken API
-*/
+/* A sane realpath() function, trying to cope with stupid path limits and a
+ * broken API. */
 char *
 x_realpath(const char *path)
 {
@@ -1105,8 +1096,8 @@ x_realpath(const char *path)
 	p = realpath(path, ret);
 #elif defined(_WIN32)
 	path_handle = CreateFile(
-		path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
-		FILE_ATTRIBUTE_NORMAL, NULL);
+	  path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
+	  FILE_ATTRIBUTE_NORMAL, NULL);
 	if (INVALID_HANDLE_VALUE != path_handle) {
 		GetFinalPathNameByHandle(path_handle, ret, maxlen, FILE_NAME_NORMALIZED);
 		CloseHandle(path_handle);
@@ -1170,7 +1161,7 @@ strtok_r(char *str, const char *delim, char **saveptr)
 	ret = strtok(str, delim);
 	if (ret) {
 		char *save = ret;
-		while (*save++);
+		while (*save++) ;
 		if ((len + 1) == (intptr_t) (save - str))
 			save--;
 		*saveptr = save;
@@ -1425,9 +1416,24 @@ update_mtime(const char *path)
 }
 
 /*
+ * If exit() already has been called, call _exit(), otherwise exit(). This is
+ * used to avoid calling exit() inside an atexit handler.
+ */
+void
+x_exit(int status)
+{
+	static bool first_time = true;
+	if (first_time) {
+		first_time = false;
+		exit(status);
+	} else {
+		_exit(status);
+	}
+}
+
+/*
  * Rename oldpath to newpath (deleting newpath).
  */
-
 int
 x_rename(const char *oldpath, const char *newpath)
 {
@@ -1443,22 +1449,22 @@ x_rename(const char *oldpath, const char *newpath)
 		DWORD dw = GetLastError();
 
 		FormatMessage(
-			FORMAT_MESSAGE_ALLOCATE_BUFFER |
-			FORMAT_MESSAGE_FROM_SYSTEM |
-			FORMAT_MESSAGE_IGNORE_INSERTS,
-			NULL, dw, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR) &lpMsgBuf,
-			0, NULL);
+		  FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		  FORMAT_MESSAGE_FROM_SYSTEM |
+		  FORMAT_MESSAGE_IGNORE_INSERTS,
+		  NULL, dw, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR) &lpMsgBuf,
+		  0, NULL);
 
 		lpDisplayBuf = (LPVOID) LocalAlloc(
-			LMEM_ZEROINIT,
-			(lstrlen((LPCTSTR) lpMsgBuf) + lstrlen((LPCTSTR) __FILE__) + 40)
-			* sizeof(TCHAR));
+		  LMEM_ZEROINIT,
+		  (lstrlen((LPCTSTR) lpMsgBuf) + lstrlen((LPCTSTR) __FILE__) + 40)
+		  * sizeof(TCHAR));
 		_snprintf((LPTSTR) lpDisplayBuf,
 		          LocalSize(lpDisplayBuf) / sizeof(TCHAR),
 		          TEXT("%s failed with error %d: %s"), __FILE__, dw, lpMsgBuf);
 
 		cc_log("can't rename file %s to %s OS returned error: %s",
-		       oldpath, newpath, (char*) lpDisplayBuf);
+		       oldpath, newpath, (char *) lpDisplayBuf);
 
 		LocalFree(lpMsgBuf);
 		LocalFree(lpDisplayBuf);

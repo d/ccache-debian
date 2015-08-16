@@ -33,6 +33,7 @@ struct compopt {
 
 static const struct compopt compopts[] = {
 	{"--param",         TAKES_ARG},
+	{"--save-temps",    TOO_HARD},
 	{"--serialize-diagnostics", TAKES_ARG | TAKES_PATH},
 	{"-A",              TAKES_ARG},
 	{"-D",              AFFECTS_CPP | TAKES_ARG | TAKES_CONCAT_ARG},
@@ -60,7 +61,6 @@ static const struct compopt compopts[] = {
 	{"-fplugin=libcc1plugin", TOO_HARD}, /* interaction with GDB */
 	{"-frepo",          TOO_HARD},
 	{"-fworking-directory", AFFECTS_CPP},
-	{"-gsplit-dwarf",   TOO_HARD}, /* generates a .dwo file at the same time */
 	{"-idirafter",      AFFECTS_CPP | TAKES_ARG | TAKES_PATH},
 	{"-iframework",     AFFECTS_CPP | TAKES_ARG | TAKES_CONCAT_ARG | TAKES_PATH},
 	{"-imacros",        AFFECTS_CPP | TAKES_ARG | TAKES_PATH},
@@ -105,8 +105,8 @@ find(const char *option)
 	struct compopt key;
 	key.name = option;
 	return bsearch(
-		&key, compopts, sizeof(compopts) / sizeof(compopts[0]),
-		sizeof(compopts[0]), compare_compopts);
+	         &key, compopts, sizeof(compopts) / sizeof(compopts[0]),
+	         sizeof(compopts[0]), compare_compopts);
 }
 
 static const struct compopt *
@@ -115,8 +115,8 @@ find_prefix(const char *option)
 	struct compopt key;
 	key.name = option;
 	return bsearch(
-		&key, compopts, sizeof(compopts) / sizeof(compopts[0]),
-		sizeof(compopts[0]), compare_prefix_compopts);
+	         &key, compopts, sizeof(compopts) / sizeof(compopts[0]),
+	         sizeof(compopts[0]), compare_prefix_compopts);
 }
 
 /* Runs fn on the first two characters of option. */

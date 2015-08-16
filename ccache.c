@@ -36,40 +36,40 @@
 #define TO_STRING(x) STRINGIFY(x)
 
 static const char VERSION_TEXT[] =
-MYNAME " version %s\n"
-"\n"
-"Copyright (C) 2002-2007 Andrew Tridgell\n"
-"Copyright (C) 2009-2015 Joel Rosdahl\n"
-"\n"
-"This program is free software; you can redistribute it and/or modify it under\n"
-"the terms of the GNU General Public License as published by the Free Software\n"
-"Foundation; either version 3 of the License, or (at your option) any later\n"
-"version.\n";
+  MYNAME " version %s\n"
+  "\n"
+  "Copyright (C) 2002-2007 Andrew Tridgell\n"
+  "Copyright (C) 2009-2015 Joel Rosdahl\n"
+  "\n"
+  "This program is free software; you can redistribute it and/or modify it under\n"
+  "the terms of the GNU General Public License as published by the Free Software\n"
+  "Foundation; either version 3 of the License, or (at your option) any later\n"
+  "version.\n";
 
 static const char USAGE_TEXT[] =
-"Usage:\n"
-"    " MYNAME " [options]\n"
-"    " MYNAME " compiler [compiler options]\n"
-"    compiler [compiler options]          (via symbolic link)\n"
-"\n"
-"Options:\n"
-"    -c, --cleanup         delete old files and recalculate size counters\n"
-"                          (normally not needed as this is done automatically)\n"
-"    -C, --clear           clear the cache completely (except configuration)\n"
-"    -F, --max-files=N     set maximum number of files in cache to N (use 0 for\n"
-"                          no limit)\n"
-"    -M, --max-size=SIZE   set maximum size of cache to SIZE (use 0 for no\n"
-"                          limit); available suffixes: k, M, G, T (decimal) and\n"
-"                          Ki, Mi, Gi, Ti (binary); default suffix: G\n"
-"    -o, --set-config=K=V  set configuration key K to value V\n"
-"    -p, --print-config    print current configuration options\n"
-"    -s, --show-stats      show statistics summary\n"
-"    -z, --zero-stats      zero statistics counters\n"
-"\n"
-"    -h, --help            print this help text\n"
-"    -V, --version         print version and copyright information\n"
-"\n"
-"See also <http://ccache.samba.org>.\n";
+  "Usage:\n"
+  "    " MYNAME " [options]\n"
+  "    " MYNAME " compiler [compiler options]\n"
+  "    compiler [compiler options]          (via symbolic link)\n"
+  "\n"
+  "Options:\n"
+  "    -c, --cleanup         delete old files and recalculate size counters\n"
+  "                          (normally not needed as this is done automatically)\n"
+  "    -C, --clear           clear the cache completely (except configuration)\n"
+  "    -F, --max-files=N     set maximum number of files in cache to N (use 0 for\n"
+  "                          no limit)\n"
+  "    -M, --max-size=SIZE   set maximum size of cache to SIZE (use 0 for no\n"
+  "                          limit); available suffixes: k, M, G, T (decimal) and\n"
+  "                          Ki, Mi, Gi, Ti (binary); default suffix: G\n"
+  "    -o, --set-config=K=V  set configuration key K to value V\n"
+  "    -p, --print-config    print current configuration options\n"
+  "    -s, --show-stats      show statistics summary\n"
+  "    -z, --zero-stats      zero statistics counters\n"
+  "\n"
+  "    -h, --help            print this help text\n"
+  "    -V, --version         print version and copyright information\n"
+  "\n"
+  "See also <http://ccache.samba.org>.\n";
 
 /* Global configuration data. */
 struct conf *conf = NULL;
@@ -98,8 +98,13 @@ static char *output_dep;
 /* The path to the coverage file (implicit when using -ftest-coverage). */
 static char *output_cov;
 
-/* Diagnostic generation information (clang). */
+/* Diagnostic generation information (clang). Contains pathname if not
+ * NULL. */
 static char *output_dia = NULL;
+
+/* -gsplit-dwarf support: Split dwarf information (GCC 4.8 and
+ *  up). Contains pathname if not NULL. */
+static char *output_dwo = NULL;
 
 /*
  * Name (represented as a struct file_hash) of the file containing the cached
@@ -136,6 +141,23 @@ static char *cached_cov;
  * (cachedir/a/b/cdef[...]-size.dia).
  */
 static char *cached_dia;
+
+/*
+ * -gsplit-dwarf support:
+ * Full path to the file containing the split dwarf (for GCC 4.8 and
+ * above)
+ * (cachedir/a/b/cdef[...]-size.dwo).
+ *
+ * contains NULL if -gsplit-dwarf is not given.
+ */
+static char *cached_dwo;
+
+/*
+ * -gsplit-dwarf support:
+ * using_split_dwarf is true if "-gsplit-dwarf" is given to the
+ * compiler (GCC 4.8 and up).
+ */
+bool using_split_dwarf = false;
 
 /*
  * Full path to the file containing the manifest
@@ -319,6 +341,7 @@ signal_handler(int signo)
 {
 	(void)signo;
 	clean_up_pending_tmp_files();
+	_exit(1);
 }
 
 static void
@@ -513,8 +536,10 @@ remember_include_file(char *path, struct mdfour *cpp_hash)
 	return;
 
 failure:
-	cc_log("Disabling direct mode");
-	conf->direct_mode = false;
+	if (conf->direct_mode) {
+		cc_log("Disabling direct mode");
+		conf->direct_mode = false;
+	}
 	/* Fall through. */
 ignore:
 	free(path);
@@ -600,8 +625,9 @@ process_preprocessed_file(struct mdfour *hash, const char *path)
 	end = data + size;
 	p = data;
 	q = data;
-	while (q < end - 7) { /* There must be at least 7 characters (# 1 "x") left
-	                         to potentially find an include file path. */
+	/* There must be at least 7 characters (# 1 "x") left to potentially find an
+	 * include file path. */
+	while (q < end - 7) {
 		/*
 		 * Check if we look at a line containing the file name of an included file.
 		 * At least the following formats exist (where N is a positive integer):
@@ -625,7 +651,7 @@ process_preprocessed_file(struct mdfour *hash, const char *path)
 		 * preprocessing as well, for instance "#    pragma".
 		 */
 		if (q[0] == '#'
-		        /* GCC: */
+		    /* GCC: */
 		    && ((q[1] == ' ' && q[2] >= '0' && q[2] <= '9')
 		        /* GCC precompiled header: */
 		        || (q[1] == 'p'
@@ -796,6 +822,7 @@ static void
 to_cache(struct args *args)
 {
 	char *tmp_stdout, *tmp_stderr, *tmp_aux, *tmp_cov;
+	char *tmp_dwo = NULL;
 	struct stat st;
 	int status, tmp_stdout_fd, tmp_stderr_fd;
 	FILE *f;
@@ -816,6 +843,16 @@ to_cache(struct args *args)
 		free(tmp_aux);
 	} else {
 		tmp_cov = NULL;
+	}
+
+	/* GCC (at least 4.8 and 4.9) forms the .dwo file name by removing everything
+	 * after (and including) the last "." from the object file name and then
+	 * appending ".dwo".
+	 */
+	if (using_split_dwarf) {
+		char *base_name = remove_extension(output_obj);
+		tmp_dwo = format("%s.dwo", base_name);
+		free(base_name);
 	}
 
 	args_add(args, "-o");
@@ -851,6 +888,7 @@ to_cache(struct args *args)
 		if (tmp_cov) {
 			tmp_unlink(tmp_cov);
 		}
+		tmp_unlink(tmp_dwo);
 		failed();
 	}
 	if (st.st_size != 0) {
@@ -861,6 +899,7 @@ to_cache(struct args *args)
 		if (tmp_cov) {
 			tmp_unlink(tmp_cov);
 		}
+		tmp_unlink(tmp_dwo);
 		failed();
 	}
 	tmp_unlink(tmp_stdout);
@@ -917,17 +956,19 @@ to_cache(struct args *args)
 			close(fd);
 			tmp_unlink(tmp_stderr);
 
-			exit(status);
+			x_exit(status);
 		}
 
 		tmp_unlink(tmp_stderr);
 		if (tmp_cov) {
 			tmp_unlink(tmp_cov);
 		}
+		tmp_unlink(tmp_dwo);
+
 		failed();
 	}
 
-	if (x_stat(output_obj, &st) != 0) {
+	if (stat(output_obj, &st) != 0) {
 		cc_log("Compiler didn't produce an object file");
 		stats_update(STATS_NOOUTPUT);
 		failed();
@@ -938,14 +979,27 @@ to_cache(struct args *args)
 		failed();
 	}
 
+	if (using_split_dwarf) {
+		if (stat(tmp_dwo, &st) != 0) {
+			cc_log("Compiler didn't produce a split dwarf file");
+			stats_update(STATS_NOOUTPUT);
+			failed();
+		}
+		if (st.st_size == 0) {
+			cc_log("Compiler produced an empty split dwarf file");
+			stats_update(STATS_EMPTYOUTPUT);
+			failed();
+		}
+	}
+
 	if (x_stat(tmp_stderr, &st) != 0) {
 		stats_update(STATS_ERROR);
 		failed();
 	}
 	if (st.st_size > 0) {
 		if (move_uncompressed_file(
-			    tmp_stderr, cached_stderr,
-			    conf->compression ? conf->compression_level : 0) != 0) {
+		      tmp_stderr, cached_stderr,
+		      conf->compression ? conf->compression_level : 0) != 0) {
 			cc_log("Failed to move %s to %s: %s", tmp_stderr, cached_stderr,
 			       strerror(errno));
 			stats_update(STATS_ERROR);
@@ -994,6 +1048,13 @@ to_cache(struct args *args)
 	}
 
 	put_file_in_cache(output_obj, cached_obj);
+
+	if (using_split_dwarf) {
+		assert(tmp_dwo);
+		assert(cached_dwo);
+		put_file_in_cache(tmp_dwo, cached_dwo);
+	}
+
 	if (generating_dependencies) {
 		put_file_in_cache(output_dep, cached_dep);
 	}
@@ -1029,6 +1090,7 @@ to_cache(struct args *args)
 	free(tmp_stderr);
 	free(tmp_stdout);
 	free(tmp_cov);
+	free(tmp_dwo);
 }
 
 /*
@@ -1045,9 +1107,9 @@ get_object_name_from_cpp(struct args *args, struct mdfour *hash)
 	struct file_hash *result;
 
 	/* ~/hello.c -> tmp.hello.123.i
-	   limit the basename to 10
-	   characters in order to cope with filesystem with small
-	   maximum filename length limits */
+	 * limit the basename to 10
+	 * characters in order to cope with filesystem with small
+	 * maximum filename length limits */
 	input_base = basename(input_file);
 	tmp = strchr(input_base, '.');
 	if (tmp) {
@@ -1153,6 +1215,13 @@ update_cached_result_globals(struct file_hash *hash)
 	cached_dep = get_path_in_cache(object_name, ".d");
 	cached_cov = get_path_in_cache(object_name, ".gcno");
 	cached_dia = get_path_in_cache(object_name, ".dia");
+
+	if (using_split_dwarf) {
+		cached_dwo = get_path_in_cache(object_name, ".dwo");
+	} else {
+		cached_dwo = NULL;
+	}
+
 	stats_file = format("%s/%c/stats", conf->cache_dir, object_name[0]);
 	free(object_name);
 }
@@ -1179,7 +1248,7 @@ hash_compiler(struct mdfour *hash, struct stat *st, const char *path,
 		hash_file(hash, path);
 	} else { /* command string */
 		if (!hash_multicommand_output(
-			    hash, conf->compiler_check, orig_args->argv[0])) {
+		      hash, conf->compiler_check, orig_args->argv[0])) {
 			fatal("Failure running compiler check command: %s", conf->compiler_check);
 		}
 	}
@@ -1355,16 +1424,16 @@ calculate_object_hash(struct args *args, struct mdfour *hash, int direct_mode)
 		}
 
 		/* The -fdebug-prefix-map option may be used in combination with
-		   CCACHE_BASEDIR to reuse results across different directories. Skip it
-		   from hashing. */
+		 * CCACHE_BASEDIR to reuse results across different directories. Skip it
+		 * from hashing. */
 		if (str_startswith(args->argv[i], "-fdebug-prefix-map=")) {
 			continue;
 		}
 
 		/* When using the preprocessor, some arguments don't contribute
-		   to the hash. The theory is that these arguments will change
-		   the output of -E if they are going to have any effect at
-		   all. For precompiled headers this might not be the case. */
+		 * to the hash. The theory is that these arguments will change
+		 * the output of -E if they are going to have any effect at
+		 * all. For precompiled headers this might not be the case. */
 		if (!direct_mode && !output_is_precompiled_header
 		    && !using_precompiled_header) {
 			if (compopt_affects_cpp(args->argv[i])) {
@@ -1414,7 +1483,7 @@ calculate_object_hash(struct args *args, struct mdfour *hash, int direct_mode)
 		}
 		if (p && x_stat(p, &st) == 0) {
 			/* If given an explicit specs file, then hash that file,
-			   but don't include the path to it in the hash. */
+			 * but don't include the path to it in the hash. */
 			hash_delimiter(hash, "specs");
 			hash_compiler(hash, &st, p, false);
 			continue;
@@ -1469,6 +1538,7 @@ calculate_object_hash(struct args *args, struct mdfour *hash, int direct_mode)
 		hash_delimiter(hash, "-fprofile-dir");
 		hash_string(hash, profile_dir);
 	}
+
 	if (profile_use) {
 		/* Calculate gcda name */
 		char *gcda_name;
@@ -1561,7 +1631,6 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 		return;
 	}
 
-	/* Check if the object file is there. */
 	if (stat(cached_obj, &st) != 0) {
 		cc_log("Object file %s not in cache", cached_obj);
 		return;
@@ -1583,6 +1652,23 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 		return;
 	}
 
+	if (using_split_dwarf && !generating_dependencies) {
+		assert(output_dwo);
+	}
+	if (output_dwo) {
+		assert(cached_dwo);
+		if (stat(cached_dwo, &st) != 0) {
+			cc_log("Split dwarf file %s not in cache", cached_dwo);
+			return;
+		}
+		if (st.st_size == 0) {
+			cc_log("Invalid (empty) dwo file %s in cache", cached_dwo);
+			x_unlink(cached_dwo);
+			x_unlink(cached_obj); /* to really invalidate */
+			return;
+		}
+	}
+
 	/*
 	 * (If mode != FROMCACHE_DIRECT_MODE, the dependency file is created by
 	 * gcc.)
@@ -1595,8 +1681,16 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 		return;
 	}
 
+	/*
+	 * Copy object file from cache. Do so also for FissionDwarf file, cached_dwo,
+	 * when -gsplit-dwarf is specified.
+	 */
 	if (!str_eq(output_obj, "/dev/null")) {
 		get_file_from_cache(cached_obj, output_obj);
+		if (using_split_dwarf) {
+			assert(output_dwo);
+			get_file_from_cache(cached_dwo, output_dwo);
+		}
 	}
 	if (produce_dep_file) {
 		get_file_from_cache(cached_dep, output_dep);
@@ -1610,7 +1704,7 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 	}
 
 	/* Update modification timestamps to save files from LRU cleanup.
-	   Also gives files a sensible mtime when hard-linking. */
+	 * Also gives files a sensible mtime when hard-linking. */
 	update_mtime(cached_obj);
 	update_mtime(cached_stderr);
 	if (produce_dep_file) {
@@ -1622,12 +1716,15 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 	if (output_dia) {
 		update_mtime(cached_dia);
 	}
+	if (cached_dwo) {
+		update_mtime(cached_dwo);
+	}
 
 	if (generating_dependencies && mode == FROMCACHE_CPP_MODE) {
 		put_file_in_cache(output_dep, cached_dep);
 	}
 
-  send_cached_stderr();
+	send_cached_stderr();
 
 	if (put_object_in_manifest) {
 		update_manifest_file();
@@ -1647,11 +1744,11 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 	}
 
 	/* and exit with the right status code */
-	exit(0);
+	x_exit(0);
 }
 
 /* find the real compiler. We just search the PATH to find a executable of the
-   same name that isn't a link to ourselves */
+ * same name that isn't a link to ourselves */
 static void
 find_compiler(char **argv)
 {
@@ -1879,9 +1976,15 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 			continue;
 		}
 
-		/* debugging is handled specially, so that we know if we
-		   can strip line number info
-		*/
+		if (str_eq(argv[i], "-gsplit-dwarf")) {
+			cc_log("Enabling caching of dwarf files since -gsplit-dwarf is used");
+			using_split_dwarf = true;
+			args_add(stripped_args, argv[i]);
+			continue;
+		}
+
+		/* Debugging is handled specially, so that we know if we can strip line
+		 * number info. */
 		if (str_startswith(argv[i], "-g")) {
 			args_add(stripped_args, argv[i]);
 			if (conf->unify && !str_eq(argv[i], "-g0")) {
@@ -1900,8 +2003,8 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 		}
 
 		/* These options require special handling, because they
-		   behave differently with gcc -E, when the output
-		   file is not specified. */
+		 * behave differently with gcc -E, when the output
+		 * file is not specified. */
 		if (str_eq(argv[i], "-MD") || str_eq(argv[i], "-MMD")) {
 			generating_dependencies = true;
 			args_add(dep_args, argv[i]);
@@ -2259,8 +2362,8 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 		}
 
 		/* if an argument isn't a plain file then assume its
-		   an option, not an input file. This allows us to
-		   cope better with unusual compiler options */
+		 * an option, not an input file. This allows us to
+		 * cope better with unusual compiler options */
 		if (stat(argv[i], &st) != 0 || !S_ISREG(st.st_mode)) {
 			cc_log("%s is not a regular file, not considering as input file",
 			       argv[i]);
@@ -2295,6 +2398,14 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 
 		/* Rewrite to relative to increase hit rate. */
 		input_file = make_relative_path(x_strdup(argv[i]));
+	} /* for */
+
+	if (found_S_opt) {
+		/* Even if -gsplit-dwarf is given, the .dwo file is not generated when -S
+		 * is also given.
+		 */
+		using_split_dwarf = false;
+		cc_log("Disabling caching of dwarf files since -S is used");
 	}
 
 	if (!input_file) {
@@ -2333,7 +2444,7 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 	}
 
 	output_is_precompiled_header =
-		actual_language && strstr(actual_language, "-header");
+	  actual_language && strstr(actual_language, "-header");
 
 	if (output_is_precompiled_header
 	    && !(conf->sloppiness & SLOPPY_PCH_DEFINES)) {
@@ -2350,7 +2461,7 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 		} else {
 			cc_log("No -c option found");
 			/* I find that having a separate statistic for autoconf tests is useful,
-			   as they are the dominant form of "called for link" in many cases */
+			 * as they are the dominant form of "called for link" in many cases */
 			if (strstr(input_file, "conftest.")) {
 				stats_update(STATS_CONFTEST);
 			} else {
@@ -2408,8 +2519,24 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 		}
 	}
 
+	if (using_split_dwarf) {
+		char *p;
+		p = strrchr(output_obj, '.');
+		if (!p || !p[1]) {
+			cc_log("Badly formed object filename");
+			stats_update(STATS_ARGS);
+			result = false;
+			goto out;
+		}
+		{
+			char *base_name = remove_extension(output_obj);
+			output_dwo = format("%s.dwo", base_name);
+			free(base_name);
+		}
+	}
+
 	/* cope with -o /dev/null */
-	if (!str_eq(output_obj,"/dev/null")
+	if (!str_eq(output_obj, "/dev/null")
 	    && stat(output_obj, &st) == 0
 	    && !S_ISREG(st.st_mode)) {
 		cc_log("Not a regular file: %s", output_obj);
@@ -2654,11 +2781,13 @@ cc_reset(void)
 	args_free(orig_args); orig_args = NULL;
 	free(input_file); input_file = NULL;
 	free(output_obj); output_obj = NULL;
+	free(output_dwo); output_dwo = NULL;
 	free(output_dep); output_dep = NULL;
 	free(output_cov); output_cov = NULL;
 	free(output_dia); output_dia = NULL;
 	free(cached_obj_hash); cached_obj_hash = NULL;
 	free(cached_obj); cached_obj = NULL;
+	free(cached_dwo); cached_dwo = NULL;
 	free(cached_stderr); cached_stderr = NULL;
 	free(cached_dep); cached_dep = NULL;
 	free(cached_cov); cached_cov = NULL;
@@ -2679,10 +2808,11 @@ cc_reset(void)
 	output_is_precompiled_header = false;
 
 	conf = conf_create();
+	using_split_dwarf = false;
 }
 
 /* Make a copy of stderr that will not be cached, so things like
-   distcc can send networking errors to it. */
+ * distcc can send networking errors to it. */
 static void
 setup_uncached_err(void)
 {
@@ -2777,6 +2907,19 @@ ccache(int argc, char *argv[])
 	if (output_dia) {
 		cc_log("Diagnostic file: %s", output_dia);
 	}
+
+	if (using_split_dwarf) {
+		if (!generating_dependencies) {
+			assert(output_dwo);
+		}
+	} else {
+		assert(!output_dwo);
+	}
+
+	if (output_dwo) {
+		cc_log("Split dwarf file: %s", output_dwo);
+	}
+
 	cc_log("Object file: %s", output_obj);
 
 	hash_start(&common_hash);
@@ -2864,7 +3007,7 @@ ccache(int argc, char *argv[])
 	/* run real compiler, sending output to cache */
 	to_cache(compiler_args);
 
-	exit(0);
+	x_exit(0);
 }
 
 static void
@@ -2919,64 +3062,64 @@ ccache_main_options(int argc, char *argv[])
 
 		case 'h': /* --help */
 			fputs(USAGE_TEXT, stdout);
-			exit(0);
+			x_exit(0);
 
 		case 'F': /* --max-files */
-			{
-				unsigned files;
-				initialize();
-				files = atoi(optarg);
-				if (conf_set_value_in_file(primary_config_path, "max_files", optarg,
-				                           &errmsg)) {
-					if (files == 0) {
-						printf("Unset cache file limit\n");
-					} else {
-						printf("Set cache file limit to %u\n", files);
-					}
+		{
+			unsigned files;
+			initialize();
+			files = atoi(optarg);
+			if (conf_set_value_in_file(primary_config_path, "max_files", optarg,
+			                           &errmsg)) {
+				if (files == 0) {
+					printf("Unset cache file limit\n");
 				} else {
-					fatal("could not set cache file limit: %s", errmsg);
+					printf("Set cache file limit to %u\n", files);
 				}
+			} else {
+				fatal("could not set cache file limit: %s", errmsg);
 			}
-			break;
+		}
+		break;
 
 		case 'M': /* --max-size */
-			{
-				uint64_t size;
-				initialize();
-				if (!parse_size_with_suffix(optarg, &size)) {
-					fatal("invalid size: %s", optarg);
-				}
-				if (conf_set_value_in_file(primary_config_path, "max_size", optarg,
-				                           &errmsg)) {
-					if (size == 0) {
-						printf("Unset cache size limit\n");
-					} else {
-						char *s = format_human_readable_size(size);
-						printf("Set cache size limit to %s\n", s);
-						free(s);
-					}
-				} else {
-					fatal("could not set cache size limit: %s", errmsg);
-				}
+		{
+			uint64_t size;
+			initialize();
+			if (!parse_size_with_suffix(optarg, &size)) {
+				fatal("invalid size: %s", optarg);
 			}
-			break;
+			if (conf_set_value_in_file(primary_config_path, "max_size", optarg,
+			                           &errmsg)) {
+				if (size == 0) {
+					printf("Unset cache size limit\n");
+				} else {
+					char *s = format_human_readable_size(size);
+					printf("Set cache size limit to %s\n", s);
+					free(s);
+				}
+			} else {
+				fatal("could not set cache size limit: %s", errmsg);
+			}
+		}
+		break;
 
 		case 'o': /* --set-config */
-			{
-				char *errmsg, *key, *value, *p;
-				initialize();
-				p = strchr(optarg, '=');
-				if (!p) {
-					fatal("missing equal sign in \"%s\"", optarg);
-				}
-				key = x_strndup(optarg, p - optarg);
-				value = p + 1;
-				if (!conf_set_value_in_file(primary_config_path, key, value, &errmsg)) {
-					fatal("%s", errmsg);
-				}
-				free(key);
+		{
+			char *errmsg, *key, *value, *p;
+			initialize();
+			p = strchr(optarg, '=');
+			if (!p) {
+				fatal("missing equal sign in \"%s\"", optarg);
 			}
-			break;
+			key = x_strndup(optarg, p - optarg);
+			value = p + 1;
+			if (!conf_set_value_in_file(primary_config_path, key, value, &errmsg)) {
+				fatal("%s", errmsg);
+			}
+			free(key);
+		}
+		break;
 
 		case 'p': /* --print-config */
 			initialize();
@@ -2990,7 +3133,7 @@ ccache_main_options(int argc, char *argv[])
 
 		case 'V': /* --version */
 			fprintf(stdout, VERSION_TEXT, CCACHE_VERSION);
-			exit(0);
+			x_exit(0);
 
 		case 'z': /* --zero-stats */
 			initialize();
@@ -3000,7 +3143,7 @@ ccache_main_options(int argc, char *argv[])
 
 		default:
 			fputs(USAGE_TEXT, stderr);
-			exit(1);
+			x_exit(1);
 		}
 	}
 
@@ -3015,10 +3158,10 @@ ccache_main(int argc, char *argv[])
 	if (same_executable_name(program_name, MYNAME)) {
 		if (argc < 2) {
 			fputs(USAGE_TEXT, stderr);
-			exit(1);
+			x_exit(1);
 		}
 		/* if the first argument isn't an option, then assume we are
-		   being passed a compiler name and options */
+		 * being passed a compiler name and options */
 		if (argv[1][0] == '-') {
 			return ccache_main_options(argc, argv);
 		}

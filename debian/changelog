@@ -1,3 +1,10 @@
+ccache (3.2.4-1) unstable; urgency=medium
+
+  * New upstream release 3.2.4
+  * Use debhelper compat level 9
+
+ -- Joel Rosdahl <joel@debian.org>  Thu, 08 Oct 2015 21:48:51 +0200
+
 ccache (3.2.3-1) unstable; urgency=medium
 
   * New upstream release 3.2.3

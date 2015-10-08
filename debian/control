@@ -2,7 +2,7 @@ Source: ccache
 Section: devel
 Priority: optional
 Maintainer: Joel Rosdahl <joel@debian.org>
-Build-Depends: debhelper (>> 6.0.7~), autotools-dev, zlib1g-dev, dpkg-dev (>= 1.16.1~)
+Build-Depends: debhelper (>= 9), autotools-dev, zlib1g-dev, dpkg-dev (>= 1.16.1~)
 Standards-Version: 3.9.6
 Homepage: http://ccache.samba.org
 Vcs-git: git://anonscm.debian.org/collab-maint/ccache.git

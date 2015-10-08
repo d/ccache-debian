@@ -639,8 +639,6 @@ CC
 test_suites
 include_dev_mk
 extra_libs
-extra_ldflags
-extra_cppflags
 host_os
 host_vendor
 host_cpu
@@ -2326,15 +2324,13 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 
 case $host in
-    *mingw32* | *cygwin* | *wince* | *mingwce*)
+    *mingw32* | *mingw64* | *cygwin* | *wince* | *mingwce*)
         windows_os=yes
 
 $as_echo "#define _WIN32_WINNT 0x0600" >>confdefs.h
 
         ;;
 esac
-
-
 
 
 
@@ -5677,16 +5673,15 @@ $as_echo "$as_me: using bundled zlib as requested" >&6;}
 fi
 
 if test x${use_bundled_zlib} = xyes; then
-    extra_cppflags="-I\$(srcdir)/zlib"
-    extra_ldflags="-Lzlib"
+    CPPFLAGS="$CPPFLAGS -I\$(srcdir)/zlib"
     extra_libs="zlib/libz.a"
     mkdir -p zlib
 else
-    extra_libs="-lz"
+    LIBS="$LIBS -lz"
 fi
 
 if test x${windows_os} = xyes; then
-    extra_ldflags="$extra_ldflags -lws2_32"
+    LIBS="$LIBS -lws2_32"
 fi
 
  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether byte ordering is bigendian" >&5

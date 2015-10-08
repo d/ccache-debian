@@ -186,7 +186,7 @@ void stats_summary(struct conf *conf);
 void stats_update_size(uint64_t size, unsigned files);
 void stats_get_obsolete_limits(const char *dir, unsigned *maxfiles,
                                uint64_t *maxsize);
-void stats_set_sizes(const char *dir, size_t num_files, size_t total_size);
+void stats_set_sizes(const char *dir, unsigned num_files, uint64_t total_size);
 void stats_read(const char *path, struct counters *counters);
 void stats_write(const char *path, struct counters *counters);
 
@@ -213,7 +213,7 @@ void wipe_all(struct conf *conf);
 /* ------------------------------------------------------------------------- */
 /* execute.c */
 
-int execute(char **argv, int fd_out, int fd_err);
+int execute(char **argv, int fd_out, int fd_err, pid_t *pid);
 char *find_executable(const char *name, const char *exclude_name);
 void print_command(FILE *fp, char **argv);
 
@@ -227,6 +227,8 @@ void lockfile_release(const char *path);
 /* ccache.c */
 
 extern time_t time_of_compilation;
+void block_signals(void);
+void unblock_signals(void);
 bool cc_process_args(struct args *args, struct args **preprocessor_args,
                     struct args **compiler_args);
 void cc_reset(void);

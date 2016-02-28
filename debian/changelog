@@ -1,3 +1,10 @@
+ccache (3.2.4-2) unstable; urgency=medium
+
+  * Create symlinks for compilers in /usr/lib/gcc-cross (closes: #815210)
+  * Change http URLs to https
+
+ -- Joel Rosdahl <joel@debian.org>  Sun, 28 Feb 2016 11:24:57 +0100
+
 ccache (3.2.4-1) unstable; urgency=medium
 
   * New upstream release 3.2.4

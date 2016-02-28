@@ -1,7 +1,7 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: ccache
 Upstream-Contact: Joel Rosdahl <joel@rosdahl.net>
-Source: http://samba.org/ftp/ccache/
+Source: https://samba.org/ftp/ccache/
 
 Files: *
 Copyright: 2002-2007 Andrew Tridgell <tridge@samba.org>

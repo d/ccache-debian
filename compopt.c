@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2015 Joel Rosdahl
+ * Copyright (C) 2010-2016 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -78,6 +78,7 @@ static const struct compopt compopts[] = {
 	{"-nostdinc++",     AFFECTS_CPP},
 	{"-remap",          AFFECTS_CPP},
 	{"-save-temps",     TOO_HARD},
+	{"-stdlib=",        AFFECTS_CPP | TAKES_CONCAT_ARG},
 	{"-trigraphs",      AFFECTS_CPP},
 	{"-u",              TAKES_ARG},
 };
@@ -179,15 +180,6 @@ compopt_takes_arg(const char *option)
 {
 	const struct compopt *co = find(option);
 	return co && (co->type & TAKES_ARG);
-}
-
-/* Determines if argument takes a concatentated argument by comparing prefixes.
- */
-bool
-compopt_takes_concat_arg(const char *option)
-{
-	const struct compopt *co = find_prefix(option);
-	return co && (co->type & TAKES_CONCAT_ARG);
 }
 
 /* Determines if the prefix of the option matches any option and affects the

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2002 Andrew Tridgell
- * Copyright (C) 2009-2015 Joel Rosdahl
+ * Copyright (C) 2009-2016 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -66,12 +66,12 @@ static void
 log_prefix(bool log_updated_time)
 {
 #ifdef HAVE_GETTIMEOFDAY
-	char timestamp[100];
-	struct timeval tv;
-	struct tm *tm;
 	static char prefix[200];
 
 	if (log_updated_time) {
+		char timestamp[100];
+		struct tm *tm;
+		struct timeval tv;
 		gettimeofday(&tv, NULL);
 #ifdef __MINGW64_VERSION_MAJOR
 		tm = localtime((time_t *)&tv.tv_sec);
@@ -219,9 +219,9 @@ copy_fd(int fd_in, int fd_out)
 	}
 
 	while ((n = gzread(gz_in, buf, sizeof(buf))) > 0) {
-		ssize_t count, written = 0;
+		ssize_t written = 0;
 		do {
-			count = write(fd_out, buf + written, n - written);
+			ssize_t count = write(fd_out, buf + written, n - written);
 			if (count == -1) {
 				if (errno != EAGAIN && errno != EINTR) {
 					fatal("Failed to copy fd");
@@ -327,10 +327,9 @@ copy_file(const char *src, const char *dest, int compress_level)
 		if (compress_level > 0) {
 			written = gzwrite(gz_out, buf, n);
 		} else {
-			ssize_t count;
 			written = 0;
 			do {
-				count = write(fd_out, buf + written, n - written);
+				ssize_t count = write(fd_out, buf + written, n - written);
 				if (count == -1 && errno != EINTR) {
 					saved_errno = errno;
 					break;
@@ -627,7 +626,7 @@ format_hash_as_string(const unsigned char *hash, int size)
 		sprintf(&ret[i*2], "%02x", (unsigned) hash[i]);
 	}
 	if (size >= 0) {
-		sprintf(&ret[i*2], "-%u", size);
+		sprintf(&ret[i*2], "-%d", size);
 	}
 
 	return ret;
@@ -882,7 +881,7 @@ traverse(const char *dir, void (*fn)(const char *, struct stat *))
 
 		fname = format("%s/%s", dir, de->d_name);
 		if (lstat(fname, &st)) {
-			if (errno != ENOENT) {
+			if (errno != ENOENT && errno != ESTALE) {
 				fatal("lstat %s failed: %s", fname, strerror(errno));
 			}
 			free(fname);
@@ -1086,7 +1085,7 @@ x_realpath(const char *path)
 {
 	long maxlen = path_max(path);
 	char *ret, *p;
-#ifdef _WIN32
+#if !defined(HAVE_REALPATH) && defined(_WIN32)
 	HANDLE path_handle;
 #endif
 
@@ -1180,15 +1179,16 @@ create_tmp_fd(char **fname)
 	char *template = format("%s.%s", *fname, tmp_string());
 	int fd = mkstemp(template);
 	if (fd == -1 && errno == ENOENT) {
-		if (create_parent_dirs(template) != 0) {
+		if (create_parent_dirs(*fname) != 0) {
 			fatal("Failed to create directory %s: %s",
-			      dirname(template), strerror(errno));
+			      dirname(*fname), strerror(errno));
 		}
 		reformat(&template, "%s.%s", *fname, tmp_string());
 		fd = mkstemp(template);
 	}
 	if (fd == -1) {
-		fatal("Failed to create file %s: %s", template, strerror(errno));
+		fatal("Failed to create temporary file for %s: %s",
+		      *fname, strerror(errno));
 	}
 
 #ifndef _WIN32
@@ -1212,16 +1212,6 @@ create_tmp_file(char **fname, const char *mode)
 		fatal("Failed to create file %s: %s", *fname, strerror(errno));
 	}
 	return file;
-}
-
-/*
- * Create an empty temporary file. *fname will be reallocated and set to the
- * resulting filename.
- */
-void
-create_empty_tmp_file(char **fname)
-{
-	close(create_tmp_fd(fname));
 }
 
 /*
@@ -1339,7 +1329,6 @@ get_relative_path(const char *from, const char *to)
 {
 	size_t common_prefix_len;
 	int i;
-	const char *p;
 	char *result;
 
 	assert(from && is_absolute_path(from));
@@ -1359,6 +1348,7 @@ get_relative_path(const char *from, const char *to)
 	result = x_strdup("");
 	common_prefix_len = common_dir_prefix_length(from, to);
 	if (common_prefix_len > 0 || !str_eq(from, "/")) {
+		const char *p;
 		for (p = from + common_prefix_len; *p; p++) {
 			if (*p == '/') {
 				reformat(&result, "../%s", result);
@@ -1520,7 +1510,7 @@ x_unlink(const char *path)
 	}
 	if (unlink(tmp_name) == -1) {
 		/* If it was released in a race, that's OK. */
-		if (errno != ENOENT) {
+		if (errno != ENOENT && errno != ESTALE) {
 			result = -1;
 			saved_errno = errno;
 		}

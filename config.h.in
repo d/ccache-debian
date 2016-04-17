@@ -231,6 +231,9 @@
 /* Define on FreeBSD to activate all library features */
 #undef __BSD_VISIBLE
 
+/* Define to activate Unix95-and-earlier features */
+#undef __EXTENSIONS__
+
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
 

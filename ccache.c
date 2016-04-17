@@ -2,7 +2,7 @@
  * ccache -- a fast C/C++ compiler cache
  *
  * Copyright (C) 2002-2007 Andrew Tridgell
- * Copyright (C) 2009-2015 Joel Rosdahl
+ * Copyright (C) 2009-2016 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -39,7 +39,7 @@ static const char VERSION_TEXT[] =
   MYNAME " version %s\n"
   "\n"
   "Copyright (C) 2002-2007 Andrew Tridgell\n"
-  "Copyright (C) 2009-2015 Joel Rosdahl\n"
+  "Copyright (C) 2009-2016 Joel Rosdahl\n"
   "\n"
   "This program is free software; you can redistribute it and/or modify it under\n"
   "the terms of the GNU General Public License as published by the Free Software\n"
@@ -638,7 +638,7 @@ ignore:
 static char *
 make_relative_path(char *path)
 {
-	char *relpath, *canon_path, *path_suffix = NULL;
+	char *canon_path, *path_suffix = NULL;
 	struct stat st;
 
 	if (str_eq(conf->base_dir, "") || !str_startswith(path, conf->base_dir)) {
@@ -666,6 +666,7 @@ make_relative_path(char *path)
 
 	canon_path = x_realpath(path);
 	if (canon_path) {
+		char *relpath;
 		free(path);
 		relpath = get_relative_path(get_current_working_dir(), canon_path);
 		free(canon_path);
@@ -800,6 +801,9 @@ put_file_in_cache(const char *source, const char *dest)
 	struct stat st;
 	bool do_link = conf->hard_link && !conf->compression;
 
+	assert(!conf->read_only);
+	assert(!conf->read_only_direct);
+
 	if (do_link) {
 		x_unlink(dest);
 		ret = link(source, dest);
@@ -839,7 +843,7 @@ get_file_from_cache(const char *source, const char *dest)
 	}
 
 	if (ret == -1) {
-		if (errno == ENOENT) {
+		if (errno == ENOENT || errno == ESTALE) {
 			/* Someone removed the file just before we began copying? */
 			cc_log("Cache file %s just disappeared from cache", source);
 			stats_update(STATS_MISSING);
@@ -907,11 +911,10 @@ void update_manifest_file(void)
 static void
 to_cache(struct args *args)
 {
-	char *tmp_stdout, *tmp_stderr, *tmp_aux, *tmp_cov;
+	char *tmp_stdout, *tmp_stderr, *tmp_cov;
 	char *tmp_dwo = NULL;
 	struct stat st;
 	int status, tmp_stdout_fd, tmp_stderr_fd;
-	FILE *f;
 
 	tmp_stdout = format("%s.tmp.stdout", cached_obj);
 	tmp_stdout_fd = create_tmp_fd(&tmp_stdout);
@@ -919,6 +922,7 @@ to_cache(struct args *args)
 	tmp_stderr_fd = create_tmp_fd(&tmp_stderr);
 
 	if (generating_coverage) {
+		char *tmp_aux;
 		/* gcc has some funny rule about max extension length */
 		if (strlen(get_extension(output_obj)) < 6) {
 			tmp_aux = remove_extension(output_obj);
@@ -1108,9 +1112,8 @@ to_cache(struct args *args)
 	if (generating_coverage) {
 		/* gcc won't generate notes if there is no code */
 		if (stat(tmp_cov, &st) != 0 && errno == ENOENT) {
+			FILE *f = fopen(cached_cov, "wb");
 			cc_log("Creating placeholder: %s", cached_cov);
-
-			f = fopen(cached_cov, "wb");
 			if (!f) {
 				cc_log("Failed to create %s: %s", cached_cov, strerror(errno));
 				stats_update(STATS_ERROR);
@@ -1372,7 +1375,7 @@ calculate_common_hash(struct args *args, struct mdfour *hash)
 {
 	struct stat st;
 	char *p;
-	const char *full_path = args->argv[0];
+	const char *full_path;
 #ifdef _WIN32
 	const char *ext;
 	char full_path_win_ext[MAX_PATH + 1] = {0};
@@ -1392,6 +1395,8 @@ calculate_common_hash(struct args *args, struct mdfour *hash)
 	add_exe_ext_if_no_to_fullpath(full_path_win_ext, MAX_PATH, ext,
 	                              args->argv[0]);
 	full_path = full_path_win_ext;
+#else
+	full_path = args->argv[0];
 #endif
 
 	if (x_stat(full_path, &st) != 0) {
@@ -1425,7 +1430,6 @@ calculate_common_hash(struct args *args, struct mdfour *hash)
 
 	/* Possibly hash the coverage data file path. */
 	if (generating_coverage && profile_arcs) {
-		char *gcda_path;
 		char *dir = dirname(output_obj);
 		if (profile_dir) {
 			dir = x_strdup(profile_dir);
@@ -1435,6 +1439,7 @@ calculate_common_hash(struct args *args, struct mdfour *hash)
 			dir = real_dir;
 		}
 		if (dir) {
+			char *gcda_path;
 			char *base_name = basename(output_obj);
 			p = remove_extension(base_name);
 			free(base_name);
@@ -1482,9 +1487,7 @@ static struct file_hash *
 calculate_object_hash(struct args *args, struct mdfour *hash, int direct_mode)
 {
 	int i;
-	char *manifest_name;
 	struct stat st;
-	int result;
 	struct file_hash *object_hash = NULL;
 	char *p;
 
@@ -1589,6 +1592,7 @@ calculate_object_hash(struct args *args, struct mdfour *hash, int direct_mode)
 		    && x_stat(args->argv[i+3], &st) == 0) {
 			hash_delimiter(hash, "plugin");
 			hash_compiler(hash, &st, args->argv[i+3], false);
+			i += 3;
 			continue;
 		}
 
@@ -1643,6 +1647,9 @@ calculate_object_hash(struct args *args, struct mdfour *hash, int direct_mode)
 	}
 
 	if (direct_mode) {
+		char *manifest_name;
+		int result;
+
 		/* Hash environment variables that affect the preprocessor output. */
 		const char **p;
 		const char *envvars[] = {
@@ -1806,7 +1813,8 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 		update_mtime(cached_dwo);
 	}
 
-	if (generating_dependencies && mode == FROMCACHE_CPP_MODE) {
+	if (generating_dependencies && mode == FROMCACHE_CPP_MODE
+	    && !conf->read_only && !conf->read_only_direct) {
 		put_file_in_cache(output_dep, cached_dep);
 	}
 

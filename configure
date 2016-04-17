@@ -3645,7 +3645,7 @@ $as_echo "#define _BSD_SOURCE 1" >>confdefs.h
   # or has another value. By not (re)defining it, the defaults come in place.
   AIX/4)
     define_xopen_source=no;;
-  AIX/5)
+  AIX/5|AIX/7)
     if test `uname -r` -eq 1; then
       define_xopen_source=no
     fi
@@ -3684,7 +3684,10 @@ $as_echo "#define _XOPEN_SOURCE 600" >>confdefs.h
   # except for Solaris 10, where it must not be defined,
   # as it implies XPG4.2
   case $ac_sys_system/$ac_sys_release in
-    SunOS/5.10)
+    SunOS/5.10|SunOS/5.11)
+
+$as_echo "#define __EXTENSIONS__ 1" >>confdefs.h
+
       ;;
     *)
 

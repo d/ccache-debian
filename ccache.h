@@ -155,7 +155,6 @@ char *strtok_r(char *str, const char *delim, char **saveptr);
 #endif
 int create_tmp_fd(char **fname);
 FILE *create_tmp_file(char **fname, const char *mode);
-void create_empty_tmp_file(char **fname);
 const char *get_home_directory(void);
 char *get_cwd(void);
 bool same_executable_name(const char *s1, const char *s2);
@@ -276,6 +275,8 @@ void add_exe_ext_if_no_to_fullpath(char *full_path_win_ext, size_t max_size,
 #    define PATH_DELIM ":"
 #endif
 
+#ifndef MAX
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#endif
 
 #endif /* ifndef CCACHE_H */

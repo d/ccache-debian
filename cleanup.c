@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2002-2006 Andrew Tridgell
- * Copyright (C) 2009-2015 Joel Rosdahl
+ * Copyright (C) 2009-2016 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -108,7 +108,7 @@ delete_file(const char *path, size_t size)
 	if (x_unlink(path) == 0) {
 		cache_size -= size;
 		files_in_cache--;
-	} else if (errno != ENOENT) {
+	} else if (errno != ENOENT && errno != ESTALE) {
 		cc_log("Failed to unlink %s (%s)", path, strerror(errno));
 	}
 }
@@ -122,7 +122,7 @@ delete_sibling_file(const char *base, const char *extension)
 	path = format("%s%s", base, extension);
 	if (lstat(path, &st) == 0) {
 		delete_file(path, file_size(&st));
-	} else if (errno != ENOENT) {
+	} else if (errno != ENOENT && errno != ESTALE) {
 		cc_log("Failed to stat %s: %s", path, strerror(errno));
 	}
 	free(path);
@@ -134,7 +134,6 @@ static void
 sort_and_clean(void)
 {
 	unsigned i;
-	const char *ext;
 	char *last_base = x_strdup("");
 
 	if (num_files > 1) {
@@ -144,6 +143,8 @@ sort_and_clean(void)
 
 	/* delete enough files to bring us below the threshold */
 	for (i = 0; i < num_files; i++) {
+		const char *ext;
+
 		if ((cache_size_threshold == 0
 		     || cache_size <= cache_size_threshold)
 		    && (files_in_cache_threshold == 0
@@ -227,11 +228,10 @@ cleanup_dir(struct conf *conf, const char *dir)
 /* cleanup in all cache subdirs */
 void cleanup_all(struct conf *conf)
 {
-	char *dname;
 	int i;
 
 	for (i = 0; i <= 0xF; i++) {
-		dname = format("%s/%1x", conf->cache_dir, i);
+		char *dname = format("%s/%1x", conf->cache_dir, i);
 		cleanup_dir(conf, dname);
 		free(dname);
 	}
@@ -259,11 +259,10 @@ static void wipe_fn(const char *fname, struct stat *st)
 /* wipe all cached files in all subdirs */
 void wipe_all(struct conf *conf)
 {
-	char *dname;
 	int i;
 
 	for (i = 0; i <= 0xF; i++) {
-		dname = format("%s/%1x", conf->cache_dir, i);
+		char *dname = format("%s/%1x", conf->cache_dir, i);
 		traverse(dname, wipe_fn);
 		free(dname);
 	}

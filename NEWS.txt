@@ -2,6 +2,47 @@ ccache news
 ===========
 
 
+ccache 3.2.5
+------------
+Release date: 2016-04-17
+
+New features and improvements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Only pass clang-specific `-stdlib=` to the preprocessor.
+
+- Improved handling of stale NFS handles.
+
+- Made it harder to misinterpret documentation of boolean environment settings'
+  semantics.
+
+
+Bug fixes
+~~~~~~~~~
+
+- Include m4 files used by configure.ac in the source dist archives.
+
+- Corrected "Performance" section in the manual regarding `__DATE_`, `__TIME__`
+  and `__FILE__` macros.
+
+- Fixed build on Solaris 10+ and AIX 7.
+
+- Fixed failure to create directories on QNX.
+
+- Don't (try to) update manifest file in ``read-only'' and ``read-only direct''
+  modes.
+
+- Fixed a bug in caching of `stat` system calls in ``file_stat_matches
+  sloppiness mode''.
+
+- Fixed bug in hashing of clang plugins, leading to unnecessary cache misses.
+
+- Fixed --print-config to show ``pch_defines sloppiness''.
+
+- The man page is now built when running ``make install'' from Git repository
+  sources.
+
+
 ccache 3.2.4
 ------------
 Release date: 2015-10-08

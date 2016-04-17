@@ -734,7 +734,7 @@ asciidoc.install(2);
 <body class="article">
 <div id="header">
 <h1>CCACHE(1)</h1>
-<span id="revnumber">version 3.2.3</span>
+<span id="revnumber">version 3.2.5</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1068,7 +1068,7 @@ example, <strong>CCACHE_COMPRESS</strong> can be set to force compression and
 <h3 id="_configuration_settings">Configuration settings</h3>
 <div class="paragraph"><p>Below is a list of available configuration settings. The corresponding
 environment variable name is indicated in parentheses after each configuration
-setting key. Boolean options are indicated with &#8220;[boolean]&#8221;</p></div>
+setting key.</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <strong>base_dir</strong> (<strong>CCACHE_BASEDIR</strong>)
@@ -1209,7 +1209,7 @@ the <strong>prefix_command</strong> setting if possible. See
 </div></div>
 </dd>
 <dt class="hdlist1">
-<strong>compression</strong> (<strong>CCACHE_COMPRESS</strong>) [boolean]
+<strong>compression</strong> (<strong>CCACHE_COMPRESS</strong> or <strong>CCACHE_NOCOMPRESS</strong>, see <a href="#_boolean_values">Boolean values</a> above)
 </dt>
 <dd>
 <p>
@@ -1243,7 +1243,7 @@ the <strong>prefix_command</strong> setting if possible. See
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>direct_mode</strong> (<strong>CCACHE_DIRECT</strong>) [boolean]
+<strong>direct_mode</strong> (<strong>CCACHE_DIRECT</strong> or <strong>CCACHE_NODIRECT</strong>, see <a href="#_boolean_values">Boolean values</a> above)
 </dt>
 <dd>
 <p>
@@ -1252,7 +1252,7 @@ the <strong>prefix_command</strong> setting if possible. See
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>disable</strong> (<strong>CCACHE_DISABLE</strong>) [boolean]
+<strong>disable</strong> (<strong>CCACHE_DISABLE</strong> or <strong>CCACHE_NODISABLE</strong>, see <a href="#_boolean_values">Boolean values</a> above)
 </dt>
 <dd>
 <p>
@@ -1271,7 +1271,7 @@ the <strong>prefix_command</strong> setting if possible. See
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>hard_link</strong> (<strong>CCACHE_HARDLINK</strong>) [boolean]
+<strong>hard_link</strong> (<strong>CCACHE_HARDLINK</strong> or <strong>CCACHE_NOHARDLINK</strong>, see <a href="#_boolean_values">Boolean values</a> above)
 </dt>
 <dd>
 <p>
@@ -1286,7 +1286,7 @@ the <strong>prefix_command</strong> setting if possible. See
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>hash_dir</strong> (<strong>CCACHE_HASHDIR</strong>) [boolean]
+<strong>hash_dir</strong> (<strong>CCACHE_HASHDIR</strong> or <strong>CCACHE_NOHASHDIR</strong>, see <a href="#_boolean_values">Boolean values</a> above)
 </dt>
 <dd>
 <p>
@@ -1351,7 +1351,7 @@ the <strong>prefix_command</strong> setting if possible. See
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>read_only</strong> (<strong>CCACHE_READONLY</strong>) [boolean]
+<strong>read_only</strong> (<strong>CCACHE_READONLY</strong> or <strong>CCACHE_NOREADONLY</strong>, see <a href="#_boolean_values">Boolean values</a> above)
 </dt>
 <dd>
 <p>
@@ -1362,7 +1362,7 @@ the <strong>prefix_command</strong> setting if possible. See
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>read_only_direct</strong> (<strong>CCACHE_READONLY_DIRECT</strong>) [boolean]
+<strong>read_only_direct</strong> (<strong>CCACHE_READONLY_DIRECT</strong> or <strong>CCACHE_NOREADONLY_DIRECT</strong>, see <a href="#_boolean_values">Boolean values</a> above)
 </dt>
 <dd>
 <p>
@@ -1372,7 +1372,7 @@ the <strong>prefix_command</strong> setting if possible. See
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>recache</strong> (<strong>CCACHE_RECACHE</strong>) [boolean]
+<strong>recache</strong> (<strong>CCACHE_RECACHE</strong> or <strong>CCACHE_NORECACHE</strong>, see <a href="#_boolean_values">Boolean values</a> above)
 </dt>
 <dd>
 <p>
@@ -1381,7 +1381,7 @@ the <strong>prefix_command</strong> setting if possible. See
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>run_second_cpp</strong> (<strong>CCACHE_CPP2</strong>) [boolean]
+<strong>run_second_cpp</strong> (<strong>CCACHE_CPP2</strong> or <strong>CCACHE_NOCPP2</strong>, see <a href="#_boolean_values">Boolean values</a> above)
 </dt>
 <dd>
 <p>
@@ -1466,7 +1466,7 @@ the <strong>prefix_command</strong> setting if possible. See
 information.</p></div>
 </dd>
 <dt class="hdlist1">
-<strong>stats</strong> (<strong>CCACHE_STATS</strong>) [boolean]
+<strong>stats</strong> (<strong>CCACHE_STATS</strong> or <strong>CCACHE_NOSTATS</strong>, see <a href="#_boolean_values">Boolean values</a> above)
 </dt>
 <dd>
 <p>
@@ -1505,7 +1505,7 @@ information.</p></div>
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>unify</strong> (<strong>CCACHE_UNIFY</strong>) [boolean]
+<strong>unify</strong> (<strong>CCACHE_UNIFY</strong> or <strong>CCACHE_NOUNIFY</strong>, see <a href="#_boolean_values">Boolean values</a> above)
 </dt>
 <dd>
 <p>
@@ -2036,38 +2036,36 @@ A modification time of one of the include files is too new (created the same
 <li>
 <p>
 The <strong>__TIME__</strong> preprocessor macro is (potentially) being used. ccache
-   turns off direct mode if &#8220;__TIME__&#8221; is present in the source code
-   outside comments and string literals. This is done as a safety measure since
-   the string indicates that a <strong>__TIME__</strong> macro <em>may</em> affect the output. (To
-   be sure, ccache would have to run the preprocessor, but the sole point of
-   the direct mode is to avoid that.) If you know that <strong>__TIME__</strong> isn&#8217;t used
-   in practise, or don&#8217;t care if ccache produces objects where <strong>__TIME__</strong> is
-   expanded to something in the past, you can set <strong>sloppiness</strong> to
-   <strong>time_macros</strong>.
+   turns off direct mode if &#8220;__TIME__&#8221; is present in the source code. This
+   is done as a safety measure since the string indicates that a <strong>__TIME__</strong>
+   macro <em>may</em> affect the output. (To be sure, ccache would have to run the
+   preprocessor, but the sole point of the direct mode is to avoid that.) If
+   you know that <strong>__TIME__</strong> isn&#8217;t used in practise, or don&#8217;t care if ccache
+   produces objects where <strong>__TIME__</strong> is expanded to something in the past,
+   you can set <strong>sloppiness</strong> to <strong>time_macros</strong>.
 </p>
 </li>
 <li>
 <p>
 The <strong>__DATE__</strong> preprocessor macro is (potentially) being used and the
    date has changed. This is similar to how <strong>__TIME__</strong> is handled. If
-   &#8220;__DATE__&#8221; is present in the source code outside comments and string
-   literals, ccache hashes the current date in order to be able to produce the
-   correct object file if the <strong>__DATE__</strong> macro affects the output. If you
-   know that <strong>__DATE__</strong> isn&#8217;t used in practise, or don&#8217;t care if ccache
-   produces objects where <strong>__DATE__</strong> is expanded to something in the past,
-   you can set <strong>sloppiness</strong> to <strong>time_macros</strong>.
+   &#8220;__DATE__&#8221; is present in the source code, ccache hashes the current
+   date in order to be able to produce the correct object file if the
+   <strong>__DATE__</strong> macro affects the output. If you know that <strong>__DATE__</strong> isn&#8217;t
+   used in practise, or don&#8217;t care if ccache produces objects where
+   <strong>__DATE__</strong> is expanded to something in the past, you can set <strong>sloppiness</strong>
+   to <strong>time_macros</strong>.
 </p>
 </li>
 <li>
 <p>
 The <strong>__FILE__</strong> preprocessor macro is (potentially) being used and the
-   file path has changed. If &#8220;__FILE__&#8221; is present in the source code
-   outside comments and string literals, ccache hashes the current input file
-   path in order to be able to produce the correct object file if the
-   <strong>__FILE__</strong> macro affects the output. If you know that <strong>__FILE__</strong> isn&#8217;t
-   used in practise, or don&#8217;t care if ccache produces objects where
-   <strong>__FILE__</strong> is expanded to the wrong path, you can set <strong>sloppiness</strong> to
-   <strong>file_macro</strong>.
+   file path has changed. If &#8220;__FILE__&#8221; is present in the source code,
+   ccache hashes the current input file path in order to be able to produce the
+   correct object file if the <strong>__FILE__</strong> macro affects the output. If you
+   know that <strong>__FILE__</strong> isn&#8217;t used in practise, or don&#8217;t care if ccache
+   produces objects where <strong>__FILE__</strong> is expanded to the wrong path, you can
+   set <strong>sloppiness</strong> to <strong>file_macro</strong>.
 </p>
 </li>
 </ul></div>
@@ -2169,9 +2167,9 @@ maintained by Joel Rosdahl. See AUTHORS.txt or AUTHORS.html and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.2.3<br />
+Version 3.2.5<br />
 Last updated
- 2015-06-03 20:41:29 CEST
+ 2016-04-17 16:43:39 CEST
 </div>
 </div>
 </body>

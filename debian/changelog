@@ -1,3 +1,20 @@
+ccache (3.1.12-1) stable; urgency=medium
+
+  * New upstream release 3.1.12 containing important bug fixes (and only
+    bug fixes) made since 3.1.10:
+    - Fixes a bug where (due to ccache rewriting paths) the compiler could
+      choose incorrect include files if CCACHE_BASEDIR is used and the
+      source file path is absolute and is a symlink. (Closes: #829088.)
+    - Fixes a bug which could result in false cache hits when source code
+      contains '"' followed by " /*" or " //" (with variations).
+    - Makes hash of cached result created with and without CCACHE_CPP2
+      different. This makes it possible to rebuild with CCACHE_CPP2 set
+      without having to clear the cache to get new results.
+    - Fixes a bug which could result in "No such file or directory"
+      messages in the ccache log when the cache directory doesn't exist.
+
+ -- Joel Rosdahl <joel@debian.org>  Fri, 15 Jul 2016 19:47:17 +0200
+
 ccache (3.1.10-1) unstable; urgency=medium
 
   * Update Vcs-git and Vcs-Browser to use anonscm.debian.org
@@ -390,4 +407,3 @@ ccache (1.2-1) unstable; urgency=low
   * Initial Release.
 
  -- Paul Russell <prussell@debian.org>  Sun, 31 Mar 2002 14:08:57 +0200
-

@@ -734,13 +734,62 @@ asciidoc.install(2);
 <body class="article">
 <div id="header">
 <h1>ccache news</h1>
-<span id="revnumber">version 3.1.10</span>
+<span id="revnumber">version 3.1.12</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
 </div>
 </div>
 <div id="content">
+<div class="sect1">
+<h2 id="_ccache_3_1_12">ccache 3.1.12</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Release date: 2016-07-12</p></div>
+<div class="sect2">
+<h3 id="_bug_fixes">Bug fixes</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Fixed a bug where (due to ccache rewriting paths) the compiler could choose
+  incorrect include files if <code>CCACHE_BASEDIR</code> is used and the source file path
+  is absolute and is a symlink.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_ccache_3_1_11">ccache 3.1.11</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Release date: 2015-03-07</p></div>
+<div class="sect2">
+<h3 id="_bug_fixes_2">Bug fixes</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Fixed bug which could result in false cache hits when source code contains
+  <code>'"'</code> followed by <code>" /*"</code> or <code>" //"</code> (with variations).
+</p>
+</li>
+<li>
+<p>
+Made hash of cached result created with and without <code>CCACHE_CPP2</code> different.
+  This makes it possible to rebuild with <code>CCACHE_CPP2</code> set without having to
+  clear the cache to get new results.
+</p>
+</li>
+<li>
+<p>
+Don&#8217;t try to reset a non-existing stats file. This avoids &#8220;No such file or
+  directory&#8221; messages in the ccache log when the cache directory doesn&#8217;t
+  exist.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
 <div class="sect1">
 <h2 id="_ccache_3_1_10">ccache 3.1.10</h2>
 <div class="sectionbody">
@@ -785,7 +834,7 @@ Added note in documentation that <code>--ccache-skip</code> currently does not m
 <p>
 To enable support for precompiled headers (PCH), <code>CCACHE_SLOPPINESS</code> now also
   needs to include the new <code>pch_defines</code> sloppiness. This is because ccache
-  can&#8217;t detect changes in the source code when only `#define`s have been
+  can&#8217;t detect changes in the source code when only defined macros have been
   changed.
 </p>
 </li>
@@ -798,7 +847,7 @@ Stale files in the internal temporary directory (<code>&lt;ccache_dir&gt;/tmp</c
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes">Bug fixes</h3>
+<h3 id="_bug_fixes_3">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -838,7 +887,7 @@ Fixed problem with logging of current working directory.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2013-01-06</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_2">Bug fixes</h3>
+<h3 id="_bug_fixes_4">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -909,7 +958,7 @@ Clang plugins are now hashed to catch plugin upgrades.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_3">Bug fixes</h3>
+<h3 id="_bug_fixes_5">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -957,7 +1006,7 @@ Fixed <code>static_assert</code> macro definition clash with GCC 4.7.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2012-01-08</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_4">Bug fixes</h3>
+<h3 id="_bug_fixes_6">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1040,7 +1089,7 @@ Rewrite argument to <code>--sysroot</code> if <code>CCACHE_BASEDIR</code> is use
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_5">Bug fixes</h3>
+<h3 id="_bug_fixes_7">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1093,7 +1142,7 @@ Improved order of statistics counters in <code>ccache -s</code> output.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_6">Bug fixes</h3>
+<h3 id="_bug_fixes_8">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1126,7 +1175,7 @@ Systems that lack (and don&#8217;t need to be linked with) libm are now supporte
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2011-01-09</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_7">Bug fixes</h3>
+<h3 id="_bug_fixes_9">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1159,7 +1208,7 @@ The file handle in now correctly closed on write error when trying to create
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-28</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_8">Bug fixes</h3>
+<h3 id="_bug_fixes_10">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1186,7 +1235,7 @@ Portability fixes for HP-UX 11.00 and other esoteric systems.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-21</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_9">Bug fixes</h3>
+<h3 id="_bug_fixes_11">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1234,7 +1283,7 @@ The test suite now also works on systems that lack a /dev/zero.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-07</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_10">Bug fixes</h3>
+<h3 id="_bug_fixes_12">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1356,7 +1405,7 @@ Added <code>-install_name</code> as an option known to take an argument. (This i
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_11">Bug fixes</h3>
+<h3 id="_bug_fixes_13">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1442,7 +1491,7 @@ New <code>HACKING.txt</code> file with some notes about ccache code conventions.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-07-15</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_12">Bug fixes</h3>
+<h3 id="_bug_fixes_14">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1631,7 +1680,7 @@ The following options are no longer hashed in the preprocessor mode:
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_13">Bug fixes</h3>
+<h3 id="_bug_fixes_15">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1776,8 +1825,9 @@ Statistics counters are now correctly updated for -E option failures and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.1.10<br />
-Last updated 2014-10-19 19:03:56 CEST
+Version 3.1.12<br />
+Last updated
+ 2016-07-12 21:34:27 CEST
 </div>
 </div>
 </body>

@@ -2,7 +2,7 @@
  * ccache -- a fast C/C++ compiler cache
  *
  * Copyright (C) 2002-2007 Andrew Tridgell
- * Copyright (C) 2009-2014 Joel Rosdahl
+ * Copyright (C) 2009-2016 Joel Rosdahl
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -36,7 +36,7 @@ static const char VERSION_TEXT[] =
 MYNAME " version %s\n"
 "\n"
 "Copyright (C) 2002-2007 Andrew Tridgell\n"
-"Copyright (C) 2009-2011 Joel Rosdahl\n"
+"Copyright (C) 2009-2016 Joel Rosdahl\n"
 "\n"
 "This program is free software; you can redistribute it and/or modify it under\n"
 "the terms of the GNU General Public License as published by the Free Software\n"
@@ -878,6 +878,8 @@ get_object_name_from_cpp(struct args *args, struct mdfour *hash)
 		 */
 		cpp_stderr = path_stderr;
 	} else {
+		hash_delimiter(hash, "runsecondcpp");
+		hash_string(hash, "false");
 		free(path_stderr);
 	}
 
@@ -1745,8 +1747,17 @@ cc_process_args(struct args *orig_args, struct args **preprocessor_args,
 			goto out;
 		}
 
-		/* Rewrite to relative to increase hit rate. */
-		input_file = make_relative_path(x_strdup(argv[i]));
+		lstat(argv[i], &st);
+		if (S_ISLNK(st.st_mode)) {
+			/* Don't rewrite source file path if it's a symlink since
+			   make_relative_path resolves symlinks using realpath(3) and this leads
+			   to potentially choosing incorrect relative header files. See the
+			   "symlink to source file" test. */
+			input_file = x_strdup(argv[i]);
+		} else {
+			/* Rewrite to relative to increase hit rate. */
+			input_file = make_relative_path(x_strdup(argv[i]));
+		}
 	}
 
 	if (!input_file) {

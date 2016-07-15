@@ -3,7 +3,7 @@
 # A simple test suite for ccache.
 #
 # Copyright (C) 2002-2007 Andrew Tridgell
-# Copyright (C) 2009-2014 Joel Rosdahl
+# Copyright (C) 2009-2016 Joel Rosdahl
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -219,7 +219,7 @@ base_tests() {
     mv $CCACHE_DIR $CCACHE_DIR.saved
     CCACHE_DISABLE=1 $CCACHE_COMPILE -c test1.c 2> /dev/null
     if [ -d $CCACHE_DIR ]; then
-        test_failed "$CCACHE_DIR created dispite CCACHE_DISABLE being set"
+        test_failed "$CCACHE_DIR created despite CCACHE_DISABLE being set"
     fi
     mv $CCACHE_DIR.saved $CCACHE_DIR
     checkstat 'cache hit (preprocessed)' 3
@@ -245,10 +245,10 @@ base_tests() {
     checkstat 'cache hit (preprocessed)' 5
     checkstat 'cache miss' 4
 
-    # strictly speaking should be 3 - RECACHE causes a double counting!
+    # strictly speaking should be 4 - RECACHE causes a double counting!
     checkstat 'files in cache' 4
     $CCACHE -c > /dev/null
-    checkstat 'files in cache' 3
+    checkstat 'files in cache' 4
 
     testname="CCACHE_HASHDIR"
     CCACHE_HASHDIR=1 $CCACHE_COMPILE -c test1.c -O -O
@@ -258,7 +258,7 @@ base_tests() {
     CCACHE_HASHDIR=1 $CCACHE_COMPILE -c test1.c -O -O
     checkstat 'cache hit (preprocessed)' 6
     checkstat 'cache miss' 5
-    checkstat 'files in cache' 4
+    checkstat 'files in cache' 5
 
     testname="comments"
     echo '/* a silly comment */' > test1-comment.c
@@ -286,7 +286,7 @@ base_tests() {
     done
     checkstat 'cache hit (preprocessed)' 8
     checkstat 'cache miss' 37
-    checkstat 'files in cache' 36
+    checkstat 'files in cache' 37
 
     $CCACHE -C >/dev/null
 
@@ -344,9 +344,15 @@ base_tests() {
             CCACHE_CPP2=1 $CCACHE_COMPILE -c -finput-charset=latin1 latin1.c
             checkstat 'cache hit (preprocessed)' 14
             checkstat 'cache miss' 40
-            $CCACHE_COMPILE -c -finput-charset=latin1 latin1.c
+            CCACHE_CPP2=1 $CCACHE_COMPILE -c -finput-charset=latin1 latin1.c
             checkstat 'cache hit (preprocessed)' 15
             checkstat 'cache miss' 40
+            $CCACHE_COMPILE -c -finput-charset=latin1 latin1.c
+            checkstat 'cache hit (preprocessed)' 15
+            checkstat 'cache miss' 41
+            $CCACHE_COMPILE -c -finput-charset=latin1 latin1.c
+            checkstat 'cache hit (preprocessed)' 16
+            checkstat 'cache miss' 41
         fi
     fi
 
@@ -898,45 +904,6 @@ EOF
     checkfile stderr-mf.txt "`cat stderr-orig.txt`"
 
     ##################################################################
-    # Check that changes in comments are ignored when hashing.
-    testname="changes in comments"
-    $CCACHE -C >/dev/null
-    $CCACHE -z >/dev/null
-    cat <<EOF >comments.h
-/*
- * /* foo comment
- */
-EOF
-    backdate comments.h
-    cat <<'EOF' >comments.c
-#include "comments.h"
-char test[] = "\
-/* apple */ // banana"; // foo comment
-EOF
-
-    $CCACHE $COMPILER -c comments.c
-    checkstat 'cache hit (direct)' 0
-    checkstat 'cache hit (preprocessed)' 0
-    checkstat 'cache miss' 1
-
-    sed_in_place 's/foo/ignored/' comments.h comments.c
-    backdate comments.h
-
-    $CCACHE $COMPILER -c comments.c
-    checkstat 'cache hit (direct)' 1
-    checkstat 'cache hit (preprocessed)' 0
-    checkstat 'cache miss' 1
-
-    # Check that comment-like string contents are hashed.
-    sed_in_place 's/apple/orange/' comments.c
-    backdate comments.h
-
-    $CCACHE $COMPILER -c comments.c
-    checkstat 'cache hit (direct)' 1
-    checkstat 'cache hit (preprocessed)' 0
-    checkstat 'cache miss' 2
-
-    ##################################################################
     # Check that it's possible to compile and cache an empty source code file.
     testname="empty source file"
     $CCACHE -Cz >/dev/null
@@ -1201,6 +1168,23 @@ EOF
     checkstat 'cache miss' 2 # subdir2 is part of the preprocessor output
     CPATH=subdir2 $CCACHE $COMPILER -c foo.c
     checkstat 'cache hit (direct)' 2
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 2
+
+    testname="comment in strings"
+    $CCACHE -Cz >/dev/null
+    echo 'char *comment = " /* \\\\u" "foo" " */";' >comment.c
+    $CCACHE $COMPILER -c comment.c
+    checkstat 'cache hit (direct)' 0
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    $CCACHE $COMPILER -c comment.c
+    checkstat 'cache hit (direct)' 1
+    checkstat 'cache hit (preprocessed)' 0
+    checkstat 'cache miss' 1
+    echo 'char *comment = " /* \\\\u" "goo" " */";' >comment.c
+    $CCACHE $COMPILER -c comment.c
+    checkstat 'cache hit (direct)' 1
     checkstat 'cache hit (preprocessed)' 0
     checkstat 'cache miss' 2
 }
@@ -1853,6 +1837,59 @@ EOF
     checkstat 'cache miss' 2
 }
 
+symlinks_suite() {
+    ##################################################################
+    testname="symlink to source directory"
+
+    mkdir dir
+    cd dir
+    mkdir -p d1/d2
+    echo '#define A "OK"' >d1/h.h
+    cat <<EOF >d1/d2/c.c
+#include <stdio.h>
+#include "../h.h"
+int main() { printf("%s\n", A); }
+EOF
+    echo '#define A "BUG"' >h.h
+    ln -s d1/d2 d3
+
+    CCACHE_BASEDIR=/ $CCACHE $COMPILER -c $PWD/d3/c.c
+    $COMPILER -c $PWD/d3/c.c
+    $COMPILER c.o -o c
+    result=$(./c)
+    if [ "$result" != OK ]; then
+        test_failed "Incorrect header file used"
+    fi
+
+    cd ..
+    rm -rf dir
+
+    ##################################################################
+    testname="symlink to source file"
+
+    mkdir dir
+    cd dir
+    mkdir d
+    echo '#define A "BUG"' >d/h.h
+    cat <<EOF >d/c.c
+#include <stdio.h>
+#include "h.h"
+int main() { printf("%s\n", A); }
+EOF
+    echo '#define A "OK"' >h.h
+    ln -s d/c.c c.c
+
+    CCACHE_BASEDIR=/ $CCACHE $COMPILER -c $PWD/c.c
+    $COMPILER c.o -o c
+    result=$(./c)
+    if [ "$result" != OK ]; then
+        test_failed "Incorrect header file used"
+    fi
+
+    cd ..
+    rm -rf dir
+}
+
 ######################################################################
 # main program
 
@@ -1892,7 +1929,6 @@ all_suites="
 base
 link          !win32
 hardlink
-cpp2
 nlevels4
 nlevels1
 basedir       !win32
@@ -1902,6 +1938,7 @@ readonly
 extrafiles
 cleanup
 pch
+symlinks
 "
 
 host_os="`uname -s`"

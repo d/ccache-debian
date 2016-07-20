@@ -402,7 +402,9 @@ register_signal_handler(int signum)
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = signal_handler;
 	act.sa_mask = fatal_signal_set;
+#ifdef SA_RESTART
 	act.sa_flags = SA_RESTART;
+#endif
 	sigaction(signum, &act, NULL);
 }
 
@@ -747,6 +749,30 @@ process_preprocessed_file(struct mdfour *hash, const char *path)
 		            && q[5] == ' '))
 		    && (q == data || q[-1] == '\n')) {
 			char *path;
+
+			/* Workarounds for preprocessor linemarker bugs in GCC version 6 */
+			if (q[2] == '3') {
+				if (str_startswith(q, "# 31 \"<command-line>\"\n")) {
+					/* Bogus extra line with #31, after the regular #1:
+					   Ignore the whole line, and continue parsing */
+					hash_buffer(hash, p, q - p);
+					while (q < end && *q != '\n') {
+						q++;
+					}
+					q++;
+					p = q;
+					continue;
+				} else if (str_startswith(q, "# 32 \"<command-line>\" 2\n")) {
+					/* Bogus wrong line with #32, instead of regular #1:
+					   Replace the line number with the usual one */
+					hash_buffer(hash, p, q - p);
+					q += 1;
+					q[0] = '#';
+					q[1] = ' ';
+					q[2] = '1';
+					p = q;
+				}
+			}
 
 			while (q < end && *q != '"' && *q != '\n') {
 				q++;
@@ -1098,7 +1124,7 @@ to_cache(struct args *args)
 		cc_log("Stored in cache: %s", cached_stderr);
 		if (!conf->compression
 		    /* If the file was compressed, obtain the size again: */
-		    || (conf->compression && x_stat(cached_stderr, &st) == 0)) {
+		    || x_stat(cached_stderr, &st) == 0) {
 			stats_update_size(file_size(&st), 1);
 		}
 	} else {
@@ -1599,6 +1625,11 @@ calculate_object_hash(struct args *args, struct mdfour *hash, int direct_mode)
 		/* All other arguments are included in the hash. */
 		hash_delimiter(hash, "arg");
 		hash_string(hash, args->argv[i]);
+		if (i + 1 < args->argc && compopt_takes_arg(args->argv[i])) {
+			i++;
+			hash_delimiter(hash, "arg");
+			hash_string(hash, args->argv[i]);
+		}
 	}
 
 	/*
@@ -1841,7 +1872,7 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 	x_exit(0);
 }
 
-/* find the real compiler. We just search the PATH to find a executable of the
+/* find the real compiler. We just search the PATH to find an executable of the
  * same name that isn't a link to ourselves */
 static void
 find_compiler(char **argv)
@@ -2490,8 +2521,17 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 			continue;
 		}
 
-		/* Rewrite to relative to increase hit rate. */
-		input_file = make_relative_path(x_strdup(argv[i]));
+		lstat(argv[i], &st);
+		if (S_ISLNK(st.st_mode)) {
+			/* Don't rewrite source file path if it's a symlink since
+			   make_relative_path resolves symlinks using realpath(3) and this leads
+			   to potentially choosing incorrect relative header files. See the
+			   "symlink to source file" test. */
+			input_file = x_strdup(argv[i]);
+		} else {
+			/* Rewrite to relative to increase hit rate. */
+			input_file = make_relative_path(x_strdup(argv[i]));
+		}
 	} /* for */
 
 	if (found_S_opt) {

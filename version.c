@@ -1,1 +1,1 @@
-const char CCACHE_VERSION[] = "3.2.5";
+const char CCACHE_VERSION[] = "3.2.7";

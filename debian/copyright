@@ -5,14 +5,14 @@ Source: https://samba.org/ftp/ccache/
 
 Files: *
 Copyright: 2002-2007 Andrew Tridgell <tridge@samba.org>
-           2009-2015 Joel Rosdahl <joel@rosdahl.net>
+           2009-2016 Joel Rosdahl <joel@rosdahl.net>
 License: GPL-3+
 
 Files: debian/*
 Copyright: 2002-2003 Paul Russell <prussell@debian.org>
            2004-2009 Francois Marier <francois@debian.org>
            2009-2010 Y Giridhar Appaji Nag <appaji@debian.org>
-           2010-2015 Joel Rosdahl <joel@debian.org>
+           2010-2016 Joel Rosdahl <joel@debian.org>
 License: GPL-3+
 
 Files: getopt_long.*

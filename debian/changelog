@@ -1,3 +1,12 @@
+ccache (3.2.7-1) unstable; urgency=medium
+
+  * New upstream release 3.2.7 (closes: #829088)
+  * Bump Standards-Version to 3.9.8 (no changes)
+  * Update copyright years
+  * Enable pie and bindnow hardening flags
+
+ -- Joel Rosdahl <joel@debian.org>  Wed, 20 Jul 2016 20:10:50 +0200
+
 ccache (3.2.5-1) unstable; urgency=medium
 
   * New upstream release 3.2.5

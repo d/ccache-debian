@@ -1,1 +1,2 @@
 debian_specific_usage_docs.patch
+fix_signal_handler_exit.patch

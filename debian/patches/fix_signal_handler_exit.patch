@@ -1,0 +1,13 @@
+Description: Exit properly from exit handler
+Author: Joel Rosdahl <joel@rosdahl.net>
+
+--- a/ccache.c
++++ b/ccache.c
+@@ -264,6 +264,7 @@ signal_handler(int signo)
+ {
+ 	(void)signo;
+ 	clean_up_pending_tmp_files();
++	_exit(1);
+ }
+
+ static void

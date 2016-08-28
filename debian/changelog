@@ -1,3 +1,11 @@
+ccache (3.1.12-2) stable; urgency=medium
+
+  * Exit properly from signal handler (closes: #835460)
+    This fixes a regression in ccache 3.1.10 leading to ccache not dying
+    properly when interrupted by a signal.
+
+ -- Joel Rosdahl <joel@debian.org>  Sun, 28 Aug 2016 15:45:26 +0200
+
 ccache (3.1.12-1) stable; urgency=medium
 
   * New upstream release 3.1.12 containing important bug fixes (and only

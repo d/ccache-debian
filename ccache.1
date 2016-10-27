@@ -2,12 +2,12 @@
 .\"     Title: ccache
 .\"    Author: [see the "Author" section]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 04/17/2016
+.\"      Date: 07/20/2016
 .\"    Manual: ccache Manual
-.\"    Source: ccache 3.2.5
+.\"    Source: ccache 3.2.7
 .\"  Language: English
 .\"
-.TH "CCACHE" "1" "04/17/2016" "ccache 3\&.2\&.5" "ccache Manual"
+.TH "CCACHE" "1" "07/20/2016" "ccache 3\&.2\&.7" "ccache Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -489,7 +489,7 @@ If true, ccache will attempt to use hard links from the cache directory when cre
 .PP
 \fBhash_dir\fR (\fBCCACHE_HASHDIR\fR or \fBCCACHE_NOHASHDIR\fR, see Boolean values above)
 .RS 4
-If true, ccache will include the current working directory in the hash that is used to distinguish two compilations\&. This prevents a problem with the storage of the current working directory in the debug info of a object file, which can lead ccache to give a cached object file that has the working directory in the debug info set incorrectly\&. This option is off by default as the incorrect setting of this debug info rarely causes problems\&. If you strike problems with GDB not using the correct directory then enable this option\&.
+If true, ccache will include the current working directory in the hash that is used to distinguish two compilations\&. This prevents a problem with the storage of the current working directory in the debug info of an object file, which can lead ccache to give a cached object file that has the working directory in the debug info set incorrectly\&. This option is off by default as the incorrect setting of this debug info rarely causes problems\&. If you strike problems with GDB not using the correct directory then enable this option\&.
 .RE
 .PP
 \fBlog_file\fR (\fBCCACHE_LOGFILE\fR)

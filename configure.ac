@@ -21,7 +21,11 @@ AC_SUBST(include_dev_mk)
 AC_SUBST(test_suites)
 
 dnl Checks for programs.
-AC_PROG_CC
+AC_PROG_CC_C99
+if test "$ac_cv_prog_cc_c99" = no; then
+    AC_MSG_ERROR(cannot find a C99-compatible compiler)
+fi
+
 AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_RANLIB
@@ -41,7 +45,6 @@ fi
 
 AC_HEADER_DIRENT
 AC_HEADER_TIME
-AC_HEADER_STDBOOL
 AC_HEADER_SYS_WAIT
 
 AC_CHECK_TYPES(long long)
@@ -123,6 +126,7 @@ fi
 dnl Linking on Windows needs ws2_32
 if test x${windows_os} = xyes; then
     LIBS="$LIBS -lws2_32"
+    AC_CHECK_FUNCS(GetFinalPathNameByHandleW,[],[LIBS="$LIBS -lpsapi"])
 fi
 
 AC_C_BIGENDIAN

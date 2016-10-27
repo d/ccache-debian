@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: ccache
 .\"    Author: [see the "Author" section]
-.\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 07/20/2016
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 10/26/2016
 .\"    Manual: ccache Manual
-.\"    Source: ccache 3.2.7
+.\"    Source: ccache 3.3.3
 .\"  Language: English
 .\"
-.TH "CCACHE" "1" "07/20/2016" "ccache 3\&.2\&.7" "ccache Manual"
+.TH "CCACHE" "1" "10/26/2016" "ccache 3\&.3\&.3" "ccache Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -40,7 +40,7 @@ ccache \- a fast C/C++ compiler cache
 .sp
 ccache is a compiler cache\&. It speeds up recompilation by caching the result of previous compilations and detecting when the same compilation is being done again\&. Supported languages are C, C++, Objective\-C and Objective\-C++\&.
 .sp
-ccache has been carefully written to always produce exactly the same compiler output that you would get without the cache\&. The only way you should be able to tell that you are using ccache is the speed\&. Currently known exceptions to this goal are listed under BUGS\&. If you ever discover an undocumented case where ccache changes the output of your compiler, please let us know\&.
+ccache has been carefully written to always produce exactly the same compiler output that you would get without the cache\&. The only way you should be able to tell that you are using ccache is the speed\&. Currently known exceptions to this goal are listed under CAVEATS\&. If you ever discover an undocumented case where ccache changes the output of your compiler, please let us know\&.
 .SS "Features"
 .sp
 .RS 4
@@ -356,7 +356,9 @@ Below is a list of available configuration settings\&. The corresponding environ
 \fBbase_dir\fR (\fBCCACHE_BASEDIR\fR)
 .RS 4
 This setting should be an absolute path to a directory\&. ccache then rewrites absolute paths into relative paths before computing the hash that identifies the compilation, but only for paths under the specified directory\&. If set to the empty string (which is the default), no rewriting is done\&. See also the discussion under
-COMPILING IN DIFFERENT DIRECTORIES\&.
+COMPILING IN DIFFERENT DIRECTORIES\&. If using GCC or newer versions of Clang, you might want to look into the
+\fB\-fdebug\-prefix\-map=old=new\fR
+option for relocating debug info to a common prefix (mapping prefix with old=new)\&.
 .RE
 .PP
 \fBcache_dir\fR (\fBCCACHE_DIR\fR)
@@ -479,7 +481,7 @@ When true, ccache will just call the real compiler, bypassing the cache complete
 .PP
 \fBextra_files_to_hash\fR (\fBCCACHE_EXTRAFILES\fR)
 .RS 4
-This setting is a list of paths to files that ccache will include in the the hash sum that idetifies the build\&. The list separator is semicolon on Windows systems and colon on other systems\&.
+This setting is a list of paths to files that ccache will include in the the hash sum that identifies the build\&. The list separator is semicolon on Windows systems and colon on other systems\&.
 .RE
 .PP
 \fBhard_link\fR (\fBCCACHE_HARDLINK\fR or \fBCCACHE_NOHARDLINK\fR, see Boolean values above)
@@ -489,7 +491,56 @@ If true, ccache will attempt to use hard links from the cache directory when cre
 .PP
 \fBhash_dir\fR (\fBCCACHE_HASHDIR\fR or \fBCCACHE_NOHASHDIR\fR, see Boolean values above)
 .RS 4
-If true, ccache will include the current working directory in the hash that is used to distinguish two compilations\&. This prevents a problem with the storage of the current working directory in the debug info of an object file, which can lead ccache to give a cached object file that has the working directory in the debug info set incorrectly\&. This option is off by default as the incorrect setting of this debug info rarely causes problems\&. If you strike problems with GDB not using the correct directory then enable this option\&.
+If true (which is the default), ccache will include the current working directory (CWD) in the hash that is used to distinguish two compilations when generating debug info (compiler option
+\fB\-g\fR
+with variations)\&. Exception: The CWD will not be included in the hash if
+\fBbase_dir\fR
+is set (and matches the CWD) and the compiler option
+\fB\-fdebug\-prefix\-map\fR
+is used\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+The reason for including the CWD in the hash by default is to prevent a
+problem with the storage of the current working directory in the debug info
+of an object file, which can lead ccache to return a cached object file
+that has the working directory in the debug info set incorrectly\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+You can disable this setting to get cache hits when compiling the same
+source code in different directories if you don\*(Aqt mind that CWD in the
+debug info might be incorrect\&.
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.PP
+\fBignore_headers_in_manifest\fR (\fBCCACHE_IGNOREHEADERS\fR)
+.RS 4
+This setting is a list of paths to files (or directories with headers) that ccache will
+\fBnot\fR
+include in the manifest list that makes up the direct mode\&. Note that this can cause stale cache hits if those headers do indeed change\&. The list separator is semicolon on Windows systems and colon on other systems\&.
+.RE
+.PP
+\fBkeep_comments_cpp\fR (\fBCCACHE_COMMENTS\fR or \fBCCACHE_NOCOMMENTS\fR, see Boolean values above)
+.RS 4
+If true, ccache will not discard the comments before hashing preprocessor output\&. This can be used to check documentation with
+\fB\-Wdocumentation\fR\&.
+.RE
+.PP
+\fBlimit_multiple\fR (\fBCCACHE_LIMIT_MULTIPLE\fR)
+.RS 4
+Sets the limit when cleaning up\&. Files are deleted (in LRU order) until the levels are below the limit\&. The default is 0\&.8 (= 80%)\&.
 .RE
 .PP
 \fBlog_file\fR (\fBCCACHE_LOGFILE\fR)
@@ -520,6 +571,11 @@ This option adds a list of prefixes (separated by space) to the command line tha
 USING CCACHE WITH OTHER COMPILER WRAPPERS\&.
 .RE
 .PP
+\fBprefix_command_cpp\fR (\fBCCACHE_PREFIX_CPP\fR)
+.RS 4
+This option adds a list of prefixes (separated by space) to the command line that ccache uses when invoking the preprocessor\&.
+.RE
+.PP
 \fBread_only\fR (\fBCCACHE_READONLY\fR or \fBCCACHE_NOREADONLY\fR, see Boolean values above)
 .RS 4
 If true, ccache will attempt to use existing cached object files, but it will not to try to add anything new to the cache\&. If you are using this because your ccache directory is read\-only, then you need to set
@@ -543,7 +599,23 @@ If true, ccache will not use any previously stored result\&. New results will st
 .PP
 \fBrun_second_cpp\fR (\fBCCACHE_CPP2\fR or \fBCCACHE_NOCPP2\fR, see Boolean values above)
 .RS 4
-If true, ccache will not use the optimisation of avoiding the second call to the preprocessor by compiling the preprocessed output that was used for finding the hash in the case of a cache miss\&. This is primarily a debugging option, although it is possible that some unusual compilers will have problems with compiling the preprocessed output, in which case this option could allow ccache to be used anyway\&.
+If true, ccache will first run the preprocessor to preprocess the source code (see
+THE PREPROCESSOR MODE) and then on a cache miss run the compiler on the source code to get hold of the object file\&. This is the default\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+If false, ccache will first run preprocessor to preprocess the source code
+and then on a cache miss run the compiler on the _preprocessed source code_
+instead of the original source code\&. This makes cache misses slightly
+faster since the source code only has to be preprocessed once\&. The downside
+is that some compilers won\*(Aqt produce the same result (for instance
+diagnostics warnings) when compiling preprocessed source code\&.
+.fi
+.if n \{\
+.RE
+.\}
 .RE
 .PP
 \fBsloppiness\fR (\fBCCACHE_SLOPPINESS\fR)
@@ -570,6 +642,11 @@ By default, ccache also will not cache a file if it includes a header whose ctim
 \fBinclude_file_mtime\fR
 .RS 4
 By default, ccache will not cache a file if it includes a header whose mtime is too new\&. This option disables that check\&.
+.RE
+.PP
+\fBno_system_headers\fR
+.RS 4
+By default, ccache will also include all system headers in the manifest\&. With this option set, ccache will only include system headers in the hash but not add the system header files to the list of include files\&.
 .RE
 .PP
 \fBpch_defines\fR
@@ -866,9 +943,10 @@ a compiler option not supported by the direct mode is used:
 a
 \fB\-Wp,\fR\fB\fIX\fR\fR
 compiler option other than
-\fB\-Wp,\-MD,\fR\fB\fIpath\fR\fR
-and
+\fB\-Wp,\-MD,\fR\fB\fIpath\fR\fR,
 \fB\-Wp,\-MMD,\fR\fB\fIpath\fR\fR
+and
+\fB\-Wp,\-D_define_\fR
 .RE
 .sp
 .RS 4
@@ -1214,25 +1292,8 @@ Compiler upgrades will not be detected properly\&.
 The cached results will not be shared between compilations with and without the other wrapper\&.
 .RE
 .sp
-Another minor thing is that if \fBprefix_command\fR is used, ccache will not invoke the other wrapper when running the preprocessor, which increase performance\&.
-.SH "BUGS"
-.sp
-.RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.sp -1
-.IP \(bu 2.3
-.\}
-ccache doesn\(cqt handle the GNU Assembler\(cqs
-\fB\&.incbin\fR
-directive correctly\&. This directive can be embedded in the source code inside an
-\fB\fIasm\fR\fR
-statement in order to include a file verbatim in the object file\&. If the included file is modified, ccache doesn\(cqt pick up the change since the inclusion isn\(cqt done by the preprocessor\&. A workaround of this problem is to set
-\fBextra_files_to_hash\fR
-to the path of the included file\&.
-.RE
+Another minor thing is that if \fBprefix_command\fR is used, ccache will not invoke the other wrapper when running the preprocessor, which increases performance\&. You can use the \fBprefix_command_cpp\fR configuration setting if you also want to invoke the other wrapper when doing preprocessing (normally by adding \fB\-E\fR)\&.
+.SH "CAVEATS"
 .sp
 .RS 4
 .ie n \{\
@@ -1254,7 +1315,7 @@ A general tip for getting information about what ccache is doing is to enable de
 .sp
 ccache has been written to perform well out of the box, but sometimes you may have to do some adjustments of how you use the compiler and ccache in order to improve performance\&.
 .sp
-Since ccache works best when I/O is fast, put the cache directory on a fast storage device if possible\&. Having lots of free memory so that files in the cache directory stay in the disk cache is also preferrable\&.
+Since ccache works best when I/O is fast, put the cache directory on a fast storage device if possible\&. Having lots of free memory so that files in the cache directory stay in the disk cache is also preferable\&.
 .sp
 A good way of monitoring how well ccache works is to run \fBccache \-s\fR before and after your build and then compare the statistics counters\&. Here are some common problems and what may be done to increase the hit rate:
 .sp
@@ -1305,9 +1366,9 @@ The compiler option
 or
 \fB\-Wp,\fR\fB\fIX\fR\fR
 (except
-\fB\-Wp,\-MD,\fR\fB\fIpath\fR\fR
-and
-\fBWp,\-MMD,\fR\fB\fIpath\fR\fR) is used\&.
+\fB\-Wp,\-MD,\fR\fB\fIpath\fR\fR,
+\fB\-Wp,\-MMD,\fR\fB\fIpath\fR\fR, and
+\fB\-Wp,\-D_define_\fR) is used\&.
 .RE
 .sp
 .RS 4
@@ -1468,9 +1529,6 @@ for how to remedy this\&.
 If \(lqcan\(cqt use precompiled header\(rq has been incremented, see
 PRECOMPILED HEADERS\&.
 .RE
-.SS "Errors when compiling with ccache"
-.sp
-If compilation doesn\(cqt work with ccache, but it works without it, one possible reason is that the compiler can\(cqt compile preprocessed output correctly\&. A workaround that may work is to enable \fBrun_second_cpp\fR*\&. This will make cache misses slower, though, so it is better to find and fix the root cause\&.
 .SS "Corrupt object files"
 .sp
 It should be noted that ccache is susceptible to general storage problems\&. If a bad object file sneaks into the cache for some reason, it will of course stay bad\&. Some possible reasons for erroneous object files are bad hardware (disk drive, disk controller, memory, etc), buggy drivers or file systems, a bad \fBprefix_command\fR or compiler wrapper\&. If this happens, the easiest way of fixing it is this:
@@ -1515,7 +1573,7 @@ An alternative is to clear the whole cache with \fBccache \-C\fR if you don\(cqt
 There are no reported issues about ccache producing broken object files reproducibly\&. That doesn\(cqt mean it can\(cqt happen, so if you find a repeatable case, please report it\&.
 .SH "MORE INFORMATION"
 .sp
-Credits, mailing list information, bug reporting instructions, source code, etc, can be found on ccache\(cqs web site: http://ccache\&.samba\&.org\&.
+Credits, mailing list information, bug reporting instructions, source code, etc, can be found on ccache\(cqs web site: https://ccache\&.samba\&.org\&.
 .SH "AUTHOR"
 .sp
-ccache was originally written by Andrew Tridgell and is currently developed and maintained by Joel Rosdahl\&. See AUTHORS\&.txt or AUTHORS\&.html and http://ccache\&.samba\&.org/credits\&.html for a list of contributors\&.
+ccache was originally written by Andrew Tridgell and is currently developed and maintained by Joel Rosdahl\&. See AUTHORS\&.txt or AUTHORS\&.html and https://ccache\&.samba\&.org/credits\&.html for a list of contributors\&.

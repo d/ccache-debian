@@ -734,7 +734,7 @@ asciidoc.install(2);
 <body class="article">
 <div id="header">
 <h1>CCACHE(1)</h1>
-<span id="revnumber">version 3.2.7</span>
+<span id="revnumber">version 3.3.3</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -767,8 +767,9 @@ again. Supported languages are C, C++, Objective-C and Objective-C++.</p></div>
 <div class="paragraph"><p>ccache has been carefully written to always produce exactly the same compiler
 output that you would get without the cache. The only way you should be able to
 tell that you are using ccache is the speed. Currently known exceptions to this
-goal are listed under <a href="#_bugs">BUGS</a>. If you ever discover an undocumented case
-where ccache changes the output of your compiler, please let us know.</p></div>
+goal are listed under <a href="#_caveats">CAVEATS</a>. If you ever discover an
+undocumented case where ccache changes the output of your compiler, please let
+us know.</p></div>
 <div class="sect2">
 <h3 id="_features">Features</h3>
 <div class="ulist"><ul>
@@ -1081,6 +1082,9 @@ setting key.</p></div>
     directory. If set to the empty string (which is the default), no rewriting
     is done. See also the discussion under
     <a href="#_compiling_in_different_directories">COMPILING IN DIFFERENT DIRECTORIES</a>.
+    If using GCC or newer versions of Clang, you might want to look into the
+    <strong>-fdebug-prefix-map=old=new</strong> option for relocating debug info to a common
+    prefix (mapping prefix with old=new).
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1266,7 +1270,7 @@ the <strong>prefix_command</strong> setting if possible. See
 <dd>
 <p>
     This setting is a list of paths to files that ccache will include in the
-    the hash sum that idetifies the build. The list separator is semicolon on
+    the hash sum that identifies the build. The list separator is semicolon on
     Windows systems and colon on other systems.
 </p>
 </dd>
@@ -1290,14 +1294,54 @@ the <strong>prefix_command</strong> setting if possible. See
 </dt>
 <dd>
 <p>
-    If true, ccache will include the current working directory in the hash that
-    is used to distinguish two compilations. This prevents a problem with the
-    storage of the current working directory in the debug info of an object
-    file, which can lead ccache to give a cached object file that has the
-    working directory in the debug info set incorrectly. This option is off by
-    default as the incorrect setting of this debug info rarely causes problems.
-    If you strike problems with GDB not using the correct directory then enable
-    this option.
+    If true (which is the default), ccache will include the current working
+    directory (CWD) in the hash that is used to distinguish two compilations
+    when generating debug info (compiler option <strong>-g</strong> with variations).
+    Exception: The CWD will not be included in the hash if <strong>base_dir</strong> is set
+    (and matches the CWD) and the compiler option <strong>-fdebug-prefix-map</strong> is used.
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code>The reason for including the CWD in the hash by default is to prevent a
+problem with the storage of the current working directory in the debug info
+of an object file, which can lead ccache to return a cached object file
+that has the working directory in the debug info set incorrectly.</code></pre>
+</div></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>You can disable this setting to get cache hits when compiling the same
+source code in different directories if you don't mind that CWD in the
+debug info might be incorrect.</code></pre>
+</div></div>
+</dd>
+<dt class="hdlist1">
+<strong>ignore_headers_in_manifest</strong> (<strong>CCACHE_IGNOREHEADERS</strong>)
+</dt>
+<dd>
+<p>
+    This setting is a list of paths to files (or directories with headers) that
+    ccache will <strong>not</strong> include in the manifest list that makes up the direct
+    mode. Note that this can cause stale cache hits if those headers do indeed
+    change. The list separator is semicolon on Windows systems and colon on
+    other systems.
+</p>
+</dd>
+<dt class="hdlist1">
+<strong>keep_comments_cpp</strong> (<strong>CCACHE_COMMENTS</strong> or <strong>CCACHE_NOCOMMENTS</strong>, see <a href="#_boolean_values">Boolean values</a> above)
+</dt>
+<dd>
+<p>
+    If true, ccache will not discard the comments before hashing preprocessor
+    output. This can be used to check documentation with <strong>-Wdocumentation</strong>.
+</p>
+</dd>
+<dt class="hdlist1">
+<strong>limit_multiple</strong> (<strong>CCACHE_LIMIT_MULTIPLE</strong>)
+</dt>
+<dd>
+<p>
+    Sets the limit when cleaning up. Files are deleted (in LRU order) until the
+    levels are below the limit. The default is 0.8 (= 80%).
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1351,6 +1395,15 @@ the <strong>prefix_command</strong> setting if possible. See
 </p>
 </dd>
 <dt class="hdlist1">
+<strong>prefix_command_cpp</strong> (<strong>CCACHE_PREFIX_CPP</strong>)
+</dt>
+<dd>
+<p>
+    This option adds a list of prefixes (separated by space) to the command
+    line that ccache uses when invoking the preprocessor.
+</p>
+</dd>
+<dt class="hdlist1">
 <strong>read_only</strong> (<strong>CCACHE_READONLY</strong> or <strong>CCACHE_NOREADONLY</strong>, see <a href="#_boolean_values">Boolean values</a> above)
 </dt>
 <dd>
@@ -1385,13 +1438,20 @@ the <strong>prefix_command</strong> setting if possible. See
 </dt>
 <dd>
 <p>
-    If true, ccache will not use the optimisation of avoiding the second call
-    to the preprocessor by compiling the preprocessed output that was used for
-    finding the hash in the case of a cache miss. This is primarily a debugging
-    option, although it is possible that some unusual compilers will have
-    problems with compiling the preprocessed output, in which case this option
-    could allow ccache to be used anyway.
+    If true, ccache will first run the preprocessor to preprocess the source
+    code (see <a href="#_the_preprocessor_mode">THE PREPROCESSOR MODE</a>) and then on a
+    cache miss run the compiler on the source code to get hold of the object
+    file. This is the default.
 </p>
+<div class="literalblock">
+<div class="content">
+<pre><code>If false, ccache will first run preprocessor to preprocess the source code
+and then on a cache miss run the compiler on the _preprocessed source code_
+instead of the original source code. This makes cache misses slightly
+faster since the source code only has to be preprocessed once. The downside
+is that some compilers won't produce the same result (for instance
+diagnostics warnings) when compiling preprocessed source code.</code></pre>
+</div></div>
 </dd>
 <dt class="hdlist1">
 <strong>sloppiness</strong> (<strong>CCACHE_SLOPPINESS</strong>)
@@ -1441,6 +1501,16 @@ the <strong>prefix_command</strong> setting if possible. See
 <p>
     By default, ccache will not cache a file if it includes a header whose
     mtime is too new. This option disables that check.
+</p>
+</dd>
+<dt class="hdlist1">
+<strong>no_system_headers</strong>
+</dt>
+<dd>
+<p>
+    By default, ccache will also include all system headers in the manifest.
+    With this option set, ccache will only include system headers in the hash
+    but not add the system header files to the list of include files.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1682,8 +1752,8 @@ a compiler option not supported by the direct mode is used:
 <div class="ulist"><ul>
 <li>
 <p>
-a <strong>-Wp,<em>X</em></strong> compiler option other than <strong>-Wp,-MD,<em>path</em></strong> and
-   <strong>-Wp,-MMD,<em>path</em></strong>
+a <strong>-Wp,<em>X</em></strong> compiler option other than <strong>-Wp,-MD,<em>path</em></strong>,
+   <strong>-Wp,-MMD,<em>path</em></strong> and <strong>-Wp,-D_define_</strong>
 </p>
 </li>
 <li>
@@ -1940,23 +2010,15 @@ The cached results will not be shared between compilations with and without
 </li>
 </ul></div>
 <div class="paragraph"><p>Another minor thing is that if <strong>prefix_command</strong> is used, ccache will not invoke
-the other wrapper when running the preprocessor, which increase performance.</p></div>
+the other wrapper when running the preprocessor, which increases performance.
+You can use the <strong>prefix_command_cpp</strong> configuration setting if you also want to
+invoke the other wrapper when doing preprocessing (normally by adding <strong>-E</strong>).</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_bugs">Bugs</h2>
+<h2 id="_caveats">Caveats</h2>
 <div class="sectionbody">
 <div class="ulist"><ul>
-<li>
-<p>
-ccache doesn&#8217;t handle the GNU Assembler&#8217;s <strong>.incbin</strong> directive correctly. This
-  directive can be embedded in the source code inside an <strong><em>asm</em></strong> statement in
-  order to include a file verbatim in the object file. If the included file is
-  modified, ccache doesn&#8217;t pick up the change since the inclusion isn&#8217;t done by
-  the preprocessor. A workaround of this problem is to set
-  <strong>extra_files_to_hash</strong> to the path of the included file.
-</p>
-</li>
 <li>
 <p>
 The direct mode fails to pick up new header files in some rare scenarios. See
@@ -1983,7 +2045,7 @@ have to do some adjustments of how you use the compiler and ccache in order to
 improve performance.</p></div>
 <div class="paragraph"><p>Since ccache works best when I/O is fast, put the cache directory on a fast
 storage device if possible. Having lots of free memory so that files in the
-cache directory stay in the disk cache is also preferrable.</p></div>
+cache directory stay in the disk cache is also preferable.</p></div>
 <div class="paragraph"><p>A good way of monitoring how well ccache works is to run <strong>ccache -s</strong> before and
 after your build and then compare the statistics counters. Here are some common
 problems and what may be done to increase the hit rate:</p></div>
@@ -2010,8 +2072,8 @@ Compiler arguments that are hashed in the direct mode but not in the
 </li>
 <li>
 <p>
-The compiler option <strong>-Xpreprocessor</strong> or <strong>-Wp,<em>X</em></strong> (except <strong>-Wp,-MD,<em>path</em></strong>
-   and <strong>Wp,-MMD,<em>path</em></strong>) is used.
+The compiler option <strong>-Xpreprocessor</strong> or <strong>-Wp,<em>X</em></strong> (except <strong>-Wp,-MD,<em>path</em></strong>,
+   <strong>-Wp,-MMD,<em>path</em></strong>, and <strong>-Wp,-D_define_</strong>) is used.
 </p>
 </li>
 <li>
@@ -2109,13 +2171,6 @@ If &#8220;can&#8217;t use precompiled header&#8221; has been incremented, see
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_errors_when_compiling_with_ccache">Errors when compiling with ccache</h3>
-<div class="paragraph"><p>If compilation doesn&#8217;t work with ccache, but it works without it, one possible
-reason is that the compiler can&#8217;t compile preprocessed output correctly. A
-workaround that may work is to enable <strong>run_second_cpp</strong>*. This will make cache
-misses slower, though, so it is better to find and fix the root cause.</p></div>
-</div>
-<div class="sect2">
 <h3 id="_corrupt_object_files">Corrupt object files</h3>
 <div class="paragraph"><p>It should be noted that ccache is susceptible to general storage problems. If a
 bad object file sneaks into the cache for some reason, it will of course stay
@@ -2152,7 +2207,7 @@ case, please report it.</p></div>
 <h2 id="_more_information">More information</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Credits, mailing list information, bug reporting instructions, source code,
-etc, can be found on ccache&#8217;s web site: <a href="http://ccache.samba.org">http://ccache.samba.org</a>.</p></div>
+etc, can be found on ccache&#8217;s web site: <a href="https://ccache.samba.org">https://ccache.samba.org</a>.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -2160,16 +2215,16 @@ etc, can be found on ccache&#8217;s web site: <a href="http://ccache.samba.org">
 <div class="sectionbody">
 <div class="paragraph"><p>ccache was originally written by Andrew Tridgell and is currently developed and
 maintained by Joel Rosdahl. See AUTHORS.txt or AUTHORS.html and
-<a href="http://ccache.samba.org/credits.html">http://ccache.samba.org/credits.html</a> for a list of contributors.</p></div>
+<a href="https://ccache.samba.org/credits.html">https://ccache.samba.org/credits.html</a> for a list of contributors.</p></div>
 </div>
 </div>
 </div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.2.7<br />
+Version 3.3.3<br />
 Last updated
- 2016-07-20 18:01:48 CEST
+ 2016-10-26 23:21:34 CEST
 </div>
 </div>
 </body>

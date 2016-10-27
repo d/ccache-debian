@@ -20,7 +20,7 @@
 
 extern const char CCACHE_VERSION[];
 
-/* statistics fields in storage order */
+// Statistics fields in storage order.
 enum stats {
 	STATS_NONE = 0,
 	STATS_STDOUT = 1,
@@ -42,7 +42,7 @@ enum stats {
 	STATS_NOINPUT = 17,
 	STATS_MULTIPLE = 18,
 	STATS_CONFTEST = 19,
-	STATS_UNSUPPORTED = 20,
+	STATS_UNSUPPORTED_OPTION = 20,
 	STATS_OUTSTDOUT = 21,
 	STATS_CACHEHIT_DIR = 22,
 	STATS_NOOUTPUT = 23,
@@ -51,6 +51,8 @@ enum stats {
 	STATS_COMPCHECK = 26,
 	STATS_CANTUSEPCH = 27,
 	STATS_PREPROCESSING = 28,
+	STATS_NUMCLEANUPS = 29,
+	STATS_UNSUPPORTED_DIRECTIVE = 30,
 
 	STATS_END
 };
@@ -60,17 +62,25 @@ enum stats {
 #define SLOPPY_FILE_MACRO 4
 #define SLOPPY_TIME_MACROS 8
 #define SLOPPY_PCH_DEFINES 16
-/*
- * Allow us to match files based on their stats (size, mtime, ctime), without
- * looking at their contents.
- */
+// Allow us to match files based on their stats (size, mtime, ctime), without
+// looking at their contents.
 #define SLOPPY_FILE_STAT_MATCHES 32
+// Allow us to not include any system headers in the manifest include files,
+// similar to -MM versus -M for dependencies.
+#define SLOPPY_NO_SYSTEM_HEADERS 64
 
 #define str_eq(s1, s2) (strcmp((s1), (s2)) == 0)
-#define str_startswith(s, p) (strncmp((s), (p), strlen((p))) == 0)
+#define str_startswith(s, prefix) \
+	(strncmp((s), (prefix), strlen((prefix))) == 0)
+#define str_endswith(s, suffix) \
+	(strlen(s) >= strlen(suffix) \
+	 && str_eq((s) + strlen(s) - strlen(suffix), (suffix)))
 
-/* ------------------------------------------------------------------------- */
-/* args.c */
+// Buffer size for I/O operations. Should be a multiple of 4 KiB.
+#define READ_BUFFER_SIZE 65536
+
+// ----------------------------------------------------------------------------
+// args.c
 
 struct args {
 	char **argv;
@@ -93,8 +103,8 @@ void args_remove_first(struct args *args);
 char *args_to_string(struct args *args);
 bool args_equal(struct args *args1, struct args *args2);
 
-/* ------------------------------------------------------------------------- */
-/* hash.c */
+// ----------------------------------------------------------------------------
+// hash.c
 
 void hash_start(struct mdfour *md);
 void hash_buffer(struct mdfour *md, const void *s, size_t len);
@@ -108,8 +118,8 @@ void hash_int(struct mdfour *md, int x);
 bool hash_fd(struct mdfour *md, int fd);
 bool hash_file(struct mdfour *md, const char *fname);
 
-/* ------------------------------------------------------------------------- */
-/* util.c */
+// ----------------------------------------------------------------------------
+// util.c
 
 void cc_log(const char *format, ...) ATTR_FORMAT(printf, 1, 2);
 void cc_bulklog(const char *format, ...) ATTR_FORMAT(printf, 1, 2);
@@ -162,6 +172,7 @@ size_t common_dir_prefix_length(const char *s1, const char *s2);
 char *get_relative_path(const char *from, const char *to);
 bool is_absolute_path(const char *path);
 bool is_full_path(const char *path);
+bool is_symlink(const char *path);
 void update_mtime(const char *path);
 void x_exit(int status) ATTR_NORETURN;
 int x_rename(const char *oldpath, const char *newpath);
@@ -174,8 +185,8 @@ bool read_file(const char *path, size_t size_hint, char **data, size_t *size);
 char *read_text_file(const char *path, size_t size_hint);
 char *subst_env_in_string(const char *str, char **errmsg);
 
-/* ------------------------------------------------------------------------- */
-/* stats.c */
+// ----------------------------------------------------------------------------
+// stats.c
 
 void stats_update(enum stats stat);
 void stats_flush(void);
@@ -186,44 +197,45 @@ void stats_update_size(uint64_t size, unsigned files);
 void stats_get_obsolete_limits(const char *dir, unsigned *maxfiles,
                                uint64_t *maxsize);
 void stats_set_sizes(const char *dir, unsigned num_files, uint64_t total_size);
+void stats_add_cleanup(const char *dir, unsigned count);
 void stats_read(const char *path, struct counters *counters);
 void stats_write(const char *path, struct counters *counters);
 
-/* ------------------------------------------------------------------------- */
-/* unify.c */
+// ----------------------------------------------------------------------------
+// unify.c
 
 int unify_hash(struct mdfour *hash, const char *fname);
 
-/* ------------------------------------------------------------------------- */
-/* exitfn.c */
+// ----------------------------------------------------------------------------
+// exitfn.c
 
 void exitfn_init(void);
 void exitfn_add_nullary(void (*function)(void));
 void exitfn_add(void (*function)(void *), void *context);
 void exitfn_call(void);
 
-/* ------------------------------------------------------------------------- */
-/* cleanup.c */
+// ----------------------------------------------------------------------------
+// cleanup.c
 
 void cleanup_dir(struct conf *conf, const char *dir);
 void cleanup_all(struct conf *conf);
 void wipe_all(struct conf *conf);
 
-/* ------------------------------------------------------------------------- */
-/* execute.c */
+// ----------------------------------------------------------------------------
+// execute.c
 
 int execute(char **argv, int fd_out, int fd_err, pid_t *pid);
 char *find_executable(const char *name, const char *exclude_name);
 void print_command(FILE *fp, char **argv);
 
-/* ------------------------------------------------------------------------- */
-/* lockfile.c */
+// ----------------------------------------------------------------------------
+// lockfile.c
 
 bool lockfile_acquire(const char *path, unsigned staleness_limit);
 void lockfile_release(const char *path);
 
-/* ------------------------------------------------------------------------- */
-/* ccache.c */
+// ----------------------------------------------------------------------------
+// ccache.c
 
 extern time_t time_of_compilation;
 void block_signals(void);
@@ -233,7 +245,7 @@ bool cc_process_args(struct args *args, struct args **preprocessor_args,
 void cc_reset(void);
 bool is_precompiled_header(const char *path);
 
-/* ------------------------------------------------------------------------- */
+// ----------------------------------------------------------------------------
 
 #if HAVE_COMPAR_FN_T
 #define COMPAR_FN_T __compar_fn_t
@@ -241,13 +253,12 @@ bool is_precompiled_header(const char *path);
 typedef int (*COMPAR_FN_T)(const void *, const void *);
 #endif
 
-/* work with silly DOS binary open */
+// Work with silly DOS binary open.
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
 
-/* mkstemp() on some versions of cygwin don't handle binary files, so
-   override */
+// mkstemp() on some versions of cygwin don't handle binary files, so override.
 #ifdef __CYGWIN__
 #undef HAVE_MKSTEMP
 #endif
@@ -267,16 +278,21 @@ void add_exe_ext_if_no_to_fullpath(char *full_path_win_ext, size_t max_size,
 #    define link(src,dst) (CreateHardLink(dst,src,NULL) ? 0 : -1)
 #    define lstat(a,b) stat(a,b)
 #    define execv(a,b) win32execute(a,b,0,-1,-1)
-#    define execute(a,b,c) win32execute(*(a),a,1,b,c)
+#    define execute(a,b,c,d) win32execute(*(a),a,1,b,c)
+#    define DIR_DELIM_CH '/'
 #    define PATH_DELIM ";"
 #    define F_RDLCK 0
 #    define F_WRLCK 0
 #else
+#    define DIR_DELIM_CH '\\'
 #    define PATH_DELIM ":"
 #endif
 
 #ifndef MAX
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
 
-#endif /* ifndef CCACHE_H */
+#endif // ifndef CCACHE_H

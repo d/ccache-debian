@@ -17,11 +17,15 @@ struct conf {
 	char *extra_files_to_hash;
 	bool hard_link;
 	bool hash_dir;
+	char *ignore_headers_in_manifest;
+	bool keep_comments_cpp;
+	float limit_multiple;
 	char *log_file;
 	unsigned max_files;
 	uint64_t max_size;
 	char *path;
 	char *prefix_command;
+	char *prefix_command_cpp;
 	bool read_only;
 	bool read_only_direct;
 	bool recache;

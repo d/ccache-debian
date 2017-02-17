@@ -2,12 +2,12 @@
 .\"     Title: ccache
 .\"    Author: [see the "Author" section]
 .\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
-.\"      Date: 10/26/2016
+.\"      Date: 02/17/2017
 .\"    Manual: ccache Manual
-.\"    Source: ccache 3.3.3
+.\"    Source: ccache 3.3.4
 .\"  Language: English
 .\"
-.TH "CCACHE" "1" "10/26/2016" "ccache 3\&.3\&.3" "ccache Manual"
+.TH "CCACHE" "1" "02/17/2017" "ccache 3\&.3\&.4" "ccache Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -270,7 +270,23 @@ Zero the cache statistics (but not the configuration options)\&.
 .RE
 .SH "EXTRA OPTIONS"
 .sp
-When run as a compiler, ccache usually just takes the same command line options as the compiler you are using\&. The only exception to this is the option \fB\-\-ccache\-skip\fR\&. That option can be used to tell ccache to avoid interpreting the next option in any way and to pass it along to the compiler as\-is\&. \fBNote\fR: \fB\-\-ccache\-skip\fR currently only tells ccache not to interpret the next option as a special compiler option \(em the option will still be included in the direct mode hash\&.
+When run as a compiler, ccache usually just takes the same command line options as the compiler you are using\&. The only exception to this is the option \fB\-\-ccache\-skip\fR\&. That option can be used to tell ccache to avoid interpreting the next option in any way and to pass it along to the compiler as\-is\&.
+.if n \{\
+.sp
+.\}
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNote\fR
+.ps -1
+.br
+.sp
+\fB\-\-ccache\-skip\fR currently only tells ccache not to interpret the next option as a special compiler option \(em the option will still be included in the direct mode hash\&.
+.sp .5v
+.RE
 .sp
 The reason this can be important is that ccache does need to parse the command line and determine what is an input filename and what is a compiler option, as it needs the input filename to determine the name of the resulting object file (among other things)\&. The heuristic ccache uses when parsing the command line is that any argument that exists as a file is treated as an input file name\&. By using \fB\-\-ccache\-skip\fR you can force an option to not be treated as an input file name and instead be passed along to the compiler as a command line option\&.
 .sp
@@ -413,27 +429,25 @@ Hash the standard output and standard error output of the specified command\&. T
 \fB%compiler%\fR
 will be replaced with the path to the compiler\&. Several commands can be specified with semicolon as separator\&. Examples:
 .sp
+.if n \{\
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
 .\}
-.el \{\
-.sp -1
-.IP \(bu 2.3
-.\}
+.nf
 %compiler% \-v
+.fi
+.if n \{\
 .RE
+.\}
 .sp
+.if n \{\
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
 .\}
-.el \{\
-.sp -1
-.IP \(bu 2.3
-.\}
+.nf
 %compiler% \-dumpmachine; %compiler% \-dumpversion
+.fi
+.if n \{\
 .RE
+.\}
 .sp
 You should make sure that the specified command is as fast as possible since it will be run once for each ccache invocation\&.
 .sp
@@ -499,30 +513,9 @@ is set (and matches the CWD) and the compiler option
 \fB\-fdebug\-prefix\-map\fR
 is used\&.
 .sp
-.if n \{\
-.RS 4
-.\}
-.nf
-The reason for including the CWD in the hash by default is to prevent a
-problem with the storage of the current working directory in the debug info
-of an object file, which can lead ccache to return a cached object file
-that has the working directory in the debug info set incorrectly\&.
-.fi
-.if n \{\
-.RE
-.\}
+The reason for including the CWD in the hash by default is to prevent a problem with the storage of the current working directory in the debug info of an object file, which can lead ccache to return a cached object file that has the working directory in the debug info set incorrectly\&.
 .sp
-.if n \{\
-.RS 4
-.\}
-.nf
-You can disable this setting to get cache hits when compiling the same
-source code in different directories if you don\*(Aqt mind that CWD in the
-debug info might be incorrect\&.
-.fi
-.if n \{\
-.RE
-.\}
+You can disable this setting to get cache hits when compiling the same source code in different directories if you don\(cqt mind that CWD in the debug info might be incorrect\&.
 .RE
 .PP
 \fBignore_headers_in_manifest\fR (\fBCCACHE_IGNOREHEADERS\fR)
@@ -602,20 +595,9 @@ If true, ccache will not use any previously stored result\&. New results will st
 If true, ccache will first run the preprocessor to preprocess the source code (see
 THE PREPROCESSOR MODE) and then on a cache miss run the compiler on the source code to get hold of the object file\&. This is the default\&.
 .sp
-.if n \{\
-.RS 4
-.\}
-.nf
-If false, ccache will first run preprocessor to preprocess the source code
-and then on a cache miss run the compiler on the _preprocessed source code_
-instead of the original source code\&. This makes cache misses slightly
-faster since the source code only has to be preprocessed once\&. The downside
-is that some compilers won\*(Aqt produce the same result (for instance
-diagnostics warnings) when compiling preprocessed source code\&.
-.fi
-.if n \{\
-.RE
-.\}
+If false, ccache will first run preprocessor to preprocess the source code and then on a cache miss run the compiler on the
+\fIpreprocessed source code\fR
+instead of the original source code\&. This makes cache misses slightly faster since the source code only has to be preprocessed once\&. The downside is that some compilers won\(cqt produce the same result (for instance diagnostics warnings) when compiling preprocessed source code\&.
 .RE
 .PP
 \fBsloppiness\fR (\fBCCACHE_SLOPPINESS\fR)
@@ -719,6 +701,244 @@ By default, ccache has a five gigabyte limit on the total size of files in the c
 .SH "CACHE COMPRESSION"
 .sp
 ccache can optionally compress all files it puts into the cache using the compression library zlib\&. While this may involve a tiny performance slowdown, it increases the number of files that fit in the cache\&. You can turn on compression with the \fBcompression\fR configuration setting and you can also tweak the compression level with \fBcompression_level\fR\&.
+.SH "CACHE STATISTICS"
+.sp
+\fBccache \-s/\-\-show\-stats\fR can show the following statistics:
+.TS
+allbox tab(:);
+ltB ltB.
+T{
+Name
+T}:T{
+Description
+T}
+.T&
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+.sp
+autoconf compile/link
+T}:T{
+.sp
+Uncachable compilation or linking by an autoconf test\&.
+T}
+T{
+.sp
+bad compiler arguments
+T}:T{
+.sp
+Malformed compiler argument, e\&.g\&. missing a value for an option that requires an argument or failure to read a file specified by an option argument\&.
+T}
+T{
+.sp
+cache file missing
+T}:T{
+.sp
+A file was unexpectedly missing from the cache\&. This only happens in rare situations, e\&.g\&. if one ccache instance is about to get a file from the cache while another instance removed the file as part of cache cleanup\&.
+T}
+T{
+.sp
+cache hit (direct)
+T}:T{
+.sp
+A result was successfully found using the direct mode\&.
+T}
+T{
+.sp
+cache hit (preprocessed)
+T}:T{
+.sp
+A result was successfully found using the preprocessor mode\&.
+T}
+T{
+.sp
+cache miss
+T}:T{
+.sp
+No result was found\&.
+T}
+T{
+.sp
+cache size
+T}:T{
+.sp
+Current size of the cache\&.
+T}
+T{
+.sp
+called for link
+T}:T{
+.sp
+The compiler was called for linking, not compiling\&.
+T}
+T{
+.sp
+called for preprocessing
+T}:T{
+.sp
+The compiler was called for preprocessing, not compiling\&.
+T}
+T{
+.sp
+can\(cqt use precompiled header
+T}:T{
+.sp
+Preconditions for using precompiled headers were not fulfilled\&.
+T}
+T{
+.sp
+ccache internal error
+T}:T{
+.sp
+Unexpected failure, e\&.g\&. due to problems reading/writing the cache\&.
+T}
+T{
+.sp
+cleanups performed
+T}:T{
+.sp
+Number of cleanups performed, either implicitly due to the cache size limit being reached or due to explicit \fBccache \-c/\-\-cleanup\fR calls\&.
+T}
+T{
+.sp
+compile failed
+T}:T{
+.sp
+The compilation failed\&. No result stored in the cache\&.
+T}
+T{
+.sp
+compiler check failed
+T}:T{
+.sp
+A compiler check program specified by \fBcompiler_check\fR (\fBCCACHE_COMPILERCHECK\fR) failed\&.
+T}
+T{
+.sp
+compiler produced empty output
+T}:T{
+.sp
+The compiler\(cqs output file (typically an object file) was empty after compilation\&.
+T}
+T{
+.sp
+compiler produced no output
+T}:T{
+.sp
+The compiler\(cqs output file (typically an object file) was missing after compilation\&.
+T}
+T{
+.sp
+compiler produced stdout
+T}:T{
+.sp
+The compiler wrote data to standard output\&. This is something that compilers normally never do, so ccache is not designed to store such output in the cache\&.
+T}
+T{
+.sp
+couldn\(cqt find the compiler
+T}:T{
+.sp
+The compiler to execute could not be found\&.
+T}
+T{
+.sp
+error hashing extra file
+T}:T{
+.sp
+Failure reading a file specified by \fBextra_files_to_hash\fR (\fBCCACHE_EXTRAFILES\fR)\&.
+T}
+T{
+.sp
+files in cache
+T}:T{
+.sp
+Current number of files in the cache\&.
+T}
+T{
+.sp
+multiple source files
+T}:T{
+.sp
+The compiler was called to compile multiple source files in one go\&. This is not supported by ccache\&.
+T}
+T{
+.sp
+no input file
+T}:T{
+.sp
+No input file was specified to the compiler\&.
+T}
+T{
+.sp
+output to a non\-regular file
+T}:T{
+.sp
+The output path specified with \fB\-o\fR is not a file (e\&.g\&. a directory or a device node)\&.
+T}
+T{
+.sp
+output to stdout
+T}:T{
+.sp
+The compiler was instructed to write its output to standard output using \fB\-o \-\fR\&. This is not supported by ccache\&.
+T}
+T{
+.sp
+preprocessor error
+T}:T{
+.sp
+Preprocessing the source code using the compiler\(cqs \fB\-E\fR option failed\&.
+T}
+T{
+.sp
+unsupported code directive
+T}:T{
+.sp
+Code like the assembler \(lq\&.incbin\(rq directive was found\&. This is not supported by ccache\&.
+T}
+T{
+.sp
+unsupported compiler option
+T}:T{
+.sp
+A compiler option not supported by ccache was found\&.
+T}
+T{
+.sp
+unsupported source language
+T}:T{
+.sp
+A source language e\&.g\&. specified with \fB\-x\fR was unsupported by ccache\&.
+T}
+.TE
+.sp 1
 .SH "HOW CCACHE WORKS"
 .sp
 The basic idea is to detect when you are compiling exactly the same code a second time and reuse the previously produced output\&. The detection is done by hashing different kinds of information that should be unique for the compilation and then using the hash sum to identify the cached output\&. ccache uses MD4, a very fast cryptographic hash algorithm, for the hashing\&. (MD4 is nowadays too weak to be useful in cryptographic contexts, but it should be safe enough to be used to identify recompilations\&.) On a cache hit, ccache is able to supply all of the correct compiler outputs (including all warnings, dependency file, etc) from the cache\&.
@@ -1231,7 +1451,17 @@ Make sure that all users have write permission in the entire cache directory (an
 .sp -1
 .IP \(bu 2.3
 .\}
-Make sure that the setgid bit is set on all directories in the cache\&. This tells the filesystem to inherit group ownership for new directories\&. The command \(lqfind $CCACHE_DIR \-type d | xargs chmod g+s\(rq might be useful for this\&.
+Make sure that the setgid bit is set on all directories in the cache\&. This tells the filesystem to inherit group ownership for new directories\&. The following command might be useful for this:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+find $CCACHE_DIR \-type d | xargs chmod g+s
+.fi
+.if n \{\
+.RE
+.\}
 .RE
 .sp
 The reason to avoid the hard link mode is that the hard links cause unwanted side effects, as all links to a cached file share the file\(cqs modification timestamp\&. This results in false dependencies to be triggered by timestamp\-based build systems whenever another user links to an existing file\&. Typically, users will see that their libraries and binaries are relinked without reason\&.

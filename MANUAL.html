@@ -734,7 +734,7 @@ asciidoc.install(2);
 <body class="article">
 <div id="header">
 <h1>CCACHE(1)</h1>
-<span id="revnumber">version 3.3.3</span>
+<span id="revnumber">version 3.3.4</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -991,10 +991,17 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 <div class="paragraph"><p>When run as a compiler, ccache usually just takes the same command line options
 as the compiler you are using. The only exception to this is the option
 <strong>--ccache-skip</strong>. That option can be used to tell ccache to avoid interpreting
-the next option in any way and to pass it along to the compiler as-is. <strong>Note</strong>:
-<strong>--ccache-skip</strong> currently only tells ccache not to interpret the next option as
-a special compiler option&#8201;&#8212;&#8201;the option will still be included in the direct
-mode hash.</p></div>
+the next option in any way and to pass it along to the compiler as-is.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content"><strong>--ccache-skip</strong> currently only tells ccache not to interpret the next
+option as a special compiler option&#8201;&#8212;&#8201;the option will still be included in the
+direct mode hash.</td>
+</tr></table>
+</div>
 <div class="paragraph"><p>The reason this can be important is that ccache does need to parse the command
 line and determine what is an input filename and what is a compiler option, as
 it needs the input filename to determine the name of the resulting object file
@@ -1183,18 +1190,14 @@ setting key.</p></div>
 </p>
 <div class="openblock">
 <div class="content">
-<div class="ulist"><ul>
-<li>
-<p>
-<code>%compiler% -v</code>
-</p>
-</li>
-<li>
-<p>
-<code>%compiler% -dumpmachine; %compiler% -dumpversion</code>
-</p>
-</li>
-</ul></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>%compiler% -v</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>%compiler% -dumpmachine; %compiler% -dumpversion</code></pre>
+</div></div>
 <div class="paragraph"><p>You should make sure that the specified command is as fast as possible since it
 will be run once for each ccache invocation.</p></div>
 <div class="paragraph"><p>Identifying the compiler using a command is useful if you want to avoid cache
@@ -1300,19 +1303,13 @@ the <strong>prefix_command</strong> setting if possible. See
     Exception: The CWD will not be included in the hash if <strong>base_dir</strong> is set
     (and matches the CWD) and the compiler option <strong>-fdebug-prefix-map</strong> is used.
 </p>
-<div class="literalblock">
-<div class="content">
-<pre><code>The reason for including the CWD in the hash by default is to prevent a
-problem with the storage of the current working directory in the debug info
-of an object file, which can lead ccache to return a cached object file
-that has the working directory in the debug info set incorrectly.</code></pre>
-</div></div>
-<div class="literalblock">
-<div class="content">
-<pre><code>You can disable this setting to get cache hits when compiling the same
-source code in different directories if you don't mind that CWD in the
-debug info might be incorrect.</code></pre>
-</div></div>
+<div class="paragraph"><p>The reason for including the CWD in the hash by default is to prevent a problem
+with the storage of the current working directory in the debug info of an
+object file, which can lead ccache to return a cached object file that has the
+working directory in the debug info set incorrectly.</p></div>
+<div class="paragraph"><p>You can disable this setting to get cache hits when compiling the same source
+code in different directories if you don&#8217;t mind that CWD in the debug info
+might be incorrect.</p></div>
 </dd>
 <dt class="hdlist1">
 <strong>ignore_headers_in_manifest</strong> (<strong>CCACHE_IGNOREHEADERS</strong>)
@@ -1443,15 +1440,12 @@ debug info might be incorrect.</code></pre>
     cache miss run the compiler on the source code to get hold of the object
     file. This is the default.
 </p>
-<div class="literalblock">
-<div class="content">
-<pre><code>If false, ccache will first run preprocessor to preprocess the source code
-and then on a cache miss run the compiler on the _preprocessed source code_
-instead of the original source code. This makes cache misses slightly
-faster since the source code only has to be preprocessed once. The downside
-is that some compilers won't produce the same result (for instance
-diagnostics warnings) when compiling preprocessed source code.</code></pre>
-</div></div>
+<div class="paragraph"><p>If false, ccache will first run preprocessor to preprocess the source code and
+then on a cache miss run the compiler on the <em>preprocessed source code</em> instead
+of the original source code. This makes cache misses slightly faster since the
+source code only has to be preprocessed once. The downside is that some
+compilers won&#8217;t produce the same result (for instance diagnostics warnings)
+when compiling preprocessed source code.</p></div>
 </dd>
 <dt class="hdlist1">
 <strong>sloppiness</strong> (<strong>CCACHE_SLOPPINESS</strong>)
@@ -1613,6 +1607,155 @@ compression library zlib. While this may involve a tiny performance slowdown,
 it increases the number of files that fit in the cache. You can turn on
 compression with the <strong>compression</strong> configuration setting and you can also tweak
 the compression level with <strong>compression_level</strong>.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_cache_statistics">Cache statistics</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><strong>ccache -s/--show-stats</strong> can show the following statistics:</p></div>
+<div class="tableblock">
+<table rules="all"
+width="100%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<col width="30%" />
+<col width="70%" />
+<thead>
+<tr>
+<th align="left" valign="top">Name </th>
+<th align="left" valign="top"> Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">autoconf compile/link</p></td>
+<td align="left" valign="top"><p class="table">Uncachable compilation or linking by an autoconf test.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">bad compiler arguments</p></td>
+<td align="left" valign="top"><p class="table">Malformed compiler argument, e.g. missing a value for an option that requires
+an argument or failure to read a file specified by an option argument.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">cache file missing</p></td>
+<td align="left" valign="top"><p class="table">A file was unexpectedly missing from the cache. This only happens in rare
+situations, e.g. if one ccache instance is about to get a file from the cache
+while another instance removed the file as part of cache cleanup.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">cache hit (direct)</p></td>
+<td align="left" valign="top"><p class="table">A result was successfully found using <a href="#_the_direct_mode">the direct mode</a>.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">cache hit (preprocessed)</p></td>
+<td align="left" valign="top"><p class="table">A result was successfully found using <a href="#_the_preprocessor_mode">the preprocessor mode</a>.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">cache miss</p></td>
+<td align="left" valign="top"><p class="table">No result was found.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">cache size</p></td>
+<td align="left" valign="top"><p class="table">Current size of the cache.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">called for link</p></td>
+<td align="left" valign="top"><p class="table">The compiler was called for linking, not compiling.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">called for preprocessing</p></td>
+<td align="left" valign="top"><p class="table">The compiler was called for preprocessing, not compiling.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">can&#8217;t use precompiled header</p></td>
+<td align="left" valign="top"><p class="table">Preconditions for using <a href="#_precompiled_headers">precompiled headers</a> were not
+fulfilled.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">ccache internal error</p></td>
+<td align="left" valign="top"><p class="table">Unexpected failure, e.g. due to problems reading/writing the cache.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">cleanups performed</p></td>
+<td align="left" valign="top"><p class="table">Number of cleanups performed, either implicitly due to the cache size limit
+being reached or due to explicit <strong>ccache -c/--cleanup</strong> calls.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">compile failed</p></td>
+<td align="left" valign="top"><p class="table">The compilation failed. No result stored in the cache.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">compiler check failed</p></td>
+<td align="left" valign="top"><p class="table">A compiler check program specified by <strong>compiler_check</strong> (<strong>CCACHE_COMPILERCHECK</strong>)
+failed.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">compiler produced empty output</p></td>
+<td align="left" valign="top"><p class="table">The compiler&#8217;s output file (typically an object file) was empty after
+compilation.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">compiler produced no output</p></td>
+<td align="left" valign="top"><p class="table">The compiler&#8217;s output file (typically an object file) was missing after
+compilation.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">compiler produced stdout</p></td>
+<td align="left" valign="top"><p class="table">The compiler wrote data to standard output. This is something that compilers
+normally never do, so ccache is not designed to store such output in the cache.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">couldn&#8217;t find the compiler</p></td>
+<td align="left" valign="top"><p class="table">The compiler to execute could not be found.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">error hashing extra file</p></td>
+<td align="left" valign="top"><p class="table">Failure reading a file specified by <strong>extra_files_to_hash</strong>
+(<strong>CCACHE_EXTRAFILES</strong>).</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">files in cache</p></td>
+<td align="left" valign="top"><p class="table">Current number of files in the cache.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">multiple source files</p></td>
+<td align="left" valign="top"><p class="table">The compiler was called to compile multiple source files in one go. This is not
+supported by ccache.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">no input file</p></td>
+<td align="left" valign="top"><p class="table">No input file was specified to the compiler.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">output to a non-regular file</p></td>
+<td align="left" valign="top"><p class="table">The output path specified with <strong>-o</strong> is not a file (e.g. a directory or a device
+node).</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">output to stdout</p></td>
+<td align="left" valign="top"><p class="table">The compiler was instructed to write its output to standard output using <strong>-o
+-</strong>. This is not supported by ccache.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">preprocessor error</p></td>
+<td align="left" valign="top"><p class="table">Preprocessing the source code using the compiler&#8217;s <strong>-E</strong> option failed.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">unsupported code directive</p></td>
+<td align="left" valign="top"><p class="table">Code like the assembler &#8220;.incbin&#8221; directive was found. This is not supported
+by ccache.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">unsupported compiler option</p></td>
+<td align="left" valign="top"><p class="table">A compiler option not supported by ccache was found.</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">unsupported source language</p></td>
+<td align="left" valign="top"><p class="table">A source language e.g. specified with <strong>-x</strong> was unsupported by ccache.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -1943,9 +2086,15 @@ Make sure that all users have write permission in the entire cache directory
 <p>
 Make sure that the setgid bit is set on all directories in the cache. This
   tells the filesystem to inherit group ownership for new directories. The
-  command &#8220;find $CCACHE_DIR -type d | xargs chmod g+s&#8221; might be useful for
-  this.
+  following command might be useful for this:
 </p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre><code>find $CCACHE_DIR -type d | xargs chmod g+s</code></pre>
+</div></div>
+</div></div>
 </li>
 </ul></div>
 <div class="paragraph"><p>The reason to avoid the hard link mode is that the hard links cause unwanted
@@ -2222,9 +2371,9 @@ maintained by Joel Rosdahl. See AUTHORS.txt or AUTHORS.html and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.3.3<br />
+Version 3.3.4<br />
 Last updated
- 2016-10-26 23:21:34 CEST
+ 2017-02-12 14:58:39 CET
 </div>
 </div>
 </body>

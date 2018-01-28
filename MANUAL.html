@@ -734,7 +734,7 @@ asciidoc.install(2);
 <body class="article">
 <div id="header">
 <h1>CCACHE(1)</h1>
-<span id="revnumber">version 3.3.4</span>
+<span id="revnumber">version 3.3.6</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1087,12 +1087,12 @@ setting key.</p></div>
     rewrites absolute paths into relative paths before computing the hash that
     identifies the compilation, but only for paths under the specified
     directory. If set to the empty string (which is the default), no rewriting
-    is done. See also the discussion under
-    <a href="#_compiling_in_different_directories">COMPILING IN DIFFERENT DIRECTORIES</a>.
-    If using GCC or newer versions of Clang, you might want to look into the
-    <strong>-fdebug-prefix-map=old=new</strong> option for relocating debug info to a common
-    prefix (mapping prefix with old=new).
+    is done. A typical path to use as the base directory is your home directory
+    or another directory that is a parent of your build directories. Don&#8217;t use
+    <code>/</code> as the base directory since that will make ccache also rewrite paths to
+    system header files, which doesn&#8217;t gain anything.
 </p>
+<div class="paragraph"><p>See also the discussion under <a href="#_compiling_in_different_directories">COMPILING IN DIFFERENT DIRECTORIES</a>.</p></div>
 </dd>
 <dt class="hdlist1">
 <strong>cache_dir</strong> (<strong>CCACHE_DIR</strong>)
@@ -1302,6 +1302,8 @@ the <strong>prefix_command</strong> setting if possible. See
     when generating debug info (compiler option <strong>-g</strong> with variations).
     Exception: The CWD will not be included in the hash if <strong>base_dir</strong> is set
     (and matches the CWD) and the compiler option <strong>-fdebug-prefix-map</strong> is used.
+    See also the discussion under
+    <a href="#_compiling_in_different_directories">COMPILING IN DIFFERENT DIRECTORIES</a>.
 </p>
 <div class="paragraph"><p>The reason for including the CWD in the hash by default is to prevent a problem
 with the storage of the current working directory in the debug info of an
@@ -1338,7 +1340,8 @@ might be incorrect.</p></div>
 <dd>
 <p>
     Sets the limit when cleaning up. Files are deleted (in LRU order) until the
-    levels are below the limit. The default is 0.8 (= 80%).
+    levels are below the limit. The default is 0.8 (= 80%). See
+    <a href="#_automatic_cleanup">AUTOMATIC CLEANUP</a> for more information.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1356,7 +1359,8 @@ might be incorrect.</p></div>
 <dd>
 <p>
     This option specifies the maximum number of files to keep in the cache. Use
-    0 for no limit (which is the default).
+    0 for no limit (which is the default). See also
+    <a href="#_cache_size_management">CACHE SIZE MANAGEMENT</a>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1366,7 +1370,8 @@ might be incorrect.</p></div>
 <p>
     This option specifies the maximum size of the cache. Use 0 for no limit.
     The default value is 5G. Available suffixes: k, M, G, T (decimal) and Ki,
-    Mi, Gi, Ti (binary). The default suffix is "G".
+    Mi, Gi, Ti (binary). The default suffix is "G". See also
+    <a href="#_cache_size_management">CACHE SIZE MANAGEMENT</a>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1476,7 +1481,7 @@ when compiling preprocessed source code.</p></div>
 <p>
     ccache normally examines a file&#8217;s contents to determine whether it matches
     the cached version. With this option set, ccache will consider a file as
-    matching its cached version if the sizes, mtimes and ctimes match.
+    matching its cached version if the mtimes and ctimes match.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1512,7 +1517,7 @@ when compiling preprocessed source code.</p></div>
 </dt>
 <dd>
 <p>
-    Be sloppy about #defines when precompiling a header file. See
+    Be sloppy about <strong>#define</strong>s when precompiling a header file. See
     <a href="#_precompiled_headers">PRECOMPILED HEADERS</a> for more information.
 </p>
 </dd>
@@ -1592,11 +1597,56 @@ information.</p></div>
 <div class="sect1">
 <h2 id="_cache_size_management">Cache size management</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>By default, ccache has a five gigabyte limit on the total size of files in the
-cache and no maximum number of files. You can set different limits using the
+<div class="paragraph"><p>By default, ccache has a 5 GB limit on the total size of files in the cache and
+no limit on the number of files. You can set different limits using the
 <strong>-M</strong>/<strong>--max-size</strong> and <strong>-F</strong>/<strong>--max-files</strong> options. Use <strong>ccache -s/--show-stats</strong>
 to see the cache size and the currently configured limits (in addition to other
 various statistics).</p></div>
+<div class="paragraph"><p>Cleanup can be triggered in two different ways: automatic and manual.</p></div>
+<div class="sect2">
+<h3 id="_automatic_cleanup">Automatic cleanup</h3>
+<div class="paragraph"><p>ccache maintains counters for various statistics about the cache, including the
+size and number of all cached files. In order to improve performance and reduce
+issues with concurrent ccache invocations, there is one statistics file for
+each of the sixteen subdirectories in the cache.</p></div>
+<div class="paragraph"><p>After a new compilation result has been written to the cache, ccache will
+update the size and file number statistics for the subdirectory (one of
+sixteen) to which the result was written. Then, if the size counter for said
+subdirectory is greater than <strong>max_size / 16</strong> or the file number counter is
+greater than <strong>max_files / 16</strong>, automatic cleanup is triggered.</p></div>
+<div class="paragraph"><p>When automatic cleanup is triggered for a subdirectory in the cache, ccache
+will:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Count all files in the subdirectory and compute their aggregated size.
+</p>
+</li>
+<li>
+<p>
+Remove files in LRU (least recently used) order until the size is at most
+   <strong>limit_multiple * max_size / 16</strong> and the number of files is at most
+   <strong>limit_multiple * max_files / 16</strong>, where <strong>limit_multiple</strong>, <strong>max_size</strong> and
+   <strong>max_files</strong> are configuration settings.
+</p>
+</li>
+<li>
+<p>
+Set the size and file number counters to match the files that were kept.
+</p>
+</li>
+</ol></div>
+<div class="paragraph"><p>The reason for removing more files than just those needed to not exceed the max
+limits is that a cleanup is a fairly slow operation, so it would not be a good
+idea to trigger it often, like after each cache miss.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_manual_cleanup">Manual cleanup</h3>
+<div class="paragraph"><p>You can run <strong>ccache -c/--cleanup</strong> to force cleanup of the whole cache, i.e. all
+of the sixteen subdirectories. This will recalculate the statistics counters
+and make sure that the <strong>max_size</strong> and <strong>max_files</strong> settings are not exceeded.
+Note that <strong>limit_multiple</strong> is not taken into account for manual cleanup.</p></div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -1943,7 +1993,7 @@ the cache.</p></div>
 <div class="sect1">
 <h2 id="_compiling_in_different_directories">Compiling in different directories</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Some information included in the hash that identifies a unique compilation may
+<div class="paragraph"><p>Some information included in the hash that identifies a unique compilation can
 contain absolute paths:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -1955,8 +2005,8 @@ The preprocessed source code may contain absolute paths to include files if
 </li>
 <li>
 <p>
-Paths specified by compiler options (such as <strong>-I</strong>, <strong>-MF</strong>, etc) may be
-  absolute.
+Paths specified by compiler options (such as <strong>-I</strong>, <strong>-MF</strong>, etc) on the command
+  line may be absolute.
 </p>
 </li>
 <li>
@@ -1970,29 +2020,39 @@ The source code file path may be absolute, and that path may substituted for
 <div class="paragraph"><p>This means that if you compile the same code in different locations, you can&#8217;t
 share compilation results between the different build directories since you get
 cache misses because of the absolute build directory paths that are part of the
-hash. To mitigate this problem, you can specify a &#8220;base directory&#8221; in the
-configuration setting <strong>base_dir</strong> to an absolute path to the directory. ccache
-will then rewrite absolute paths that are under the base directory (i.e., paths
-that have the base directory as a prefix) to relative paths when constructing
-the hash. A typical path to use as the base directory is your home directory or
-another directory that is a parent of your build directories. (Don&#8217;t use <code>/</code> as
-the base directory since that will make ccache also rewrite paths to system
-header files, which doesn&#8217;t gain anything.)</p></div>
-<div class="paragraph"><p>The drawbacks of using a base directory are:</p></div>
+hash.</p></div>
+<div class="paragraph"><p>Here&#8217;s what can be done to enable cache hits between different build
+directories:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
-If you specify an absolute path to the source code file, <strong>__FILE__</strong> macros
-  will be expanded to a relative path instead.
+If you build with <strong>-g</strong> (or similar) to add debug information to the object
+  file, you must either:
+</p>
+<div class="openblock">
+<div class="content">
+<div class="ulist"><ul>
+<li>
+<p>
+use the <strong>-fdebug-prefix-map=<em>old</em>=<em>new</em></strong> option for relocating debug info to
+   a common prefix (e.g. <strong>-fdebug-prefix-map=$PWD=.</strong>); or
 </p>
 </li>
 <li>
 <p>
-If you specify an absolute path to the source code file and compile with
-  <strong>-g</strong>, the source code path stored in the object file may point to the wrong
-  directory, which may prevent debuggers like GDB from finding the source code.
-  Sometimes, a work-around is to change the directory explicitly with the
-  &#8220;cd&#8221; command in GDB.
+set <strong>hash_dir = false</strong>.
+</p>
+</li>
+</ul></div>
+</div></div>
+</li>
+<li>
+<p>
+If you use absolute paths anywhere on the command line (e.g. the source code
+  file path or an argument to compiler options like <strong>-I</strong> and <strong>-MF</strong>), you must
+  to set <strong>base_dir</strong> to an absolute path to a &#8220;base directory&#8221;. ccache will
+  then rewrite absolute paths under that directory to relative before computing
+  the hash.
 </p>
 </li>
 </ul></div>
@@ -2008,7 +2068,7 @@ things to make it work properly:</p></div>
 <p>
 You must set <strong>sloppiness</strong> to <strong>pch_defines,time_macros</strong>. The reason is that
   ccache can&#8217;t tell whether <strong>__TIME__</strong> or <strong>__DATE__</strong> is used when using a
-  precompiled header. Further, it can&#8217;t detect changes in #defines in the
+  precompiled header. Further, it can&#8217;t detect changes in <strong>#define</strong>s in the
   source code because of how preprocessing works in combination with
   precompiled headers.
 </p>
@@ -2371,9 +2431,9 @@ maintained by Joel Rosdahl. See AUTHORS.txt or AUTHORS.html and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.3.4<br />
+Version 3.3.6<br />
 Last updated
- 2017-02-12 14:58:39 CET
+ 2018-01-28 16:20:40 CET
 </div>
 </div>
 </body>

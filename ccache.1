@@ -2,12 +2,12 @@
 .\"     Title: ccache
 .\"    Author: [see the "Author" section]
 .\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
-.\"      Date: 02/17/2017
+.\"      Date: 01/28/2018
 .\"    Manual: ccache Manual
-.\"    Source: ccache 3.3.4
+.\"    Source: ccache 3.3.6
 .\"  Language: English
 .\"
-.TH "CCACHE" "1" "02/17/2017" "ccache 3\&.3\&.4" "ccache Manual"
+.TH "CCACHE" "1" "01/28/2018" "ccache 3\&.3\&.6" "ccache Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -371,10 +371,12 @@ Below is a list of available configuration settings\&. The corresponding environ
 .PP
 \fBbase_dir\fR (\fBCCACHE_BASEDIR\fR)
 .RS 4
-This setting should be an absolute path to a directory\&. ccache then rewrites absolute paths into relative paths before computing the hash that identifies the compilation, but only for paths under the specified directory\&. If set to the empty string (which is the default), no rewriting is done\&. See also the discussion under
-COMPILING IN DIFFERENT DIRECTORIES\&. If using GCC or newer versions of Clang, you might want to look into the
-\fB\-fdebug\-prefix\-map=old=new\fR
-option for relocating debug info to a common prefix (mapping prefix with old=new)\&.
+This setting should be an absolute path to a directory\&. ccache then rewrites absolute paths into relative paths before computing the hash that identifies the compilation, but only for paths under the specified directory\&. If set to the empty string (which is the default), no rewriting is done\&. A typical path to use as the base directory is your home directory or another directory that is a parent of your build directories\&. Don\(cqt use
+/
+as the base directory since that will make ccache also rewrite paths to system header files, which doesn\(cqt gain anything\&.
+.sp
+See also the discussion under
+COMPILING IN DIFFERENT DIRECTORIES\&.
 .RE
 .PP
 \fBcache_dir\fR (\fBCCACHE_DIR\fR)
@@ -511,7 +513,8 @@ with variations)\&. Exception: The CWD will not be included in the hash if
 \fBbase_dir\fR
 is set (and matches the CWD) and the compiler option
 \fB\-fdebug\-prefix\-map\fR
-is used\&.
+is used\&. See also the discussion under
+COMPILING IN DIFFERENT DIRECTORIES\&.
 .sp
 The reason for including the CWD in the hash by default is to prevent a problem with the storage of the current working directory in the debug info of an object file, which can lead ccache to return a cached object file that has the working directory in the debug info set incorrectly\&.
 .sp
@@ -533,7 +536,9 @@ If true, ccache will not discard the comments before hashing preprocessor output
 .PP
 \fBlimit_multiple\fR (\fBCCACHE_LIMIT_MULTIPLE\fR)
 .RS 4
-Sets the limit when cleaning up\&. Files are deleted (in LRU order) until the levels are below the limit\&. The default is 0\&.8 (= 80%)\&.
+Sets the limit when cleaning up\&. Files are deleted (in LRU order) until the levels are below the limit\&. The default is 0\&.8 (= 80%)\&. See
+AUTOMATIC CLEANUP
+for more information\&.
 .RE
 .PP
 \fBlog_file\fR (\fBCCACHE_LOGFILE\fR)
@@ -543,12 +548,14 @@ If set to a file path, ccache will write information on what it is doing to the 
 .PP
 \fBmax_files\fR (\fBCCACHE_MAXFILES\fR)
 .RS 4
-This option specifies the maximum number of files to keep in the cache\&. Use 0 for no limit (which is the default)\&.
+This option specifies the maximum number of files to keep in the cache\&. Use 0 for no limit (which is the default)\&. See also
+CACHE SIZE MANAGEMENT\&.
 .RE
 .PP
 \fBmax_size\fR (\fBCCACHE_MAXSIZE\fR)
 .RS 4
-This option specifies the maximum size of the cache\&. Use 0 for no limit\&. The default value is 5G\&. Available suffixes: k, M, G, T (decimal) and Ki, Mi, Gi, Ti (binary)\&. The default suffix is "G"\&.
+This option specifies the maximum size of the cache\&. Use 0 for no limit\&. The default value is 5G\&. Available suffixes: k, M, G, T (decimal) and Ki, Mi, Gi, Ti (binary)\&. The default suffix is "G"\&. See also
+CACHE SIZE MANAGEMENT\&.
 .RE
 .PP
 \fBpath\fR (\fBCCACHE_PATH\fR)
@@ -613,7 +620,7 @@ being present in the source\&.
 .PP
 \fBfile_stat_matches\fR
 .RS 4
-ccache normally examines a file\(cqs contents to determine whether it matches the cached version\&. With this option set, ccache will consider a file as matching its cached version if the sizes, mtimes and ctimes match\&.
+ccache normally examines a file\(cqs contents to determine whether it matches the cached version\&. With this option set, ccache will consider a file as matching its cached version if the mtimes and ctimes match\&.
 .RE
 .PP
 \fBinclude_file_ctime\fR
@@ -633,7 +640,8 @@ By default, ccache will also include all system headers in the manifest\&. With 
 .PP
 \fBpch_defines\fR
 .RS 4
-Be sloppy about #defines when precompiling a header file\&. See
+Be sloppy about
+\fB#define\fRs when precompiling a header file\&. See
 PRECOMPILED HEADERS
 for more information\&.
 .RE
@@ -697,7 +705,62 @@ macro\&. Also note that enabling the unifier implies turning off the direct mode
 .RE
 .SH "CACHE SIZE MANAGEMENT"
 .sp
-By default, ccache has a five gigabyte limit on the total size of files in the cache and no maximum number of files\&. You can set different limits using the \fB\-M\fR/\fB\-\-max\-size\fR and \fB\-F\fR/\fB\-\-max\-files\fR options\&. Use \fBccache \-s/\-\-show\-stats\fR to see the cache size and the currently configured limits (in addition to other various statistics)\&.
+By default, ccache has a 5 GB limit on the total size of files in the cache and no limit on the number of files\&. You can set different limits using the \fB\-M\fR/\fB\-\-max\-size\fR and \fB\-F\fR/\fB\-\-max\-files\fR options\&. Use \fBccache \-s/\-\-show\-stats\fR to see the cache size and the currently configured limits (in addition to other various statistics)\&.
+.sp
+Cleanup can be triggered in two different ways: automatic and manual\&.
+.SS "Automatic cleanup"
+.sp
+ccache maintains counters for various statistics about the cache, including the size and number of all cached files\&. In order to improve performance and reduce issues with concurrent ccache invocations, there is one statistics file for each of the sixteen subdirectories in the cache\&.
+.sp
+After a new compilation result has been written to the cache, ccache will update the size and file number statistics for the subdirectory (one of sixteen) to which the result was written\&. Then, if the size counter for said subdirectory is greater than \fBmax_size / 16\fR or the file number counter is greater than \fBmax_files / 16\fR, automatic cleanup is triggered\&.
+.sp
+When automatic cleanup is triggered for a subdirectory in the cache, ccache will:
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  1." 4.2
+.\}
+Count all files in the subdirectory and compute their aggregated size\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 2.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  2." 4.2
+.\}
+Remove files in LRU (least recently used) order until the size is at most
+\fBlimit_multiple * max_size / 16\fR
+and the number of files is at most
+\fBlimit_multiple * max_files / 16\fR, where
+\fBlimit_multiple\fR,
+\fBmax_size\fR
+and
+\fBmax_files\fR
+are configuration settings\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 3.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  3." 4.2
+.\}
+Set the size and file number counters to match the files that were kept\&.
+.RE
+.sp
+The reason for removing more files than just those needed to not exceed the max limits is that a cleanup is a fairly slow operation, so it would not be a good idea to trigger it often, like after each cache miss\&.
+.SS "Manual cleanup"
+.sp
+You can run \fBccache \-c/\-\-cleanup\fR to force cleanup of the whole cache, i\&.e\&. all of the sixteen subdirectories\&. This will recalculate the statistics counters and make sure that the \fBmax_size\fR and \fBmax_files\fR settings are not exceeded\&. Note that \fBlimit_multiple\fR is not taken into account for manual cleanup\&.
 .SH "CACHE COMPRESSION"
 .sp
 ccache can optionally compress all files it puts into the cache using the compression library zlib\&. While this may involve a tiny performance slowdown, it increases the number of files that fit in the cache\&. You can turn on compression with the \fBcompression\fR configuration setting and you can also tweak the compression level with \fBcompression_level\fR\&.
@@ -1234,7 +1297,7 @@ any standard error output generated by the preprocessor
 Based on the hash, the cached compilation result can be looked up directly in the cache\&.
 .SH "COMPILING IN DIFFERENT DIRECTORIES"
 .sp
-Some information included in the hash that identifies a unique compilation may contain absolute paths:
+Some information included in the hash that identifies a unique compilation can contain absolute paths:
 .sp
 .RS 4
 .ie n \{\
@@ -1261,7 +1324,7 @@ and similar compiler options\&.
 .\}
 Paths specified by compiler options (such as
 \fB\-I\fR,
-\fB\-MF\fR, etc) may be absolute\&.
+\fB\-MF\fR, etc) on the command line may be absolute\&.
 .RE
 .sp
 .RS 4
@@ -1277,9 +1340,9 @@ The source code file path may be absolute, and that path may substituted for
 macros in the source code or included in warnings emitted to standard error by the preprocessor\&.
 .RE
 .sp
-This means that if you compile the same code in different locations, you can\(cqt share compilation results between the different build directories since you get cache misses because of the absolute build directory paths that are part of the hash\&. To mitigate this problem, you can specify a \(lqbase directory\(rq in the configuration setting \fBbase_dir\fR to an absolute path to the directory\&. ccache will then rewrite absolute paths that are under the base directory (i\&.e\&., paths that have the base directory as a prefix) to relative paths when constructing the hash\&. A typical path to use as the base directory is your home directory or another directory that is a parent of your build directories\&. (Don\(cqt use / as the base directory since that will make ccache also rewrite paths to system header files, which doesn\(cqt gain anything\&.)
+This means that if you compile the same code in different locations, you can\(cqt share compilation results between the different build directories since you get cache misses because of the absolute build directory paths that are part of the hash\&.
 .sp
-The drawbacks of using a base directory are:
+Here\(cqs what can be done to enable cache hits between different build directories:
 .sp
 .RS 4
 .ie n \{\
@@ -1289,9 +1352,22 @@ The drawbacks of using a base directory are:
 .sp -1
 .IP \(bu 2.3
 .\}
-If you specify an absolute path to the source code file,
-\fB__FILE__\fR
-macros will be expanded to a relative path instead\&.
+If you build with
+\fB\-g\fR
+(or similar) to add debug information to the object file, you must either:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+use the
+\fB\-fdebug\-prefix\-map=\fR\fB\fIold\fR\fR\fB=\fR\fB\fInew\fR\fR
+option for relocating debug info to a common prefix (e\&.g\&.
+\fB\-fdebug\-prefix\-map=$PWD=\&.\fR); or
 .RE
 .sp
 .RS 4
@@ -1302,8 +1378,25 @@ macros will be expanded to a relative path instead\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-If you specify an absolute path to the source code file and compile with
-\fB\-g\fR, the source code path stored in the object file may point to the wrong directory, which may prevent debuggers like GDB from finding the source code\&. Sometimes, a work\-around is to change the directory explicitly with the \(lqcd\(rq command in GDB\&.
+set
+\fBhash_dir = false\fR\&.
+.RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+If you use absolute paths anywhere on the command line (e\&.g\&. the source code file path or an argument to compiler options like
+\fB\-I\fR
+and
+\fB\-MF\fR), you must to set
+\fBbase_dir\fR
+to an absolute path to a \(lqbase directory\(rq\&. ccache will then rewrite absolute paths under that directory to relative before computing the hash\&.
 .RE
 .SH "PRECOMPILED HEADERS"
 .sp
@@ -1324,7 +1417,8 @@ to
 \fB__TIME__\fR
 or
 \fB__DATE__\fR
-is used when using a precompiled header\&. Further, it can\(cqt detect changes in #defines in the source code because of how preprocessing works in combination with precompiled headers\&.
+is used when using a precompiled header\&. Further, it can\(cqt detect changes in
+\fB#define\fRs in the source code because of how preprocessing works in combination with precompiled headers\&.
 .RE
 .sp
 .RS 4

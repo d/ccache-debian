@@ -1,3 +1,11 @@
+ccache (3.4.1-1) unstable; urgency=medium
+
+  * New upstream release 3.4.1
+  * Update location of upstream manual and changelog files
+  * Update copyright to match new location of source files
+
+ -- Joel Rosdahl <joel@debian.org>  Sun, 11 Feb 2018 19:38:13 +0100
+
 ccache (3.3.6-1) unstable; urgency=medium
 
   * New upstream release 3.3.6

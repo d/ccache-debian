@@ -84,7 +84,7 @@ binary-arch: build install
 	dh_installcron
 	dh_installman debian/update-ccache-symlinks.8
 	dh_installinfo
-	dh_installchangelogs NEWS.txt
+	dh_installchangelogs doc/NEWS.txt
 	dh_link
 	dh_lintian
 	dh_strip

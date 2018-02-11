@@ -15,21 +15,21 @@ Copyright: 2002-2003 Paul Russell <prussell@debian.org>
            2010-2018 Joel Rosdahl <joel@debian.org>
 License: GPL-3+
 
-Files: getopt_long.*
+Files: src/getopt_long.*
 Copyright: 1987, 1993, 1994 The Regents of the University of California
            2003 PostgreSQL Global Development Group
 License: BSD-3-clause
 
-Files: hashtable*
+Files: src/hashtable*
 Copyright:  2002, 2004 Christopher Clark
 License: BSD-3-clause
 
-Files: murmurhashneutral2.*
+Files: src/murmurhashneutral2.*
 Copyright: Released to the public domain by Austin Appleby
 License: public-domain
  Released to the public domain by Austin Appleby.
 
-Files: snprintf.c
+Files: src/snprintf.c
 Copyright: 1995 Patrick Powell
            2008 Holger Weiss
 License: custom
@@ -45,7 +45,7 @@ License: custom
  However, this is not a requirement for using or redistributing (possibly
  modified) versions of this file, nor is leaving this notice intact mandatory.
 
-Files: zlib/*
+Files: src/zlib/*
 Copyright: 1995-2013 Jean-loup Gailly and Mark Adler
 License: ZLIB
 

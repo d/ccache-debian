@@ -2,12 +2,12 @@
 .\"     Title: ccache
 .\"    Author: [see the "Author" section]
 .\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
-.\"      Date: 01/28/2018
+.\"      Date: 02/11/2018
 .\"    Manual: ccache Manual
-.\"    Source: ccache 3.3.6
+.\"    Source: ccache 3.3.6+95_g181effa
 .\"  Language: English
 .\"
-.TH "CCACHE" "1" "01/28/2018" "ccache 3\&.3\&.6" "ccache Manual"
+.TH "CCACHE" "1" "02/11/2018" "ccache 3\&.3\&.6+95_g181effa" "ccache Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -96,17 +96,6 @@ Easy installation\&.
 .IP \(bu 2.3
 .\}
 Low overhead\&.
-.RE
-.sp
-.RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.sp -1
-.IP \(bu 2.3
-.\}
-Optionally uses hard links where possible to avoid copies\&.
 .RE
 .sp
 .RS 4
@@ -364,7 +353,7 @@ max_size = 10G
 .\}
 .SS "Boolean values"
 .sp
-Some settings are boolean values (i\&.e\&. truth values)\&. In a configuration file, such values must be set to the string \fBtrue\fR or \fBfalse\fR\&. For the corresponding environment variables, the semantics are a bit different: a set environment variable means \(lqtrue\(rq regardless of the value (even if set to the empty string), and an unset environment variable means \(lqfalse\(rq\&. Each boolean environment variable also has a negated form starting with \fBCCACHE_NO\fR\&. For example, \fBCCACHE_COMPRESS\fR can be set to force compression and \fBCCACHE_NOCOMPRESS\fR can be set to force no compression\&.
+Some settings are boolean values (i\&.e\&. truth values)\&. In a configuration file, such values must be set to the string \fBtrue\fR or \fBfalse\fR\&. For the corresponding environment variables, the semantics are a bit different: a set environment variable means \(lqtrue\(rq (even if set to the empty string), the following case\-insensitive negative values are considered an error (rather than surprising the user): \fB0\fR, \fBfalse\fR, \fBdisable\fR and \fBno\fR, and an unset environment variable means \(lqfalse\(rq\&. Each boolean environment variable also has a negated form starting with \fBCCACHE_NO\fR\&. For example, \fBCCACHE_COMPRESS\fR can be set to force compression and \fBCCACHE_NOCOMPRESS\fR can be set to force no compression\&.
 .SS "Configuration settings"
 .sp
 Below is a list of available configuration settings\&. The corresponding environment variable name is indicated in parentheses after each configuration setting key\&.
@@ -502,7 +491,47 @@ This setting is a list of paths to files that ccache will include in the the has
 .PP
 \fBhard_link\fR (\fBCCACHE_HARDLINK\fR or \fBCCACHE_NOHARDLINK\fR, see Boolean values above)
 .RS 4
-If true, ccache will attempt to use hard links from the cache directory when creating the compiler output rather than using a file copy\&. Using hard links may be slightly faster in some situations, but can confuse programs like \(lqmake\(rq that rely on modification times\&. Another thing to keep in mind is that if the resulting object file is modified in any way, this corrupts the cached object file as well\&. Hard links are never made for compressed cache files\&. This means that you should not enable compression if you want to use hard links\&. The default is false\&.
+If true, ccache will attempt to use hard links from the cache directory when creating the compiler output rather than using a file copy\&. Hard links are never made for compressed cache files\&. This means that you should not enable compression if you want to use hard links\&. The default is false\&.
+.if n \{\
+.sp
+.\}
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBWarning\fR
+.ps -1
+.br
+Do not enable this option unless you are aware of the consequences\&. Using hard links may be slightly faster in some situations, but there are several pitfalls since the resulting object file will share i\-node with the cached object file:
+.sp .5v
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  1." 4.2
+.\}
+If the resulting object file is modified in any way, the cached object file will be modified as well\&. For instance, if you run
+\fBstrip object\&.o\fR
+or
+\fBecho >object\&.o\fR, you will corrupt the cache\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 2.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  2." 4.2
+.\}
+Programs that rely on modification times (like \(lqmake\(rq) can be confused since ccache updates the cached files\*(Aq modification times as part of the automatic cache size management\&. This will affect object files in the build tree as well, which can retrigger the linking step even though nothing really has changed\&.
+.RE
 .RE
 .PP
 \fBhash_dir\fR (\fBCCACHE_HASHDIR\fR or \fBCCACHE_NOHASHDIR\fR, see Boolean values above)
@@ -605,6 +634,18 @@ THE PREPROCESSOR MODE) and then on a cache miss run the compiler on the source c
 If false, ccache will first run preprocessor to preprocess the source code and then on a cache miss run the compiler on the
 \fIpreprocessed source code\fR
 instead of the original source code\&. This makes cache misses slightly faster since the source code only has to be preprocessed once\&. The downside is that some compilers won\(cqt produce the same result (for instance diagnostics warnings) when compiling preprocessed source code\&.
+.sp
+A solution to the above mentioned downside is to set
+\fBrun_second_cpp\fR
+to false and pass
+\fB\-fdirectives\-only\fR
+(for GCC) or
+\fB\-frewrite\-includes\fR
+(for Clang) to the compiler\&. This will cause the compiler to leave the macros and other preprocessor information, and only process the
+\fB#include\fR
+directives\&. When run in this way, the preprocessor arguments will be passed to the compiler since it still has to do
+\fIsome\fR
+preprocessing (like macros)\&.
 .RE
 .PP
 \fBsloppiness\fR (\fBCCACHE_SLOPPINESS\fR)
@@ -701,7 +742,7 @@ If true, ccache will use a C/C++ unifier when hashing the preprocessor output if
 \fB\-g\fR
 option is not used\&. The unifier is slower than a normal hash, so setting this environment variable loses a little bit of speed, but it means that ccache can take advantage of not recompiling when the changes to the source code consist of reformatting only\&. Note that enabling the unifier changes the hash, so cached compilations produced when the unifier is enabled cannot be reused when the unifier is disabled, and vice versa\&. Enabling the unifier may result in incorrect line number information in compiler warning messages and expansions of the
 \fB__LINE__\fR
-macro\&. Also note that enabling the unifier implies turning off the direct mode\&.
+macro\&.
 .RE
 .SH "CACHE SIZE MANAGEMENT"
 .sp
@@ -1200,19 +1241,6 @@ a modification time of one of the include files is too new (needed to avoid a ra
 .sp -1
 .IP \(bu 2.3
 .\}
-the unifier is enabled (the configuration setting
-\fBunify\fR
-is true)
-.RE
-.sp
-.RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.sp -1
-.IP \(bu 2.3
-.\}
 a compiler option not supported by the direct mode is used:
 .sp
 .RS 4
@@ -1630,6 +1658,40 @@ Another minor thing is that if \fBprefix_command\fR is used, ccache will not inv
 The direct mode fails to pick up new header files in some rare scenarios\&. See
 THE DIRECT MODE
 above\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+When run via ccache, warning messages produced by GCC 4\&.9 and newer will only be colored when the environment variable
+\fBGCC_COLORS\fR
+is set\&. An alternative to setting
+\fBGCC_COLORS\fR
+is to pass
+\-fdiagnostics\-color
+explicitly when compiling (but then color codes will also be present when redirecting stderr to a file)\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+If ccache guesses that the compiler may emit colored warnings, then a compilation with stderr referring to a TTY will be considered different from a compilation with a redirected stderr, thus not sharing cache entries\&. This happens for clang by default and for GCC when
+\fBGCC_COLORS\fR
+is set as mentioned above\&. If you want to share cache hits, you can pass
+\-f[no\-]diagnostics\-color
+(GCC) or
+\-f[no\-]color\-diagnostics
+(clang) explicitly when compiling (but then color codes will be either on or off for both the TTY and the redirected case)\&.
 .RE
 .SH "TROUBLESHOOTING"
 .SS "General"

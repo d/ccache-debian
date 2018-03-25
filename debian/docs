@@ -1,4 +1,4 @@
-doc/MANUAL.txt
-MANUAL.html
-NEWS.html
+doc/MANUAL.adoc
+doc/MANUAL.html
+doc/NEWS.html
 README.md
